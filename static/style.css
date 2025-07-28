@@ -181,6 +181,7 @@ header a:hover,
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
     width: 100%;
+    position: relative;
 }
 
 .note-card.selected {
@@ -191,13 +192,15 @@ header a:hover,
 
 .note-content {
     color: #555;
-    margin-bottom: 15px;
+    margin-bottom: 0;
     line-height: 1.7;
     font-size: 15px;
     min-height: 20px;
     white-space: normal;
     /* Changed from pre-wrap to allow proper HTML rendering */
     overflow: hidden;
+    padding-right: 120px;
+    /* Add padding to avoid overlap with buttons */
 }
 
 /* GitHub Markdown styling */
@@ -386,28 +389,22 @@ header a:hover,
     font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
 }
 
-.note-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.85rem;
-    color: #888;
-    margin-top: auto;
-}
-
 .note-actions {
     display: flex;
     gap: 10px;
+    position: absolute;
+    top: 15px;
+    right: 15px;
 }
 
 .note-actions button {
     text-decoration: none;
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    font-size: 0.85rem;
-    padding: 5px 12px;
-    border-radius: 15px;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 12px;
     transition: all 0.2s ease;
     font-weight: 500;
 }
@@ -417,8 +414,9 @@ header a:hover,
 }
 
 .note-actions .edit-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
+    background: rgba(102, 126, 234, 0.2);
     color: #5a67d8;
+    border-color: rgba(102, 126, 234, 0.3);
 }
 
 .note-actions .delete-btn {
@@ -426,8 +424,9 @@ header a:hover,
 }
 
 .note-actions .delete-btn:hover {
-    background: rgba(255, 107, 107, 0.1);
+    background: rgba(255, 107, 107, 0.2);
     color: #ee5a52;
+    border-color: rgba(255, 107, 107, 0.3);
 }
 
 .empty-state {

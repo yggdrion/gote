@@ -41,15 +41,12 @@
             <div class="notes-grid">
                 {{range .Notes}}
                 <div class="note-card">
+                    <div class="note-actions">
+                        <button data-note-id="{{.ID}}" class="edit-btn">Edit</button>
+                        <button data-note-id="{{.ID}}" class="delete-btn">Delete</button>
+                    </div>
                     <div class="note-content markdown-content" data-raw-content="{{.Content}}">{{.Content |
                         formatContent}}</div>
-                    <div class="note-meta">
-                        <span>{{.UpdatedAt.Format "Jan 2, 2006 15:04"}}</span>
-                        <div class="note-actions">
-                            <button data-note-id="{{.ID}}" class="edit-btn">Edit</button>
-                            <button data-note-id="{{.ID}}" class="delete-btn">Delete</button>
-                        </div>
-                    </div>
                 </div>
                 {{end}}
             </div>
