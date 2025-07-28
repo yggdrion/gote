@@ -195,12 +195,18 @@ header a:hover,
     line-height: 1.7;
     font-size: 15px;
     min-height: 20px;
-    white-space: normal; /* Changed from pre-wrap to allow proper HTML rendering */
+    white-space: normal;
+    /* Changed from pre-wrap to allow proper HTML rendering */
     overflow: hidden;
 }
 
 /* GitHub Markdown styling */
-.note-content h1, .note-content h2, .note-content h3, .note-content h4, .note-content h5, .note-content h6 {
+.note-content h1,
+.note-content h2,
+.note-content h3,
+.note-content h4,
+.note-content h5,
+.note-content h6 {
     margin: 16px 0 10px 0;
     font-weight: 600;
     line-height: 1.25;
@@ -223,12 +229,15 @@ header a:hover,
     font-size: 1.15em;
 }
 
-.note-content h4, .note-content h5, .note-content h6 {
+.note-content h4,
+.note-content h5,
+.note-content h6 {
     font-size: 1em;
 }
 
 /* Lists */
-.note-content ul, .note-content ol {
+.note-content ul,
+.note-content ol {
     margin: 10px 0;
     padding-left: 20px;
 }
@@ -248,7 +257,8 @@ header a:hover,
 /* Task lists */
 .note-content input[type="checkbox"] {
     margin-right: 8px;
-    pointer-events: none; /* Make checkboxes read-only in view mode */
+    pointer-events: none;
+    /* Make checkboxes read-only in view mode */
 }
 
 /* Links */
@@ -285,7 +295,8 @@ header a:hover,
     overflow: hidden;
 }
 
-.note-content th, .note-content td {
+.note-content th,
+.note-content td {
     padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid #d0d7de;

@@ -11,7 +11,7 @@ marked.setOptions({
 
 // Configure syntax highlighting
 marked.setOptions({
-    highlight: function(code, lang) {
+    highlight: function (code, lang) {
         if (lang && hljs.getLanguage(lang)) {
             try {
                 return hljs.highlight(code, { language: lang }).value;
@@ -216,7 +216,10 @@ function setupAutoSave() {
 document.addEventListener('DOMContentLoaded', function () {
     // Render all markdown content
     renderAllMarkdownContent();
-    
+
+    // Set up event listeners for edit and delete buttons
+    setupNoteActionListeners();
+
     setupAutoSave();
 
     // Add keyboard shortcuts
@@ -250,3 +253,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+
+// Set up event listeners for note action buttons
+function setupNoteActionListeners() {
+    // Edit buttons
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const noteId = this.getAttribute('data-note-id');
+            selectNote(noteId);
+        });
+    });
+
+    // Delete buttons
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const noteId = this.getAttribute('data-note-id');
+            deleteNote(noteId);
+        });
+    });
+
+    // Clear search buttons
+    document.querySelectorAll('.clear-search-btn, .clear-search-link').forEach(button => {
+        button.addEventListener('click', function () {
+            clearSearch();
+        });
+    });
+
+    // New note links
+    document.querySelectorAll('.new-note-link').forEach(button => {
+        button.addEventListener('click', function () {
+            createNewNote();
+        });
+    });
+}
