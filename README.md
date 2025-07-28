@@ -4,12 +4,55 @@ A simple, modern note-taking application built with Go, inspired by the original
 
 ## Features
 
-- 📝 Create, edit, and delete notes
+- 📝 Create, edit, and delete notes with **GitHub-flavored markdown support**
+- 🎨 **Syntax highlighting** for code blocks in 10+ languages
 - 🔍 Search through notes by title and content
 - 💾 JSON file-based storage (no database required)
+- 🌐 **Offline-first design** - works without internet connection
 - 🎨 Clean, responsive web interface
 - ⌨️ Keyboard shortcuts (Ctrl/Cmd+S to save, Ctrl/Cmd+N for new note)
 - 📱 Mobile-friendly design
+- 🔒 Built-in authentication system
+
+## Offline Capabilities
+
+This application is designed to work completely offline:
+
+- **Local vendor libraries**: All JavaScript dependencies (marked.js, highlight.js) are stored locally in `static/vendor/`
+- **No CDN dependencies**: Zero external network requests required for functionality  
+- **Dependabot integration**: Automated dependency updates via standard npm workflow
+- **Manual updates**: Use `npm run update-vendor` to sync vendor files manually
+
+### Vendor Libraries
+
+Dependencies are managed via `package.json` and **Dependabot**:
+- **marked.js**: GitHub-flavored markdown parser
+- **highlight.js**: Syntax highlighting for code blocks
+- **CSS themes**: GitHub-style syntax highlighting theme
+
+### Updating Vendor Libraries
+
+**Automatic (recommended):**
+- Dependabot monitors `package.json` for updates weekly
+- Creates PRs automatically when new versions are available
+- GitHub Actions syncs vendor files when package.json changes
+- All updates validated before deployment
+
+**Manual:**
+```bash
+# Update package.json first, then:
+npm run update-vendor
+
+# Or use make target:
+make vendor-update
+```
+
+**Health Check:**
+```bash
+npm run check-vendor
+# or
+make vendor-check
+```
 
 ## Quick Start
 

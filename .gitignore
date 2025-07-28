@@ -139,3 +139,11 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 data/
 tmp/
+
+# Vendor library backups (keep main files)
+static/vendor/*.backup
+static/vendor/backup-*
+
+# npm
+node_modules/
+package-lock.json

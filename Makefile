@@ -1,4 +1,4 @@
-.PHONY: run build clean dev test
+.PHONY: run build clean dev test vendor-check vendor-update
 
 # Default target
 all: run
@@ -15,6 +15,16 @@ build:
 clean:
 	rm -rf bin/
 	rm -rf data/
+
+# Check vendor library health
+vendor-check:
+	@echo "🔍 Checking vendor libraries..."
+	@npm run check-vendor
+
+# Update vendor libraries
+vendor-update:
+	@echo "📦 Updating vendor libraries..."
+	@npm run update-vendor
 
 # Development mode with automatic restart (requires air)
 dev:

@@ -1,0 +1,63 @@
+name: Sync Vendor Files
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  sync-vendor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Update vendor files
+        run: npm run update-vendor
+
+      - name: Check vendor health
+        run: npm run check-vendor
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet static/vendor/; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit vendor updates
+        if: steps.changes.outputs.changes == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add static/vendor/
+          git commit -m "vendor: sync vendor files with package.json updates"
+          git push
+
+      - name: Update PR with vendor changes
+        if: steps.changes.outputs.changes == 'true' && github.event_name == 'pull_request'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add static/vendor/
+          git commit -m "vendor: sync vendor files with package.json updates" || exit 0
+          git push origin HEAD:${{ github.head_ref }} || exit 0
