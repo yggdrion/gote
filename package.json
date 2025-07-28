@@ -4,8 +4,8 @@
     "description": "Vendor dependencies for Go note-taking app",
     "private": true,
     "dependencies": {
-        "marked": "16.1.1",
-        "highlight.js": "^11.9.0"
+        "highlight.js": "11.11.0",
+        "marked": "16.1.1"
     },
     "scripts": {
         "update-vendor": "node scripts/update-vendor.js",

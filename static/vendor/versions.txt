@@ -2,7 +2,7 @@
 # This file tracks the versions of locally stored vendor libraries
 
 marked.js=16.1.1
-highlight.js=11.9.0
+highlight.js=11.11.0
 
 # Update URLs
 marked.js.url=https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.js
