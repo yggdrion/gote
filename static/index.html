@@ -7,9 +7,8 @@
     <!-- Marked.js for GitHub-flavored markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
     <!-- Highlight.js for code syntax highlighting -->
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
-    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 
 <body>
@@ -26,7 +25,7 @@
                     </div>
                     <button type="submit" class="btn btn-secondary">Search</button>
                 </form>
-                <button onclick="createNewNote()" class="btn btn-primary">New Note</button>
+                <button class="btn btn-primary new-note-btn">New Note</button>
                 <form method="POST" action="/logout" style="display: inline;">
                     <button type="submit" class="btn btn-secondary">Logout</button>
                 </form>
@@ -71,10 +70,10 @@
         <!-- Note editor panel -->
         <div id="note-editor" class="note-editor hidden">
             <div class="editor-header">
-                <button onclick="closeEditor()" class="btn btn-secondary">← Back</button>
+                <button class="btn btn-secondary close-editor-btn">← Back</button>
                 <div class="editor-actions">
-                    <button onclick="saveNote()" class="btn btn-primary">Save</button>
-                    <button onclick="closeEditor()" class="btn btn-secondary">Cancel</button>
+                    <button class="btn btn-primary save-note-btn">Save</button>
+                    <button class="btn btn-secondary close-editor-btn">Cancel</button>
                 </div>
             </div>
             <div class="editor-content">

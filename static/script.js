@@ -1,34 +1,55 @@
 let currentNoteId = null;
 let isEditing = false;
 
-// Configure marked for GitHub-flavored markdown
-marked.setOptions({
-    breaks: true,
-    gfm: true,
-    headerIds: false,
-    mangle: false
-});
-
-// Configure syntax highlighting
-marked.setOptions({
-    highlight: function (code, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-            try {
-                return hljs.highlight(code, { language: lang }).value;
-            } catch (__) {
-                // Fall back to plain text if highlighting fails
-            }
-        }
-        return hljs.highlightAuto(code).value;
+// Initialize highlight.js when available
+function initializeHighlightJS() {
+    if (typeof hljs !== 'undefined') {
+        hljs.configure({
+            ignoreUnescapedHTML: true,
+            languages: ['javascript', 'python', 'html', 'css', 'json', 'bash', 'go', 'java', 'cpp', 'sql']
+        });
     }
-});
+}
+
+// Configure marked for GitHub-flavored markdown with syntax highlighting
+function initializeMarked() {
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false,
+            highlight: function (code, lang) {
+                if (typeof hljs !== 'undefined') {
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (__) {
+                            // Fall back to auto-detect if specific language fails
+                            return hljs.highlightAuto(code).value;
+                        }
+                    }
+                    return hljs.highlightAuto(code).value;
+                }
+                return code; // Fallback if hljs is not available
+            }
+        });
+    }
+}
 
 // Function to render markdown content
 function renderMarkdown(content) {
     if (!content || content.trim() === '') {
         return '<em style="color: #999;">Empty note...</em>';
     }
-    return marked.parse(content);
+
+    if (typeof marked !== 'undefined') {
+        const html = marked.parse(content);
+        return html;
+    }
+
+    // Fallback if marked is not available - basic text with line breaks
+    return content.replace(/\n/g, '<br>');
 }
 
 // Function to render all markdown content on the page
@@ -37,6 +58,13 @@ function renderAllMarkdownContent() {
         const rawContent = element.getAttribute('data-raw-content');
         if (rawContent) {
             element.innerHTML = renderMarkdown(rawContent);
+
+            // Apply syntax highlighting to any code blocks that weren't caught by marked
+            if (typeof hljs !== 'undefined') {
+                element.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
         }
     });
 }
@@ -214,6 +242,10 @@ function setupAutoSave() {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
+    // Initialize libraries
+    initializeHighlightJS();
+    initializeMarked();
+
     // Render all markdown content
     renderAllMarkdownContent();
 
@@ -279,10 +311,24 @@ function setupNoteActionListeners() {
         });
     });
 
-    // New note links
-    document.querySelectorAll('.new-note-link').forEach(button => {
+    // New note buttons
+    document.querySelectorAll('.new-note-link, .new-note-btn').forEach(button => {
         button.addEventListener('click', function () {
             createNewNote();
+        });
+    });
+
+    // Save note buttons
+    document.querySelectorAll('.save-note-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            saveNote();
+        });
+    });
+
+    // Close editor buttons
+    document.querySelectorAll('.close-editor-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            closeEditor();
         });
     });
 }
