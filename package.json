@@ -5,7 +5,8 @@
     "private": true,
     "dependencies": {
         "highlight.js": "11.11.0",
-        "marked": "16.1.1"
+        "marked": "16.1.1",
+        "marked-highlight": "^2.2.2"
     },
     "scripts": {
         "update-vendor": "node scripts/update-vendor.js",

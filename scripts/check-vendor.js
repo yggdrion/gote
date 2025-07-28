@@ -21,6 +21,7 @@ function checkVendorHealth() {
     // Required files
     const requiredFiles = [
         'marked.min.js',
+        'marked-highlight.min.js',
         'highlight.min.js',
         'github.min.css',
         'versions.txt'
@@ -48,7 +49,7 @@ function checkVendorHealth() {
     // Validate JavaScript files
     console.log('🔍 Validating JavaScript files...');
 
-    const jsFiles = ['marked.min.js', 'highlight.min.js'];
+    const jsFiles = ['marked.min.js', 'marked-highlight.min.js', 'highlight.min.js'];
 
     for (const jsFile of jsFiles) {
         try {
@@ -65,7 +66,7 @@ function checkVendorHealth() {
     // Check file sizes
     console.log('📊 File sizes:');
 
-    const allFiles = ['marked.min.js', 'highlight.min.js', 'github.min.css'];
+    const allFiles = ['marked.min.js', 'marked-highlight.min.js', 'highlight.min.js', 'github.min.css'];
 
     for (const file of allFiles) {
         const filePath = path.join(VENDOR_DIR, file);
@@ -74,6 +75,9 @@ function checkVendorHealth() {
 
         // Sanity checks for minimum file sizes
         if (file === 'marked.min.js' && stats.size < 10000) {
+            console.warn(`⚠️  WARNING: ${file} seems unusually small (${stats.size} bytes)`);
+        }
+        if (file === 'marked-highlight.min.js' && stats.size < 1000) {
             console.warn(`⚠️  WARNING: ${file} seems unusually small (${stats.size} bytes)`);
         }
         if (file === 'highlight.min.js' && stats.size < 50000) {

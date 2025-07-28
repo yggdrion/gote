@@ -15,6 +15,7 @@ const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
 // CDN URLs for the libraries
 const CDN_URLS = {
     'marked': 'https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.js',
+    'marked-highlight': 'https://cdn.jsdelivr.net/npm/marked-highlight@{version}/lib/index.umd.js',
     'highlight.js': {
         js: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js',
         css: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css'
@@ -24,6 +25,7 @@ const CDN_URLS = {
 // File mappings
 const FILE_MAPPINGS = {
     'marked': 'marked.min.js',
+    'marked-highlight': 'marked-highlight.min.js',
     'highlight.js': {
         js: 'highlight.min.js',
         css: 'github.min.css'
@@ -117,6 +119,18 @@ async function updateVendorFiles() {
             }
         }
 
+        // Update marked-highlight
+        if (dependencies['marked-highlight']) {
+            const version = dependencies['marked-highlight'].replace(/[\^~]/, '');
+            const url = CDN_URLS['marked-highlight'].replace('{version}', version);
+            const outputPath = path.join(VENDOR_DIR, FILE_MAPPINGS['marked-highlight']);
+
+            await downloadFile(url, outputPath);
+            if (!await validateJavaScript(outputPath)) {
+                allValid = false;
+            }
+        }
+
         // Update highlight.js
         if (dependencies['highlight.js']) {
             const version = dependencies['highlight.js'].replace(/[\^~]/, '');
@@ -149,6 +163,7 @@ async function updateVendorFiles() {
         // Update versions.txt
         const versionsPath = path.join(VENDOR_DIR, 'versions.txt');
         const markedVersion = dependencies.marked?.replace(/[\^~]/, '') || 'unknown';
+        const markedHighlightVersion = dependencies['marked-highlight']?.replace(/[\^~]/, '') || 'unknown';
         const highlightVersion = dependencies['highlight.js']?.replace(/[\^~]/, '') || 'unknown';
 
         const versionsContent = [
@@ -156,10 +171,12 @@ async function updateVendorFiles() {
             '# This file tracks the versions of locally stored vendor libraries',
             '',
             `marked.js=${markedVersion}`,
+            `marked-highlight=${markedHighlightVersion}`,
             `highlight.js=${highlightVersion}`,
             '',
             '# Update URLs',
             `marked.js.url=https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.js`,
+            `marked-highlight.url=https://cdn.jsdelivr.net/npm/marked-highlight@{version}/lib/index.umd.js`,
             'highlight.js.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js',
             'highlight.js.css.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css',
             '',

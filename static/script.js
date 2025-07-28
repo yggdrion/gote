@@ -1,5 +1,6 @@
 let currentNoteId = null;
 let isEditing = false;
+let markedInstance = null;
 
 // Initialize highlight.js when available
 function initializeHighlightJS() {
@@ -11,9 +12,32 @@ function initializeHighlightJS() {
     }
 }
 
-// Configure marked for GitHub-flavored markdown with syntax highlighting
+// Configure marked with marked-highlight extension
 function initializeMarked() {
-    if (typeof marked !== 'undefined') {
+    if (typeof marked !== 'undefined' && typeof markedHighlight !== 'undefined') {
+        // Create marked instance with highlight extension
+        markedInstance = new marked.Marked(
+            markedHighlight.markedHighlight({
+                langPrefix: 'hljs language-',
+                highlight(code, lang) {
+                    if (typeof hljs !== 'undefined') {
+                        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                        return hljs.highlight(code, { language }).value;
+                    }
+                    return code; // Fallback if hljs is not available
+                }
+            })
+        );
+
+        // Configure additional options
+        markedInstance.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+    } else if (typeof marked !== 'undefined') {
+        // Fallback to legacy marked configuration if marked-highlight is not available
         marked.setOptions({
             breaks: true,
             gfm: true,
@@ -25,13 +49,12 @@ function initializeMarked() {
                         try {
                             return hljs.highlight(code, { language: lang }).value;
                         } catch (__) {
-                            // Fall back to auto-detect if specific language fails
                             return hljs.highlightAuto(code).value;
                         }
                     }
                     return hljs.highlightAuto(code).value;
                 }
-                return code; // Fallback if hljs is not available
+                return code;
             }
         });
     }
@@ -43,7 +66,10 @@ function renderMarkdown(content) {
         return '<em style="color: #999;">Empty note...</em>';
     }
 
-    if (typeof marked !== 'undefined') {
+    if (markedInstance) {
+        const html = markedInstance.parse(content);
+        return html;
+    } else if (typeof marked !== 'undefined') {
         const html = marked.parse(content);
         return html;
     }
@@ -59,12 +85,8 @@ function renderAllMarkdownContent() {
         if (rawContent) {
             element.innerHTML = renderMarkdown(rawContent);
 
-            // Apply syntax highlighting to any code blocks that weren't caught by marked
-            if (typeof hljs !== 'undefined') {
-                element.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-            }
+            // Note: With marked-highlight, syntax highlighting is applied during parsing,
+            // so we don't need to manually apply it to code blocks
         }
     });
 }
