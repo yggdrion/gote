@@ -115,6 +115,26 @@ function hello() {
 - [ ] Unchecked task"></textarea>
             </div>
         </div>
+
+        <!-- Delete confirmation modal -->
+        <div id="delete-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🗑️ Delete Note</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this note?</p>
+                    <div class="note-preview" id="delete-note-preview">
+                        <!-- Note preview will be inserted here -->
+                    </div>
+                    <p class="warning-text">⚠️ This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary cancel-delete-btn">Cancel</button>
+                    <button class="btn btn-danger confirm-delete-btn">Delete Note</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/static/script.js"></script>

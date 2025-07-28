@@ -176,11 +176,85 @@ async function saveNote() {
     }
 }
 
-// Delete a note
+// Delete a note with custom confirmation modal
 async function deleteNote(noteId) {
-    if (!confirm('Are you sure you want to delete this note?')) {
-        return;
+    // Find the note content to show in preview
+    const noteCard = document.querySelector(`[data-note-id="${noteId}"]`).closest('.note-card');
+    const noteContent = noteCard.querySelector('.note-content');
+    const rawContent = noteContent.getAttribute('data-raw-content') || noteContent.textContent;
+
+    // Show custom delete modal
+    showDeleteModal(noteId, rawContent);
+}
+
+// Show the delete confirmation modal
+function showDeleteModal(noteId, noteContent) {
+    const modal = document.getElementById('delete-modal');
+    const preview = document.getElementById('delete-note-preview');
+
+    // Set up note preview
+    if (noteContent && noteContent.trim()) {
+        // Truncate content if too long
+        let previewContent = noteContent.length > 150
+            ? noteContent.substring(0, 150) + '...'
+            : noteContent;
+
+        // Enhanced markdown rendering for preview
+        previewContent = previewContent
+            // Remove code blocks first to avoid conflicts
+            .replace(/```[\s\S]*?```/g, '[code block]')
+            // Headers
+            .replace(/^### (.*$)/gm, '<strong>$1</strong>')
+            .replace(/^## (.*$)/gm, '<strong>$1</strong>')
+            .replace(/^# (.*$)/gm, '<strong>$1</strong>')
+            // Bold and italic
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Inline code
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            // Remove markdown list markers
+            .replace(/^[\s]*[-\*\+]\s/gm, '• ')
+            .replace(/^\d+\.\s/gm, '• ')
+            // Line breaks
+            .replace(/\n/g, '<br>');
+
+        preview.innerHTML = `<div class="note-content">${previewContent}</div>`;
+    } else {
+        preview.innerHTML = '<div class="note-content"><em style="color: #9ca3af;">Empty note</em></div>';
     }
+
+    // Store the noteId for later use
+    modal.setAttribute('data-note-id', noteId);
+
+    // Show modal with animation
+    modal.classList.remove('hidden');
+
+    // Focus on cancel button for better UX (keyboard navigation)
+    setTimeout(() => {
+        const cancelBtn = modal.querySelector('.cancel-delete-btn');
+        if (cancelBtn) cancelBtn.focus();
+    }, 100);
+}
+
+// Hide the delete confirmation modal
+function hideDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    modal.classList.add('hidden');
+    modal.removeAttribute('data-note-id');
+}
+
+// Confirm and execute note deletion
+async function confirmDeleteNote() {
+    const modal = document.getElementById('delete-modal');
+    const noteId = modal.getAttribute('data-note-id');
+    const confirmBtn = modal.querySelector('.confirm-delete-btn');
+
+    if (!noteId) return;
+
+    // Show loading state
+    confirmBtn.classList.add('loading');
+    confirmBtn.textContent = 'Deleting...';
+    confirmBtn.disabled = true;
 
     try {
         const response = await fetch(`/api/notes/${noteId}`, {
@@ -192,13 +266,22 @@ async function deleteNote(noteId) {
             if (currentNoteId === noteId) {
                 closeEditor();
             }
+
+            hideDeleteModal();
             window.location.reload(); // Refresh to remove deleted note
         } else {
-            alert('Error deleting note');
+            throw new Error('Failed to delete note');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error deleting note');
+
+        // Reset button state
+        confirmBtn.classList.remove('loading');
+        confirmBtn.textContent = 'Delete Note';
+        confirmBtn.disabled = false;
+
+        // Show error message
+        alert('Error deleting note. Please try again.');
     }
 }
 
@@ -270,9 +353,23 @@ document.addEventListener('DOMContentLoaded', function () {
             createNewNote();
         }
 
-        // Escape to close editor
-        if (event.key === 'Escape' && isEditing) {
-            closeEditor();
+        // Escape to close editor or modal
+        if (event.key === 'Escape') {
+            const deleteModal = document.getElementById('delete-modal');
+            if (deleteModal && !deleteModal.classList.contains('hidden')) {
+                hideDeleteModal();
+            } else if (isEditing) {
+                closeEditor();
+            }
+        }
+
+        // Enter to confirm delete when modal is open
+        if (event.key === 'Enter') {
+            const deleteModal = document.getElementById('delete-modal');
+            if (deleteModal && !deleteModal.classList.contains('hidden')) {
+                event.preventDefault();
+                confirmDeleteNote();
+            }
         }
     });
 
@@ -331,4 +428,27 @@ function setupNoteActionListeners() {
             closeEditor();
         });
     });
+
+    // Delete modal buttons
+    document.querySelectorAll('.cancel-delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            hideDeleteModal();
+        });
+    });
+
+    document.querySelectorAll('.confirm-delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            confirmDeleteNote();
+        });
+    });
+
+    // Close modal when clicking outside
+    const deleteModal = document.getElementById('delete-modal');
+    if (deleteModal) {
+        deleteModal.addEventListener('click', function (e) {
+            if (e.target === deleteModal) {
+                hideDeleteModal();
+            }
+        });
+    }
 }
