@@ -42,7 +42,13 @@ export class NoteStore {
 
           this.notes.set(note.id, note);
         } catch (err) {
-          console.warn(`Error loading note from ${file}:`, err);
+          if (err instanceof Error && err.message.includes("authenticate")) {
+            console.warn(
+              `⚠️  Note ${file} was encrypted with a different password, skipping`
+            );
+          } else {
+            console.warn(`❌ Error loading note from ${file}:`, err);
+          }
         }
       }
     } catch (err) {
