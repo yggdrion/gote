@@ -195,8 +195,140 @@ header a:hover,
     line-height: 1.7;
     font-size: 15px;
     min-height: 20px;
-    white-space: pre-wrap;
+    white-space: normal; /* Changed from pre-wrap to allow proper HTML rendering */
     overflow: hidden;
+}
+
+/* GitHub Markdown styling */
+.note-content h1, .note-content h2, .note-content h3, .note-content h4, .note-content h5, .note-content h6 {
+    margin: 16px 0 10px 0;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #333;
+}
+
+.note-content h1 {
+    font-size: 1.5em;
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 8px;
+}
+
+.note-content h2 {
+    font-size: 1.3em;
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 6px;
+}
+
+.note-content h3 {
+    font-size: 1.15em;
+}
+
+.note-content h4, .note-content h5, .note-content h6 {
+    font-size: 1em;
+}
+
+/* Lists */
+.note-content ul, .note-content ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.note-content li {
+    margin: 4px 0;
+}
+
+.note-content ul li {
+    list-style-type: disc;
+}
+
+.note-content ol li {
+    list-style-type: decimal;
+}
+
+/* Task lists */
+.note-content input[type="checkbox"] {
+    margin-right: 8px;
+    pointer-events: none; /* Make checkboxes read-only in view mode */
+}
+
+/* Links */
+.note-content a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+.note-content a:hover {
+    text-decoration: underline;
+}
+
+/* Blockquotes */
+.note-content blockquote {
+    margin: 16px 0;
+    padding: 0 16px;
+    color: #6a737d;
+    border-left: 4px solid #dfe2e5;
+    background: #f6f8fa;
+    border-radius: 0 4px 4px 0;
+}
+
+.note-content blockquote p {
+    margin: 8px 0;
+}
+
+/* Tables */
+.note-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.note-content th, .note-content td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #d0d7de;
+}
+
+.note-content th {
+    background: #f6f8fa;
+    font-weight: 600;
+    color: #24292f;
+}
+
+.note-content tr:last-child td {
+    border-bottom: none;
+}
+
+.note-content tr:nth-child(even) {
+    background: #f6f8fa;
+}
+
+/* Horizontal rule */
+.note-content hr {
+    margin: 24px 0;
+    border: none;
+    border-top: 1px solid #d0d7de;
+}
+
+/* Strikethrough */
+.note-content del {
+    text-decoration: line-through;
+    color: #6a737d;
+}
+
+/* Paragraphs */
+.note-content p {
+    margin: 12px 0;
+}
+
+.note-content p:first-child {
+    margin-top: 0;
+}
+
+.note-content p:last-child {
+    margin-bottom: 0;
 }
 
 /* Markdown styling in content */
@@ -211,22 +343,22 @@ header a:hover,
 }
 
 .note-content code {
-    background: #f0f0f0;
-    border: 1px solid #e0e0e0;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
     padding: 2px 6px;
     border-radius: 4px;
-    font-family: 'Monaco', 'Consolas', 'SF Mono', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
     font-size: 13px;
-    color: #2d3748;
+    color: #e11d48;
     font-weight: 500;
 }
 
 .note-content pre {
-    background: #f8f8f8;
-    border: 1px solid #e2e2e2;
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
     border-radius: 8px;
-    padding: 12px 16px;
-    margin: 12px 0;
+    padding: 16px;
+    margin: 16px 0;
     overflow-x: auto;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -237,9 +369,10 @@ header a:hover,
     padding: 0;
     border-radius: 0;
     font-size: 13px;
-    color: #2d3748;
+    color: #24292f;
     display: block;
     white-space: pre;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
 }
 
 .note-meta {

@@ -4,6 +4,11 @@
 <head>
     <title>Notes</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Marked.js for GitHub-flavored markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
 </head>
 
 <body>
@@ -38,7 +43,7 @@
             <div class="notes-grid">
                 {{range .Notes}}
                 <div class="note-card">
-                    <div class="note-content">{{.Content | formatContent}}</div>
+                    <div class="note-content markdown-content" data-raw-content="{{.Content}}">{{.Content | formatContent}}</div>
                     <div class="note-meta">
                         <span>{{.UpdatedAt.Format "Jan 2, 2006 15:04"}}</span>
                         <div class="note-actions">
@@ -74,13 +79,41 @@
             <div class="editor-content">
                 <textarea id="note-content" placeholder="Write your note here...
 
-Markdown supported:
-**bold** *italic* `code`
+GitHub Markdown supported:
+**bold** *italic* `inline code`
+
+```javascript
+// Code blocks with syntax highlighting
+function hello() {
+    console.log('Hello world!');
+}
 ```
-multiline code
-```
-# Heading
-- List item"></textarea>
+
+# Heading 1
+## Heading 2
+### Heading 3
+
+- Unordered list
+- Another item
+  - Nested item
+
+1. Ordered list
+2. Second item
+
+> Blockquote
+
+[Link text](https://example.com)
+
+| Tables | Are | Supported |
+|--------|-----|-----------|
+| Cell 1 | Cell 2 | Cell 3 |
+
+~~Strikethrough~~
+
+---
+
+- [x] Task list item
+- [ ] Unchecked task"></textarea>
             </div>
         </div>
     </div>

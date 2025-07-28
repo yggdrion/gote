@@ -1,6 +1,46 @@
 let currentNoteId = null;
 let isEditing = false;
 
+// Configure marked for GitHub-flavored markdown
+marked.setOptions({
+    breaks: true,
+    gfm: true,
+    headerIds: false,
+    mangle: false
+});
+
+// Configure syntax highlighting
+marked.setOptions({
+    highlight: function(code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+            try {
+                return hljs.highlight(code, { language: lang }).value;
+            } catch (__) {
+                // Fall back to plain text if highlighting fails
+            }
+        }
+        return hljs.highlightAuto(code).value;
+    }
+});
+
+// Function to render markdown content
+function renderMarkdown(content) {
+    if (!content || content.trim() === '') {
+        return '<em style="color: #999;">Empty note...</em>';
+    }
+    return marked.parse(content);
+}
+
+// Function to render all markdown content on the page
+function renderAllMarkdownContent() {
+    document.querySelectorAll('.markdown-content').forEach(element => {
+        const rawContent = element.getAttribute('data-raw-content');
+        if (rawContent) {
+            element.innerHTML = renderMarkdown(rawContent);
+        }
+    });
+}
+
 // Create a new note
 function createNewNote() {
     currentNoteId = null;
@@ -98,7 +138,7 @@ async function saveNote() {
 
         if (response.ok) {
             closeEditor();
-            window.location.reload(); // Refresh to show updated notes
+            window.location.reload(); // Refresh to show updated notes and render markdown
         } else {
             alert('Error saving note');
         }
@@ -174,6 +214,9 @@ function setupAutoSave() {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
+    // Render all markdown content
+    renderAllMarkdownContent();
+    
     setupAutoSave();
 
     // Add keyboard shortcuts
