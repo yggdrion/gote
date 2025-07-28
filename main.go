@@ -13,8 +13,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +31,14 @@ type Session struct {
 	key       []byte
 	expiresAt time.Time
 }
+
+// Configuration management
+type Config struct {
+	NotesPath        string `json:"notesPath"`
+	PasswordHashPath string `json:"passwordHashPath"`
+}
+
+var currentConfig *Config
 
 var sessions = make(map[string]*Session)
 var sessionTimeout = 30 * time.Minute
@@ -89,8 +99,120 @@ func deriveKey(password string) []byte {
 	return hash[:]
 }
 
-// Password management functions
+// Cross-platform path helpers
+func getDefaultDataPath() string {
+	// Default to "./data" in current directory
+	return "./data"
+}
+
+func getDefaultPasswordHashPath() string {
+	// Get user's home directory
+	currentUser, err := user.Current()
+	if err != nil {
+		// Fallback to current directory if home not available
+		return filepath.Join("./data", ".password_hash")
+	}
+
+	var configDir string
+	if runtime.GOOS == "windows" {
+		// On Windows, use %APPDATA%
+		configDir = os.Getenv("APPDATA")
+		if configDir == "" {
+			configDir = currentUser.HomeDir
+		}
+	} else {
+		// On Linux/Unix, use $HOME/.config
+		configDir = os.Getenv("XDG_CONFIG_HOME")
+		if configDir == "" {
+			configDir = filepath.Join(currentUser.HomeDir, ".config")
+		}
+	}
+
+	// Create the config directory if it doesn't exist
+	configPath := filepath.Join(configDir, "gote")
+	if err := os.MkdirAll(configPath, 0755); err != nil {
+		// If we can't create the config directory, fallback to data directory
+		return filepath.Join("./data", ".password_hash")
+	}
+
+	return filepath.Join(configPath, "gote_password_hash")
+}
+
+func getConfigFilePath() string {
+	// Get user's home directory for config file
+	currentUser, err := user.Current()
+	if err != nil {
+		// Fallback to current directory
+		return "./config.json"
+	}
+
+	var configDir string
+	if runtime.GOOS == "windows" {
+		configDir = os.Getenv("APPDATA")
+		if configDir == "" {
+			configDir = currentUser.HomeDir
+		}
+	} else {
+		configDir = os.Getenv("XDG_CONFIG_HOME")
+		if configDir == "" {
+			configDir = filepath.Join(currentUser.HomeDir, ".config")
+		}
+	}
+
+	configPath := filepath.Join(configDir, "gote")
+	if err := os.MkdirAll(configPath, 0755); err != nil {
+		return "./config.json"
+	}
+
+	return filepath.Join(configPath, "config.json")
+}
+
+// Configuration functions
+func loadConfig() *Config {
+	config := &Config{
+		NotesPath:        getDefaultDataPath(),
+		PasswordHashPath: getDefaultPasswordHashPath(),
+	}
+
+	configFile := getConfigFilePath()
+	if data, err := os.ReadFile(configFile); err == nil {
+		json.Unmarshal(data, config)
+	}
+
+	// Ensure the data directory exists
+	if err := os.MkdirAll(config.NotesPath, 0755); err != nil {
+		log.Printf("Warning: Could not create data directory %s: %v", config.NotesPath, err)
+	}
+
+	// Ensure the password hash directory exists
+	passwordDir := filepath.Dir(config.PasswordHashPath)
+	if err := os.MkdirAll(passwordDir, 0755); err != nil {
+		log.Printf("Warning: Could not create password hash directory %s: %v", passwordDir, err)
+	}
+
+	return config
+}
+
+func saveConfig(config *Config) error {
+	configFile := getConfigFilePath()
+
+	// Ensure the config directory exists
+	configDir := filepath.Dir(configFile)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %v", err)
+	}
+
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(configFile, data, 0644)
+}
+
 func getPasswordHashFile() string {
+	if currentConfig != nil {
+		return currentConfig.PasswordHashPath
+	}
 	return filepath.Join("./data", ".password_hash")
 }
 
@@ -104,9 +226,10 @@ func storePasswordHash(password string) error {
 	verificationHash := sha256.Sum256([]byte(password + "verification"))
 	hashFile := getPasswordHashFile()
 
-	// Ensure data directory exists
-	if err := os.MkdirAll("./data", 0755); err != nil {
-		return err
+	// Ensure password hash directory exists
+	hashDir := filepath.Dir(hashFile)
+	if err := os.MkdirAll(hashDir, 0755); err != nil {
+		return fmt.Errorf("failed to create password hash directory: %v", err)
 	}
 
 	return os.WriteFile(hashFile, verificationHash[:], 0600)
@@ -477,7 +600,15 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	store = NewNoteStore("./data")
+	currentConfig = loadConfig()
+
+	// Log configuration paths for user information
+	log.Printf("Configuration loaded:")
+	log.Printf("  Notes directory: %s", currentConfig.NotesPath)
+	log.Printf("  Password hash file: %s", currentConfig.PasswordHashPath)
+	log.Printf("  Config file: %s", getConfigFilePath())
+
+	store = NewNoteStore(currentConfig.NotesPath)
 
 	r := chi.NewRouter()
 
@@ -514,6 +645,8 @@ func main() {
 		r.Put("/notes/{id}", apiUpdateNoteHandler)
 		r.Delete("/notes/{id}", apiDeleteNoteHandler)
 		r.Get("/search", apiSearchHandler)
+		r.Get("/settings", apiGetSettingsHandler)
+		r.Post("/settings", apiSettingsHandler)
 	})
 
 	fmt.Println("Server starting on :8080")
@@ -715,4 +848,68 @@ func apiSearchHandler(w http.ResponseWriter, r *http.Request) {
 	notes := store.SearchNotes(query)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(notes)
+}
+
+func apiGetSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	session := isAuthenticated(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(currentConfig)
+}
+
+func apiSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	session := isAuthenticated(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req Config
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Validate and set default paths if empty
+	if req.NotesPath == "" {
+		req.NotesPath = getDefaultDataPath()
+	}
+	if req.PasswordHashPath == "" {
+		req.PasswordHashPath = getDefaultPasswordHashPath()
+	}
+
+	// Ensure directories exist before saving config
+	if err := os.MkdirAll(req.NotesPath, 0755); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create notes directory: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	passwordDir := filepath.Dir(req.PasswordHashPath)
+	if err := os.MkdirAll(passwordDir, 0755); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create password hash directory: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Update global config
+	currentConfig.NotesPath = req.NotesPath
+	currentConfig.PasswordHashPath = req.PasswordHashPath
+
+	// Save config to file
+	if err := saveConfig(currentConfig); err != nil {
+		http.Error(w, "Failed to save configuration", http.StatusInternalServerError)
+		return
+	}
+
+	// Update note store with new path
+	store = NewNoteStore(currentConfig.NotesPath)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Settings saved successfully",
+	})
 }

@@ -147,3 +147,4 @@ static/vendor/backup-*
 # npm
 node_modules/
 package-lock.json
+bin/
