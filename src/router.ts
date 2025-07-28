@@ -9,7 +9,7 @@ import {
   destroySession,
 } from "./auth";
 import { deriveKey } from "./crypto";
-import { store, currentConfig } from "./index";
+import { store, currentConfig } from "./globals";
 import { renderTemplate } from "./templates";
 import { saveConfig } from "./config";
 import {
@@ -75,9 +75,12 @@ export async function router(request: Request): Promise<Response> {
   const pathname = url.pathname;
   const method = request.method;
 
+  console.log(`📝 ${method} ${pathname}`);
+
   // Serve static files
   const staticResponse = await serveStatic(pathname);
   if (staticResponse) {
+    console.log(`📁 Serving static file: ${pathname}`);
     return staticResponse;
   }
 

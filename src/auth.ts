@@ -3,7 +3,7 @@ import { existsSync } from "fs";
 import { dirname } from "path";
 import { mkdirSync } from "fs";
 import { type Session } from "./types";
-import { currentConfig } from "./index";
+import { currentConfig } from "./globals";
 
 // Session management
 const sessions = new Map<string, Session>();
