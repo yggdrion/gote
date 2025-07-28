@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Notes</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-actions">
+                <form class="search-form" method="GET">
+                    <div class="search-input-container">
+                        <input type="text" name="q" placeholder="Search your notes..." value="{{.Query}}" autofocus
+                            id="search-input">
+                        {{if .Query}}
+                        <button type="button" onclick="clearSearch()" class="clear-search-btn"
+                            title="Clear search">×</button>
+                        {{end}}
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Search</button>
+                </form>
+                <button onclick="createNewNote()" class="btn btn-primary">New Note</button>
+                <form method="POST" action="/logout" style="display: inline;">
+                    <button type="submit" class="btn btn-secondary">Logout</button>
+                </form>
+            </div>
+        </header>
+
+        <main>
+            {{if .Query}}
+            <div class="search-results-header">
+                <p>Search results for "<strong>{{.Query}}</strong>" ({{len .Notes}} found)</p>
+            </div>
+            {{end}}
+            {{if .Notes}}
+            <div class="notes-grid">
+                {{range .Notes}}
+                <div class="note-card">
+                    <div class="note-content">{{.Content | formatContent}}</div>
+                    <div class="note-meta">
+                        <span>{{.UpdatedAt.Format "Jan 2, 2006 15:04"}}</span>
+                        <div class="note-actions">
+                            <button onclick="selectNote({{.ID}})" class="edit-btn">Edit</button>
+                            <button onclick="deleteNote({{.ID}})" class="delete-btn">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="empty-state">
+                {{if .Query}}
+                <p>No notes found for "{{.Query}}". <button onclick="clearSearch()" class="link-button">Show all
+                        notes</button></p>
+                {{else}}
+                <p>No notes found. <button onclick="createNewNote()" class="link-button">Create your first note</button>
+                </p>
+                {{end}}
+            </div>
+            {{end}}
+        </main>
+
+        <!-- Note editor panel -->
+        <div id="note-editor" class="note-editor hidden">
+            <div class="editor-header">
+                <button onclick="closeEditor()" class="btn btn-secondary">← Back</button>
+                <div class="editor-actions">
+                    <button onclick="saveNote()" class="btn btn-primary">Save</button>
+                    <button onclick="closeEditor()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+            <div class="editor-content">
+                <textarea id="note-content" placeholder="Write your note here...
+
+Markdown supported:
+**bold** *italic* `code`
+```
+multiline code
+```
+# Heading
+- List item"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+
+</html>
