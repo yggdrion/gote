@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Favicon Generator</title>
+  </head>
+  <body>
+    <canvas
+      id="canvas"
+      width="32"
+      height="32"
+      style="border: 1px solid #ccc"
+    ></canvas>
+    <br /><br />
+    <button onclick="generateFavicon()">Generate Favicon</button>
+    <br /><br />
+    <a id="download" style="display: none">Download favicon.ico</a>
+
+    <script>
+      function generateFavicon() {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Clear canvas
+        ctx.clearRect(0, 0, 32, 32);
+
+        // Draw blue rounded rectangle background
+        ctx.fillStyle = "#4A90E2";
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 32, 32, 4);
+        ctx.fill();
+
+        // Draw white lines representing text/notes
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(6, 8, 20, 2); // First line
+        ctx.fillRect(6, 12, 16, 2); // Second line
+        ctx.fillRect(6, 16, 18, 2); // Third line
+        ctx.fillRect(6, 20, 14, 2); // Fourth line
+
+        // Convert to ICO format and create download link
+        canvas.toBlob(function (blob) {
+          const url = URL.createObjectURL(blob);
+          const download = document.getElementById("download");
+          download.href = url;
+          download.download = "favicon.ico";
+          download.style.display = "block";
+          download.textContent = "Download favicon.ico";
+        }, "image/x-icon");
+      }
+
+      // Auto-generate when page loads
+      window.onload = generateFavicon;
+    </script>
+  </body>
+</html>
