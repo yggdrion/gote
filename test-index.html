@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
     <title>Notes</title>
     <link rel="stylesheet" href="/static/style.css" />
     <!-- Local vendor libraries for offline support -->
@@ -25,19 +24,11 @@
                   type="text"
                   name="q"
                   placeholder="Search your notes..."
-                  value="{{.Query}}"
+                  value=""
                   autofocus
                   id="search-input"
                 />
-                {{if .Query}}
-                <button
-                  type="button"
-                  class="clear-search-btn"
-                  title="Clear search"
-                >
-                  ×
-                </button>
-                {{end}}
+                
               </div>
               <button type="submit" class="btn btn-secondary">Search</button>
             </form>
@@ -52,44 +43,43 @@
         {{if .Query}}
         <div class="search-results-header">
           <p>
-            Search results for "<strong>{{.Query}}</strong>" ({{len .Notes}}
+            Search results for "<strong></strong>" ({{len .Notes}}
             found)
           </p>
         </div>
-        {{end}} {{if .Notes}}
+        {{end}} 
         <div class="notes-grid">
-          {{range .Notes}}
+          
           <div class="note-card">
             <div class="note-actions">
-              <button data-note-id="{{.ID}}" class="edit-btn">Edit</button>
-              <button data-note-id="{{.ID}}" class="delete-btn">Delete</button>
+              <button data-note-id="test1" class="edit-btn">Edit</button>
+              <button data-note-id="test1" class="delete-btn">Delete</button>
             </div>
             <div
               class="note-content markdown-content"
-              data-raw-content="{{.Content}}"
+              data-raw-content="This is a **test note** with `code`"
             >
-              {{.Content | formatContent}}
+              This is a <strong>test note</strong> with <code>code</code>
             </div>
           </div>
-          {{end}}
+          
+          <div class="note-card">
+            <div class="note-actions">
+              <button data-note-id="test2" class="edit-btn">Edit</button>
+              <button data-note-id="test2" class="delete-btn">Delete</button>
+            </div>
+            <div
+              class="note-content markdown-content"
+              data-raw-content="Another note
+
+With multiple lines"
+            >
+              Another note<br><br>With multiple lines
+            </div>
+          </div>
+          
         </div>
-        {{else}}
-        <div class="empty-state">
-          {{if .Query}}
-          <p>
-            No notes found for "{{.Query}}".
-            <button class="link-button clear-search-link">
-              Show all notes
-            </button>
-          </p>
-          {{else}}
-          <p>
-            No notes found.
-            <button class="link-button new-note-link">
-              Create your first note
-            </button>
-          </p>
-          {{end}}
+        
         </div>
         {{end}}
       </main>

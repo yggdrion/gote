@@ -1,18 +1,25 @@
 {
-    "name": "gote-vendor",
+    "name": "gote",
     "version": "1.0.0",
-    "description": "Vendor dependencies for Go note-taking app",
+    "description": "Go note-taking app ported to Bun/TypeScript",
     "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "bun run --hot src/index.ts",
+        "build": "bun build src/index.ts --outdir dist --target bun",
+        "start": "bun run dist/index.js",
+        "update-vendor": "node scripts/update-vendor.js",
+        "check-vendor": "node scripts/check-vendor.js",
+        "migration-check": "bun run scripts/migration-check.ts"
+    },
     "dependencies": {
         "highlight.js": "11.11.0",
         "marked": "16.1.1",
         "marked-highlight": "^2.2.2"
     },
-    "scripts": {
-        "update-vendor": "node scripts/update-vendor.js",
-        "check-vendor": "node scripts/check-vendor.js"
-    },
     "devDependencies": {
+        "@types/bun": "latest",
+        "@types/node": "^24.1.0",
         "semver": "^7.0.0"
     }
 }
