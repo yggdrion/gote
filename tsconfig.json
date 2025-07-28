@@ -18,8 +18,7 @@
             "ES2022",
             "DOM"
         ],
-        "declaration": true,
-        "outDir": "./dist"
+        "noEmit": true
     },
     "include": [
         "src/**/*"
