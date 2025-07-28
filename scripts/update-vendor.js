@@ -14,7 +14,12 @@ const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
 
 // CDN URLs for the libraries
 const CDN_URLS = {
-    'marked': 'https://cdn.jsdelivr.net/npm/marked@{version}/marked.min.js',
+    'marked': {
+        // For versions >= 16.0.0, use the UMD build
+        modern: 'https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.js',
+        // For versions < 16.0.0, use the minified build
+        legacy: 'https://cdn.jsdelivr.net/npm/marked@{version}/marked.min.js'
+    },
     'highlight.js': {
         js: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js',
         css: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css'
@@ -54,6 +59,20 @@ async function downloadFile(url, outputPath) {
     });
 }
 
+function getMarkedUrl(version) {
+    // Parse the version to compare
+    const versionParts = version.split('.').map(Number);
+    const majorVersion = versionParts[0];
+
+    // Use modern UMD build for versions 16.0.0 and above
+    if (majorVersion >= 16) {
+        return CDN_URLS.marked.modern.replace('{version}', version);
+    }
+
+    // Use legacy minified build for versions below 16.0.0
+    return CDN_URLS.marked.legacy.replace('{version}', version);
+}
+
 async function validateJavaScript(filePath) {
     try {
         // Use Node.js to validate JavaScript syntax
@@ -75,6 +94,20 @@ async function updateVendorFiles() {
 
         console.log('🔄 Updating vendor files from package.json...');
         console.log(`📦 Dependencies:`, dependencies);
+        console.log(`📁 Working directory: ${process.cwd()}`);
+        console.log(`📄 Package.json path: ${PACKAGE_JSON}`);
+
+        // Debug: Check if node_modules version matches package.json
+        if (dependencies.marked) {
+            const markedPkgPath = path.join(__dirname, '..', 'node_modules', 'marked', 'package.json');
+            if (fs.existsSync(markedPkgPath)) {
+                const markedPkg = JSON.parse(fs.readFileSync(markedPkgPath, 'utf8'));
+                console.log(`🔍 node_modules marked version: ${markedPkg.version}`);
+                console.log(`🔍 package.json marked spec: ${dependencies.marked}`);
+            } else {
+                console.log('⚠️  marked not found in node_modules');
+            }
+        }
 
         // Ensure vendor directory exists
         if (!fs.existsSync(VENDOR_DIR)) {
@@ -96,7 +129,7 @@ async function updateVendorFiles() {
         // Update marked.js
         if (dependencies.marked) {
             const version = dependencies.marked.replace(/[\^~]/, '');
-            const url = CDN_URLS.marked.replace('{version}', version);
+            const url = getMarkedUrl(version);
             const outputPath = path.join(VENDOR_DIR, FILE_MAPPINGS.marked);
 
             await downloadFile(url, outputPath);
@@ -136,15 +169,18 @@ async function updateVendorFiles() {
 
         // Update versions.txt
         const versionsPath = path.join(VENDOR_DIR, 'versions.txt');
+        const markedVersion = dependencies.marked?.replace(/[\^~]/, '') || 'unknown';
+        const highlightVersion = dependencies['highlight.js']?.replace(/[\^~]/, '') || 'unknown';
+
         const versionsContent = [
             '# Vendor Library Versions',
             '# This file tracks the versions of locally stored vendor libraries',
             '',
-            `marked.js=${dependencies.marked?.replace(/[\^~]/, '') || 'unknown'}`,
-            `highlight.js=${dependencies['highlight.js']?.replace(/[\^~]/, '') || 'unknown'}`,
+            `marked.js=${markedVersion}`,
+            `highlight.js=${highlightVersion}`,
             '',
             '# Update URLs',
-            'marked.js.url=https://cdn.jsdelivr.net/npm/marked@{version}/marked.min.js',
+            `marked.js.url=${getMarkedUrl(markedVersion)}`,
             'highlight.js.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js',
             'highlight.js.css.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css',
             '',

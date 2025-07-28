@@ -5,7 +5,7 @@ marked.js=9.1.6
 highlight.js=11.9.0
 
 # Update URLs
-marked.js.url=https://cdn.jsdelivr.net/npm/marked@{version}/marked.min.js
+marked.js.url=https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js
 highlight.js.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js
 highlight.js.css.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css
 
