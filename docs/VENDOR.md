@@ -72,7 +72,7 @@ last_checked=2025-07-28
 
 ## Management Scripts
 
-### Node.js Scripts (Recommended)
+### Node.js Scripts
 
 #### `npm run check-vendor` 
 Health check script that:
@@ -102,10 +102,6 @@ npm run update-vendor
 # or  
 make vendor-update
 ```
-
-### Legacy Bash Scripts (Deprecated)
-
-The old bash scripts (`scripts/check-vendor.sh`, `scripts/update-vendor.sh`) are still available but deprecated in favor of the npm-based approach.
 
 ## GitHub Actions Automation
 
@@ -173,9 +169,9 @@ To add a new vendor library:
    ```
 
 4. **Update scripts**:
-   - Add validation to `check-vendor.sh`
-   - Add update logic to `update-vendor.sh`
-   - Add GitHub API check to workflow
+   - Add validation to `scripts/check-vendor.js`
+   - Add update logic to `scripts/update-vendor.js`
+   - Add GitHub API check to Dependabot configuration
 
 ## Troubleshooting
 
