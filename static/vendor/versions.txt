@@ -1,11 +1,11 @@
 # Vendor Library Versions
 # This file tracks the versions of locally stored vendor libraries
 
-marked.js=9.1.6
+marked.js=16.1.1
 highlight.js=11.9.0
 
 # Update URLs
-marked.js.url=https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js
+marked.js.url=https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.js
 highlight.js.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js
 highlight.js.css.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css
 
