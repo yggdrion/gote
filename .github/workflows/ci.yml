@@ -1,0 +1,81 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, bun-refactor]
+  pull_request:
+    branches: [main, bun-refactor]
+
+jobs:
+  test:
+    name: Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Type check
+        run: bun run tsc --noEmit
+
+      - name: Check vendor files
+        run: bun run check-vendor
+
+      - name: Build application
+        run: bun run build
+
+      - name: Test crypto compatibility
+        run: bun run scripts/test-app.ts
+
+      - name: Test template rendering
+        run: bun run scripts/test-template-debug.ts
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run security audit
+        run: bun audit
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check TypeScript types
+        run: bun run tsc --noEmit
+
+      - name: Check for outdated dependencies
+        run: bun outdated
+        continue-on-error: true

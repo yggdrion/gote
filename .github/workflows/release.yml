@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build application
+        run: bun run build
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp -r src static package.json tsconfig.json bun.lock Makefile README.md LICENSE release/
+          tar -czf gote-${{ github.ref_name }}.tar.gz -C release .
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Gote ${{ github.ref_name }}
+          body: |
+            ## Changes in ${{ github.ref_name }}
+
+            ### Features
+            - TypeScript/Bun implementation
+            - AES-256-GCM encryption
+            - Secure note storage
+            - Modern web interface
+
+            ### Installation
+            1. Download and extract the archive
+            2. Install Bun runtime
+            3. Run `bun install`
+            4. Start with `bun run start`
+
+            ### Security
+            All notes are encrypted with AES-256-GCM using your master password.
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./gote-${{ github.ref_name }}.tar.gz
+          asset_name: gote-${{ github.ref_name }}.tar.gz
+          asset_content_type: application/gzip

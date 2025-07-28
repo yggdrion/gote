@@ -1,17 +1,17 @@
 # Vendor Library Management
 
-This document explains how the offline vendor library system works in this Go note-taking application using **Dependabot** for automated dependency management.
+This document explains how the offline vendor library system works in this TypeScript/Bun note-taking application using **Dependabot** for automated dependency management.
 
 ## Overview
 
-The application uses local copies of JavaScript libraries instead of CDN links to ensure it works completely offline. All vendor libraries are stored in `static/vendor/` and managed through **Dependabot**, npm scripts, and GitHub Actions.
+The application uses local copies of JavaScript libraries instead of CDN links to ensure it works completely offline. All vendor libraries are stored in `static/vendor/` and managed through **Dependabot**, Bun scripts, and GitHub Actions.
 
 ## How It Works
 
-1. **Dependencies defined in `package.json`** - Standard npm package management
-2. **Dependabot monitors for updates** - Automatically creates PRs for new versions  
+1. **Dependencies defined in `package.json`** - Standard Bun/npm package management
+2. **Dependabot monitors for updates** - Automatically creates PRs for new versions
 3. **GitHub Actions syncs vendor files** - Downloads updated files when package.json changes
-4. **Local scripts for manual management** - Node.js scripts for health checks and updates
+4. **Local scripts for manual management** - Bun scripts for health checks and updates
 
 ## Directory Structure
 
@@ -59,11 +59,13 @@ static/vendor/
 ## Version Tracking
 
 The `versions.txt` file tracks:
+
 - Current versions of all libraries
 - Download URLs with version placeholders
 - Last update check date
 
 Example:
+
 ```
 marked.js=9.1.6
 highlight.js=11.9.0
@@ -72,34 +74,40 @@ last_checked=2025-07-28
 
 ## Management Scripts
 
-### Node.js Scripts
+### Bun Scripts
 
-#### `npm run check-vendor` 
+#### `bun run check-vendor`
+
 Health check script that:
+
 - ✅ Verifies all required files exist
 - ✅ Validates JavaScript syntax
 - ✅ Checks file sizes for sanity
 - 📋 Shows current versions
 
 Usage:
+
 ```bash
-npm run check-vendor
+bun run check-vendor
 # or
 make vendor-check
 ```
 
-#### `npm run update-vendor`
+#### `bun run update-vendor`
+
 Manual update script that:
-- 🔍 Reads versions from package.json  
+
+- 🔍 Reads versions from package.json
 - ⬇️ Downloads libraries from CDN
 - 🧪 Validates downloaded files
 - 📝 Updates version tracking
 - 🔄 Creates backups during update
 
 Usage:
+
 ```bash
-npm run update-vendor
-# or  
+bun run update-vendor
+# or
 make vendor-update
 ```
 
@@ -107,17 +115,20 @@ make vendor-update
 
 ### Automatic Vendor File Sync (`.github/workflows/sync-vendor.yml`)
 
-**Triggers**: 
-- When `package.json` or `package-lock.json` changes
+**Triggers**:
+
+- When `package.json` or `bun.lock` changes
 - On Dependabot PRs and after merge to main
 
 **Process**:
-1. � Install npm dependencies 
-2. 🔄 Run `npm run update-vendor` to sync files
-3. 🧪 Validate with `npm run check-vendor`
+
+1. 🚀 Install Bun dependencies
+2. 🔄 Run `bun run update-vendor` to sync files
+3. 🧪 Validate with `bun run check-vendor`
 4. 📝 Commit vendor file changes automatically
 
 **Features**:
+
 - ✅ Automatic sync when dependencies change
 - 🤖 Works seamlessly with Dependabot PRs
 - 🧪 Validates all downloads before committing
@@ -128,6 +139,7 @@ make vendor-update
 **Weekly Schedule**: Dependabot creates PRs every Monday at 9 AM UTC
 
 **Workflow**:
+
 1. 🤖 Dependabot detects new versions
 2. � Creates PR updating `package.json`
 3. � GitHub Actions automatically syncs vendor files
@@ -137,11 +149,13 @@ make vendor-update
 ## Supported Libraries
 
 ### marked.js
+
 - **Purpose**: GitHub-flavored markdown parsing
 - **Source**: https://github.com/markedjs/marked
 - **CDN**: https://cdn.jsdelivr.net/npm/marked@{version}/marked.min.js
 
-### highlight.js  
+### highlight.js
+
 - **Purpose**: Syntax highlighting for code blocks
 - **Source**: https://github.com/highlightjs/highlight.js
 - **CDN**: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/highlight.min.js
@@ -152,18 +166,21 @@ make vendor-update
 To add a new vendor library:
 
 1. **Download the library**:
+
    ```bash
    cd static/vendor
    curl -o newlib.min.js "https://cdn.example.com/newlib@1.0.0/newlib.min.js"
    ```
 
 2. **Update versions.txt**:
+
    ```
    newlib.js=1.0.0
    newlib.js.url=https://cdn.example.com/newlib@{version}/newlib.min.js
    ```
 
 3. **Update HTML**:
+
    ```html
    <script src="/static/vendor/newlib.min.js"></script>
    ```
@@ -176,17 +193,20 @@ To add a new vendor library:
 ## Troubleshooting
 
 ### Library not loading
+
 1. Check browser network tab for 404 errors
 2. Run `make vendor-check` to validate files
 3. Verify HTML references correct paths
 
 ### Update script fails
+
 1. Check internet connection
 2. Verify GitHub APIs are accessible
 3. Check file permissions on scripts
 4. Ensure Node.js is available for validation
 
 ### GitHub Actions fails
+
 1. Check workflow logs in GitHub Actions tab
 2. Verify repository has proper permissions
 3. Check API rate limits

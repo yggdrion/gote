@@ -8,9 +8,12 @@
         "dev": "bun run --hot src/index.ts",
         "build": "bun build src/index.ts --outdir dist --target bun",
         "start": "bun run dist/index.js",
-        "update-vendor": "node scripts/update-vendor.js",
-        "check-vendor": "node scripts/check-vendor.js",
-        "migration-check": "bun run scripts/migration-check.ts"
+        "update-vendor": "bun run scripts/update-vendor.js",
+        "check-vendor": "bun run scripts/check-vendor.js",
+        "migration-check": "bun run scripts/migration-check.ts",
+        "test": "bun run scripts/test-app.ts && bun run scripts/test-template-debug.ts",
+        "test:crypto": "bun run scripts/test-app.ts",
+        "test:templates": "bun run scripts/test-template-debug.ts"
     },
     "dependencies": {
         "highlight.js": "11.11.0",

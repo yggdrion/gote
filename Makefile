@@ -1,64 +1,56 @@
-.PHONY: run build clean dev test vendor-check vendor-update
+# Makefile for Gote TypeScript/Bun version
+
+.PHONY: dev build start install clean test vendor-update vendor-check
 
 # Default target
-all: run
+all: install build
 
-# Run the application in development mode
-run:
-	go run main.go
+# Install dependencies
+install:
+	bun install
 
-# Build the application
+# Development server with hot reload
+dev:
+	bun run dev
+
+# Build for production
 build:
-	go build -o bin/meemo main.go
+	bun run build
+
+# Start production server
+start:
+	bun run start
 
 # Clean build artifacts
 clean:
-	rm -rf bin/
-	rm -rf data/
+	rm -rf dist/
+	rm -rf node_modules/
 
-# Check vendor library health
-vendor-check:
-	@echo "🔍 Checking vendor libraries..."
-	@npm run check-vendor
-
-# Update vendor libraries
+# Update vendor dependencies
 vendor-update:
-	@echo "📦 Updating vendor libraries..."
-	@npm run update-vendor
+	bun run update-vendor
 
-# Development mode with automatic restart (requires air)
-dev:
-	@if command -v air > /dev/null; then \
-		air; \
-	else \
-		echo "Air not installed. Install with: go install github.com/cosmtrek/air@latest"; \
-		echo "Falling back to regular run mode..."; \
-		go run main.go; \
-	fi
+# Check vendor dependencies
+vendor-check:
+	bun run check-vendor
 
-# Run tests (when we add them)
-test:
-	go test ./...
+# Run type checking
+typecheck:
+	bun run --bun tsc --noEmit
 
-# Install dependencies
-deps:
-	go mod download
-	go mod tidy
+# Format code (if prettier is installed)
+format:
+	bun run --bun prettier --write src/
 
-# Create a sample note for testing
-sample:
-	@mkdir -p data
-	@echo '{"id":1,"title":"Welcome to Meemo","content":"This is your first note!\n\nYou can:\n- Create new notes\n- Search through your notes\n- Edit and delete notes\n- Use keyboard shortcuts (Ctrl+S to save, Ctrl+N for new note)\n\nEnjoy taking notes!","created_at":"2024-01-15T10:00:00Z","updated_at":"2024-01-15T10:00:00Z"}' > data/1.json
-	@echo "Sample note created in data/1.json"
-
-# Show help
+# Help
 help:
 	@echo "Available targets:"
-	@echo "  run     - Run the application"
-	@echo "  build   - Build the application binary"
-	@echo "  clean   - Clean build artifacts and data"
-	@echo "  dev     - Run in development mode (with air if available)"
-	@echo "  test    - Run tests"
-	@echo "  deps    - Install/update dependencies"
-	@echo "  sample  - Create a sample note for testing"
-	@echo "  help    - Show this help message"
+	@echo "  install      - Install dependencies"
+	@echo "  dev          - Start development server"
+	@echo "  build        - Build for production"
+	@echo "  start        - Start production server"
+	@echo "  clean        - Clean build artifacts"
+	@echo "  vendor-update - Update vendor dependencies"
+	@echo "  vendor-check  - Check vendor dependencies"
+	@echo "  typecheck    - Run TypeScript type checking"
+	@echo "  format       - Format code with Prettier"
