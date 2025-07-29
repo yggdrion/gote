@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <title>Notes</title>
     <link rel="stylesheet" href="/static/style.css" />
     <!-- Local vendor libraries for offline support -->
@@ -8,104 +9,90 @@
     <script src="/static/vendor/marked-highlight.min.js"></script>
     <link rel="stylesheet" href="/static/vendor/github.min.css" />
     <script src="/static/vendor/highlight.min.js"></script>
-  </head>
+</head>
 
-  <body>
+<body>
     <div class="container">
-      <header>
-        <div class="header-actions">
-          <div class="header-left">
-            <button class="btn btn-primary new-note-btn">New Note</button>
-          </div>
-          <div class="header-center">
-            <form class="search-form" method="GET">
-              <div class="search-input-container">
-                <input
-                  type="text"
-                  name="q"
-                  placeholder="Search your notes..."
-                  value="{{.Query}}"
-                  autofocus
-                  id="search-input"
-                />
-                {{if .Query}}
-                <button
-                  type="button"
-                  class="clear-search-btn"
-                  title="Clear search"
-                >
-                  ×
-                </button>
+        <header>
+            <div class="header-actions">
+                <div class="header-left">
+                    <button class="btn btn-primary new-note-btn">New Note</button>
+                </div>
+                <div class="header-center">
+                    <form class="search-form" method="GET">
+                        <div class="search-input-container">
+                            <input type="text" name="q" placeholder="Search your notes..." value="{{.Query}}" autofocus
+                                id="search-input" />
+                            {{if .Query}}
+                            <button type="button" class="clear-search-btn" title="Clear search">
+                                ×
+                            </button>
+                            {{end}}
+                        </div>
+                        <button type="submit" class="btn btn-secondary">Search</button>
+                    </form>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-secondary" onclick="syncFromDisk()" title="Sync from disk">🔄 Sync</button>
+                    <button class="btn btn-secondary settings-btn">⚙️ Settings</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            {{if .Query}}
+            <div class="search-results-header">
+                <p>
+                    Search results for "<strong>{{.Query}}</strong>" ({{len .Notes}}
+                    found)
+                </p>
+            </div>
+            {{end}} {{if .Notes}}
+            <div class="notes-grid">
+                {{range .Notes}}
+                <div class="note-card">
+                    <div class="note-actions">
+                        <button data-note-id="{{.ID}}" class="edit-btn">Edit</button>
+                        <button data-note-id="{{.ID}}" class="delete-btn">Delete</button>
+                    </div>
+                    <div class="note-content markdown-content" data-raw-content="{{.Content}}">
+                        {{.Content | formatContent}}
+                    </div>
+                </div>
                 {{end}}
-              </div>
-              <button type="submit" class="btn btn-secondary">Search</button>
-            </form>
-          </div>
-          <div class="header-right">
-            <button class="btn btn-secondary settings-btn">⚙️ Settings</button>
-          </div>
-        </div>
-      </header>
-
-      <main>
-        {{if .Query}}
-        <div class="search-results-header">
-          <p>
-            Search results for "<strong>{{.Query}}</strong>" ({{len .Notes}}
-            found)
-          </p>
-        </div>
-        {{end}} {{if .Notes}}
-        <div class="notes-grid">
-          {{range .Notes}}
-          <div class="note-card">
-            <div class="note-actions">
-              <button data-note-id="{{.ID}}" class="edit-btn">Edit</button>
-              <button data-note-id="{{.ID}}" class="delete-btn">Delete</button>
             </div>
-            <div
-              class="note-content markdown-content"
-              data-raw-content="{{.Content}}"
-            >
-              {{.Content | formatContent}}
+            {{else}}
+            <div class="empty-state">
+                {{if .Query}}
+                <p>
+                    No notes found for "{{.Query}}".
+                    <button class="link-button clear-search-link">
+                        Show all notes
+                    </button>
+                </p>
+                {{else}}
+                <p>
+                    No notes found.
+                    <button class="link-button new-note-link">
+                        Create your first note
+                    </button>
+                </p>
+                {{end}}
             </div>
-          </div>
-          {{end}}
-        </div>
-        {{else}}
-        <div class="empty-state">
-          {{if .Query}}
-          <p>
-            No notes found for "{{.Query}}".
-            <button class="link-button clear-search-link">
-              Show all notes
-            </button>
-          </p>
-          {{else}}
-          <p>
-            No notes found.
-            <button class="link-button new-note-link">
-              Create your first note
-            </button>
-          </p>
-          {{end}}
-        </div>
-        {{end}}
-      </main>
+            {{end}}
+        </main>
 
-      <!-- Note editor panel -->
-      <div id="note-editor" class="note-editor hidden">
-        <div class="editor-header">
-          <button class="btn btn-secondary close-editor-btn">← Back</button>
-          <div class="editor-actions">
-            <button class="btn btn-primary save-note-btn">Save</button>
-            <button class="btn btn-secondary close-editor-btn">Cancel</button>
-          </div>
-        </div>
-        <div class="editor-content">
-          <textarea
-            id="note-content"
-            placeholder="Write your note here...
+        <!-- Note editor panel -->
+        <div id="note-editor" class="note-editor hidden">
+            <div class="editor-header">
+                <button class="btn btn-secondary close-editor-btn">← Back</button>
+                <div class="editor-actions">
+                    <button class="btn btn-primary save-note-btn">Save</button>
+                    <button class="btn btn-secondary close-editor-btn">Cancel</button>
+                </div>
+            </div>
+            <div class="editor-content">
+                <textarea id="note-content" placeholder="Write your note here...
 
 GitHub Markdown supported:
 **bold** *italic* `inline code`
@@ -141,86 +128,87 @@ function hello() {
 ---
 
 - [x] Task list item
-- [ ] Unchecked task"
-          ></textarea>
+- [ ] Unchecked task"></textarea>
+            </div>
         </div>
-      </div>
 
-      <!-- Delete confirmation modal -->
-      <div id="delete-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>🗑️ Delete Note</h3>
-          </div>
-          <div class="modal-body">
-            <p>Are you sure you want to delete this note?</p>
-            <div class="note-preview" id="delete-note-preview">
-              <!-- Note preview will be inserted here -->
+        <!-- Delete confirmation modal -->
+        <div id="delete-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🗑️ Delete Note</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this note?</p>
+                    <div class="note-preview" id="delete-note-preview">
+                        <!-- Note preview will be inserted here -->
+                    </div>
+                    <p class="warning-text">⚠️ This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary cancel-delete-btn">Cancel</button>
+                    <button class="btn btn-danger confirm-delete-btn">
+                        Delete Note
+                    </button>
+                </div>
             </div>
-            <p class="warning-text">⚠️ This action cannot be undone.</p>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary cancel-delete-btn">Cancel</button>
-            <button class="btn btn-danger confirm-delete-btn">
-              Delete Note
-            </button>
-          </div>
         </div>
-      </div>
 
-      <!-- Settings modal -->
-      <div id="settings-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>⚙️ Settings</h3>
-          </div>
-          <div class="modal-body">
-            <div class="settings-section">
-              <label for="notes-path">Notes Directory Path:</label>
-              <input
-                type="text"
-                id="notes-path"
-                class="settings-input"
-                placeholder="./data (or custom path)"
-              />
-              <small class="help-text">Path where your notes are stored</small>
-            </div>
+        <!-- Settings modal -->
+        <div id="settings-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>⚙️ Settings</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <label for="notes-path">Notes Directory Path:</label>
+                        <input type="text" id="notes-path" class="settings-input"
+                            placeholder="./data (or custom path)" />
+                        <small class="help-text">Path where your notes are stored</small>
+                    </div>
 
-            <div class="settings-section">
-              <label for="password-hash">Password Hash File:</label>
-              <input
-                type="text"
-                id="password-hash"
-                class="settings-input"
-                placeholder="Default: system config directory"
-              />
-              <small class="help-text"
-                >Path where the password hash is stored (Windows:
-                %APPDATA%\gote\gote_password_hash, Linux:
-                ~/.config/gote/gote_password_hash)</small
-              >
-            </div>
+                    <div class="settings-section">
+                        <label for="password-hash">Password Hash File:</label>
+                        <input type="text" id="password-hash" class="settings-input"
+                            placeholder="Default: system config directory" />
+                        <small class="help-text">Path where the password hash is stored (Windows:
+                            %APPDATA%\gote\gote_password_hash, Linux:
+                            ~/.config/gote/gote_password_hash)</small>
+                    </div>
 
-            <div class="settings-section">
-              <div class="logout-section">
-                <form method="POST" action="/logout">
-                  <button type="submit" class="btn btn-danger">
-                    🚪 Logout
-                  </button>
-                </form>
-              </div>
+                    <div class="settings-section">
+                        <label>File Synchronization:</label>
+                        <button class="btn btn-secondary" onclick="syncFromDisk()" style="width: 100%;">
+                            🔄 Sync from Disk
+                        </button>
+                        <small class="help-text">
+                            Refresh notes from disk. Use this if files were changed by Syncthing or other external
+                            tools.
+                        </small>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="logout-section">
+                            <form method="POST" action="/logout">
+                                <button type="submit" class="btn btn-danger">
+                                    🚪 Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary close-settings-btn">Cancel</button>
+                    <button class="btn btn-primary save-settings-btn">
+                        Save Settings
+                    </button>
+                </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary close-settings-btn">Cancel</button>
-            <button class="btn btn-primary save-settings-btn">
-              Save Settings
-            </button>
-          </div>
         </div>
-      </div>
     </div>
 
     <script src="/static/script.js"></script>
-  </body>
+</body>
+
 </html>

@@ -8,6 +8,7 @@ A simple, modern note-taking application built with Go, inspired by the original
 - 🎨 **Syntax highlighting** for code blocks in 10+ languages
 - 🔍 Search through notes by title and content
 - 💾 JSON file-based storage (no database required)
+- 🔄 **Real-time file synchronization** - Works with Syncthing, Dropbox, etc.
 - 🌐 **Offline-first design** - works without internet connection
 - 🎨 Clean, responsive web interface
 - ⌨️ Keyboard shortcuts (Ctrl/Cmd+S to save, Ctrl/Cmd+N for new note)
@@ -107,6 +108,9 @@ The application provides both a web interface and a REST API:
 - `PUT /api/notes/{id}` - Update note
 - `DELETE /api/notes/{id}` - Delete note
 - `GET /api/search?q={query}` - Search notes
+- `GET /api/settings` - Get current settings
+- `POST /api/settings` - Update settings
+- `POST /api/sync` - Force refresh from disk
 
 ## Data Storage
 
@@ -131,6 +135,30 @@ The application uses these default settings:
 - **Static files:** `./static`
 
 You can modify these in the `main.go` file if needed.
+
+## File Synchronization
+
+Gote includes built-in file system watching for seamless integration with sync tools like **Syncthing**, **Dropbox**, **Google Drive**, or manual file editing:
+
+### Features
+- 🔄 **Automatic file watching** - Detects changes to note files while the app is running
+- 🚀 **Real-time sync** - New, modified, or deleted files are immediately reflected in the UI
+- 🔒 **Thread-safe operations** - Safe concurrent access during sync operations
+- 🧠 **Smart conflict resolution** - Uses modification timestamps to determine which version to keep
+- 🔘 **Manual sync button** - Force refresh from disk when needed
+
+### Usage with Syncthing
+1. Configure Syncthing to sync your `./data` directory across devices
+2. Use the same password on all devices for encrypted notes
+3. Changes from other devices appear automatically
+4. Use the 🔄 Sync button if you notice any inconsistencies
+
+### Manual Sync
+- **Header sync button**: Quick access to refresh from disk
+- **Settings modal**: Detailed sync options with explanations
+- **API endpoint**: `POST /api/sync` for programmatic refresh
+
+For detailed information, see [docs/FILE_SYNC.md](docs/FILE_SYNC.md).
 
 ## Development
 

@@ -13,14 +13,18 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
@@ -298,14 +302,20 @@ type Note struct {
 }
 
 type NoteStore struct {
-	dataDir string
-	notes   map[string]*Note
+	dataDir      string
+	notes        map[string]*Note
+	mutex        sync.RWMutex
+	watcher      *fsnotify.Watcher
+	key          []byte
+	lastSync     time.Time
+	fileModTimes map[string]time.Time
 }
 
 func NewNoteStore(dataDir string) *NoteStore {
 	store := &NoteStore{
-		dataDir: dataDir,
-		notes:   make(map[string]*Note),
+		dataDir:      dataDir,
+		notes:        make(map[string]*Note),
+		fileModTimes: make(map[string]time.Time),
 	}
 
 	// Create data directory if it doesn't exist
@@ -313,19 +323,179 @@ func NewNoteStore(dataDir string) *NoteStore {
 		log.Fatal("Failed to create data directory:", err)
 	}
 
+	// Initialize file system watcher
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Printf("Warning: Could not create file watcher: %v", err)
+	} else {
+		store.watcher = watcher
+
+		// Add data directory to watcher
+		if err := watcher.Add(dataDir); err != nil {
+			log.Printf("Warning: Could not watch data directory: %v", err)
+		}
+	}
+
 	// Notes will be loaded when user authenticates
 	return store
 }
 
-func (s *NoteStore) loadNotes(key []byte) error {
+// startWatching starts the file system watcher goroutine
+func (s *NoteStore) startWatching() {
+	if s.watcher == nil {
+		return
+	}
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-s.watcher.Events:
+				if !ok {
+					return
+				}
+
+				// Only process .json files
+				if !strings.HasSuffix(event.Name, ".json") {
+					continue
+				}
+
+				log.Printf("File event: %s %s", event.Op, event.Name)
+
+				switch {
+				case event.Op&fsnotify.Create == fsnotify.Create:
+					s.handleFileCreate(event.Name)
+				case event.Op&fsnotify.Write == fsnotify.Write:
+					s.handleFileWrite(event.Name)
+				case event.Op&fsnotify.Remove == fsnotify.Remove:
+					s.handleFileRemove(event.Name)
+				case event.Op&fsnotify.Rename == fsnotify.Rename:
+					s.handleFileRemove(event.Name)
+				}
+
+			case err, ok := <-s.watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Printf("Watcher error: %v", err)
+			}
+		}
+	}()
+}
+
+// handleFileCreate handles new file creation
+func (s *NoteStore) handleFileCreate(filePath string) {
+	s.handleFileWrite(filePath)
+}
+
+// handleFileWrite handles file modifications
+func (s *NoteStore) handleFileWrite(filePath string) {
+	if s.key == nil {
+		return // Not authenticated yet
+	}
+
+	// Get file info
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		log.Printf("Error getting file info for %s: %v", filePath, err)
+		return
+	}
+
+	// Check if this is a change we need to process
+	s.mutex.Lock()
+	lastModTime, exists := s.fileModTimes[filePath]
+	currentModTime := fileInfo.ModTime()
+
+	// If we already have this modification time, skip (probably our own write)
+	if exists && !currentModTime.After(lastModTime) {
+		s.mutex.Unlock()
+		return
+	}
+
+	s.fileModTimes[filePath] = currentModTime
+	s.mutex.Unlock()
+
+	// Load the file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("Error reading changed file %s: %v", filePath, err)
+		return
+	}
+
+	var encryptedNote EncryptedNote
+	if err := json.Unmarshal(data, &encryptedNote); err != nil {
+		log.Printf("Error unmarshalling changed file %s: %v", filePath, err)
+		return
+	}
+
+	// Decrypt the note content
+	decryptedContent, err := decrypt(encryptedNote.EncryptedData, s.key)
+	if err != nil {
+		log.Printf("Error decrypting changed file %s: %v", filePath, err)
+		return
+	}
+
+	note := &Note{
+		ID:        encryptedNote.ID,
+		Content:   decryptedContent,
+		CreatedAt: encryptedNote.CreatedAt,
+		UpdatedAt: encryptedNote.UpdatedAt,
+	}
+
+	s.mutex.Lock()
+	existingNote, exists := s.notes[note.ID]
+
+	// Only update if the external file is newer than what we have in memory
+	if !exists || note.UpdatedAt.After(existingNote.UpdatedAt) {
+		s.notes[note.ID] = note
+		log.Printf("Updated note %s from external file change", note.ID)
+	} else {
+		log.Printf("Skipped updating note %s - in-memory version is newer", note.ID)
+	}
+	s.mutex.Unlock()
+}
+
+// handleFileRemove handles file deletion
+func (s *NoteStore) handleFileRemove(filePath string) {
+	// Extract note ID from filename
+	filename := filepath.Base(filePath)
+	if !strings.HasSuffix(filename, ".json") {
+		return
+	}
+
+	noteID := strings.TrimSuffix(filename, ".json")
+
+	s.mutex.Lock()
+	delete(s.notes, noteID)
+	delete(s.fileModTimes, filePath)
+	s.mutex.Unlock()
+
+	log.Printf("Removed note %s due to external file deletion", noteID)
+}
+
+// syncFromDisk performs a full sync from disk, useful for resolving conflicts
+func (s *NoteStore) syncFromDisk() error {
+	if s.key == nil {
+		return fmt.Errorf("not authenticated")
+	}
+
 	files, err := filepath.Glob(filepath.Join(s.dataDir, "*.json"))
 	if err != nil {
 		return fmt.Errorf("error reading data directory: %v", err)
 	}
 
-	s.notes = make(map[string]*Note) // Clear existing notes
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Track which notes exist on disk
+	diskNotes := make(map[string]bool)
 
 	for _, file := range files {
+		fileInfo, err := os.Stat(file)
+		if err != nil {
+			log.Printf("Error getting file info for %s: %v", file, err)
+			continue
+		}
+
 		data, err := os.ReadFile(file)
 		if err != nil {
 			log.Printf("Error reading file %s: %v", file, err)
@@ -339,7 +509,7 @@ func (s *NoteStore) loadNotes(key []byte) error {
 		}
 
 		// Decrypt the note content
-		decryptedContent, err := decrypt(encryptedNote.EncryptedData, key)
+		decryptedContent, err := decrypt(encryptedNote.EncryptedData, s.key)
 		if err != nil {
 			log.Printf("Error decrypting note from %s: %v", file, err)
 			continue
@@ -352,8 +522,40 @@ func (s *NoteStore) loadNotes(key []byte) error {
 			UpdatedAt: encryptedNote.UpdatedAt,
 		}
 
-		s.notes[note.ID] = note
+		diskNotes[note.ID] = true
+		s.fileModTimes[file] = fileInfo.ModTime()
+
+		// Update note if it's newer or doesn't exist in memory
+		existingNote, exists := s.notes[note.ID]
+		if !exists || note.UpdatedAt.After(existingNote.UpdatedAt) {
+			s.notes[note.ID] = note
+		}
 	}
+
+	// Remove notes that no longer exist on disk
+	for noteID := range s.notes {
+		if !diskNotes[noteID] {
+			delete(s.notes, noteID)
+		}
+	}
+
+	s.lastSync = time.Now()
+	return nil
+}
+
+func (s *NoteStore) loadNotes(key []byte) error {
+	s.mutex.Lock()
+	s.key = key
+	s.mutex.Unlock()
+
+	// Start file watching
+	s.startWatching()
+
+	// Load notes from disk
+	if err := s.syncFromDisk(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -376,12 +578,30 @@ func (s *NoteStore) saveNote(note *Note, key []byte) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filename, data, 0644)
+
+	// Write the file
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		return err
+	}
+
+	// Update our modification time tracking to prevent processing our own write
+	if fileInfo, err := os.Stat(filename); err == nil {
+		s.mutex.Lock()
+		s.fileModTimes[filename] = fileInfo.ModTime()
+		s.mutex.Unlock()
+	}
+
+	return nil
 }
 
 func (s *NoteStore) deleteNote(id string) error {
 	filename := filepath.Join(s.dataDir, fmt.Sprintf("%s.json", id))
+
+	s.mutex.Lock()
 	delete(s.notes, id)
+	delete(s.fileModTimes, filename)
+	s.mutex.Unlock()
+
 	return os.Remove(filename)
 }
 
@@ -393,9 +613,14 @@ func (s *NoteStore) CreateNote(content string, key []byte) (*Note, error) {
 		UpdatedAt: time.Now(),
 	}
 
+	s.mutex.Lock()
 	s.notes[note.ID] = note
+	s.mutex.Unlock()
+
 	if err := s.saveNote(note, key); err != nil {
+		s.mutex.Lock()
 		delete(s.notes, note.ID)
+		s.mutex.Unlock()
 		return nil, err
 	}
 
@@ -403,13 +628,16 @@ func (s *NoteStore) CreateNote(content string, key []byte) (*Note, error) {
 }
 
 func (s *NoteStore) UpdateNote(id string, content string, key []byte) (*Note, error) {
+	s.mutex.Lock()
 	note, exists := s.notes[id]
 	if !exists {
+		s.mutex.Unlock()
 		return nil, fmt.Errorf("note not found")
 	}
 
 	note.Content = content
 	note.UpdatedAt = time.Now()
+	s.mutex.Unlock()
 
 	if err := s.saveNote(note, key); err != nil {
 		return nil, err
@@ -419,7 +647,10 @@ func (s *NoteStore) UpdateNote(id string, content string, key []byte) (*Note, er
 }
 
 func (s *NoteStore) GetNote(id string) (*Note, error) {
+	s.mutex.RLock()
 	note, exists := s.notes[id]
+	s.mutex.RUnlock()
+
 	if !exists {
 		return nil, fmt.Errorf("note not found")
 	}
@@ -427,10 +658,12 @@ func (s *NoteStore) GetNote(id string) (*Note, error) {
 }
 
 func (s *NoteStore) GetAllNotes() []*Note {
+	s.mutex.RLock()
 	notes := make([]*Note, 0, len(s.notes))
 	for _, note := range s.notes {
 		notes = append(notes, note)
 	}
+	s.mutex.RUnlock()
 
 	// Sort by updated time, newest first
 	sort.Slice(notes, func(i, j int) bool {
@@ -444,11 +677,13 @@ func (s *NoteStore) SearchNotes(query string) []*Note {
 	var results []*Note
 	query = strings.ToLower(query)
 
+	s.mutex.RLock()
 	for _, note := range s.notes {
 		if strings.Contains(strings.ToLower(note.Content), query) {
 			results = append(results, note)
 		}
 	}
+	s.mutex.RUnlock()
 
 	// Sort by updated time, newest first
 	sort.Slice(results, func(i, j int) bool {
@@ -459,11 +694,27 @@ func (s *NoteStore) SearchNotes(query string) []*Note {
 }
 
 func (s *NoteStore) DeleteNote(id string) error {
+	s.mutex.Lock()
 	_, exists := s.notes[id]
+	s.mutex.Unlock()
+
 	if !exists {
 		return fmt.Errorf("note not found")
 	}
 	return s.deleteNote(id)
+}
+
+// Close cleans up the file watcher
+func (s *NoteStore) Close() error {
+	if s.watcher != nil {
+		return s.watcher.Close()
+	}
+	return nil
+}
+
+// RefreshFromDisk forces a full refresh from disk, useful for conflict resolution
+func (s *NoteStore) RefreshFromDisk() error {
+	return s.syncFromDisk()
 }
 
 var store *NoteStore
@@ -647,9 +898,24 @@ func main() {
 		r.Get("/search", apiSearchHandler)
 		r.Get("/settings", apiGetSettingsHandler)
 		r.Post("/settings", apiSettingsHandler)
+		r.Post("/sync", apiSyncHandler)
 	})
 
 	fmt.Println("Server starting on :8080")
+
+	// Handle graceful shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		log.Println("Shutting down gracefully...")
+		if store != nil {
+			store.Close()
+		}
+		os.Exit(0)
+	}()
+
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
@@ -905,11 +1171,45 @@ func apiSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update note store with new path
-	store = NewNoteStore(currentConfig.NotesPath)
+	if currentConfig.NotesPath != req.NotesPath {
+		// Close existing watcher
+		if store != nil {
+			store.Close()
+		}
+
+		// Create new note store with new path
+		store = NewNoteStore(currentConfig.NotesPath)
+
+		// Reload notes if user is authenticated
+		if session := isAuthenticated(r); session != nil {
+			if err := store.loadNotes(session.key); err != nil {
+				log.Printf("Warning: Could not reload notes after path change: %v", err)
+			}
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Settings saved successfully",
+	})
+}
+
+func apiSyncHandler(w http.ResponseWriter, r *http.Request) {
+	session := isAuthenticated(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if err := store.RefreshFromDisk(); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to sync from disk: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Successfully synced from disk",
 	})
 }
