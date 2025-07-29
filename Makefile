@@ -5,11 +5,11 @@ all: run
 
 # Run the application in development mode
 run:
-	go run main.go
+	go run cmd/server/main.go
 
 # Build the application
 build:
-	go build -o bin/meemo main.go
+	go build -o bin/gote cmd/server/main.go
 
 # Clean build artifacts
 clean:
