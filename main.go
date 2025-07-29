@@ -98,6 +98,25 @@ func decrypt(ciphertext string, key []byte) (string, error) {
 	return string(plaintext), nil
 }
 
+// isValidShortHashFilename checks if the filename matches the expected short hash pattern
+func isValidShortHashFilename(filename string) bool {
+	// Remove .json extension if present
+	filename = strings.TrimSuffix(filename, ".json")
+
+	// Check if it's exactly 8 characters and all hexadecimal
+	if len(filename) != 8 {
+		return false
+	}
+
+	// Check if all characters are valid hexadecimal
+	matched, err := regexp.MatchString("^[0-9a-fA-F]{8}$", filename)
+	if err != nil {
+		return false
+	}
+
+	return matched
+}
+
 func deriveKey(password string) []byte {
 	hash := sha256.Sum256([]byte(password))
 	return hash[:]
@@ -354,8 +373,14 @@ func (s *NoteStore) startWatching() {
 					return
 				}
 
-				// Only process .json files
+				// Only process .json files with valid short hash names
 				if !strings.HasSuffix(event.Name, ".json") {
+					continue
+				}
+
+				filename := filepath.Base(event.Name)
+				if !isValidShortHashFilename(filename) {
+					log.Printf("Ignoring file with invalid name pattern: %s", filename)
 					continue
 				}
 
@@ -462,6 +487,11 @@ func (s *NoteStore) handleFileRemove(filePath string) {
 		return
 	}
 
+	// Only process files with valid short hash names
+	if !isValidShortHashFilename(filename) {
+		return
+	}
+
 	noteID := strings.TrimSuffix(filename, ".json")
 
 	s.mutex.Lock()
@@ -490,6 +520,13 @@ func (s *NoteStore) syncFromDisk() error {
 	diskNotes := make(map[string]bool)
 
 	for _, file := range files {
+		// Only process files with valid short hash names
+		filename := filepath.Base(file)
+		if !isValidShortHashFilename(filename) {
+			log.Printf("Ignoring file with invalid name pattern during sync: %s", filename)
+			continue
+		}
+
 		fileInfo, err := os.Stat(file)
 		if err != nil {
 			log.Printf("Error getting file info for %s: %v", file, err)
