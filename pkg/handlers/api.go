@@ -163,6 +163,9 @@ func (h *APIHandlers) GetSettingsHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Debug: Log the config being sent
+	fmt.Printf("[DEBUG] Sending config: NotesPath=%s, PasswordHashPath=%s\n", h.config.NotesPath, h.config.PasswordHashPath)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(h.config)
 }

@@ -31,6 +31,9 @@ func main() {
 	log.Printf("  Password hash file: %s", cfg.PasswordHashPath)
 	log.Printf("  Config file: %s", config.GetConfigFilePath())
 
+	// Debug: Print loaded config struct
+	fmt.Printf("[DEBUG] Loaded config: %+v\n", cfg)
+
 	// Initialize components
 	authManager := auth.NewManager(cfg.PasswordHashPath)
 	store := storage.NewNoteStore(cfg.NotesPath)
