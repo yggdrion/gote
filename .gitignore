@@ -148,3 +148,4 @@ static/vendor/backup-*
 node_modules/
 package-lock.json
 bin/
+.DS_Store
