@@ -532,10 +532,50 @@ function setupNoteActionListeners() {
 }
 
 // Settings modal functions
+function createSettingsModal() {
+    if (document.getElementById("settings-modal")) return;
+    fetch("/static/settings.html")
+        .then((response) => response.text())
+        .then((modalHtml) => {
+            const div = document.createElement("div");
+            div.innerHTML = modalHtml;
+            document.body.appendChild(div.firstElementChild);
+            setupSettingsModalListeners();
+        });
+}
+
+function setupSettingsModalListeners() {
+    // Re-attach listeners for modal buttons
+    document.querySelectorAll(".close-settings-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            hideSettingsModal();
+        });
+    });
+    document.querySelectorAll(".save-settings-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            saveSettings();
+        });
+    });
+    document.querySelectorAll(".change-password-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            changePassword();
+        });
+    });
+    // Close modal when clicking outside
+    const settingsModal = document.getElementById("settings-modal");
+    if (settingsModal) {
+        settingsModal.addEventListener("click", function (e) {
+            if (e.target === settingsModal) {
+                hideSettingsModal();
+            }
+        });
+    }
+}
+
 function showSettingsModal() {
+    createSettingsModal();
     const modal = document.getElementById("settings-modal");
     if (modal) {
-        // Load current settings
         loadCurrentSettings();
         modal.classList.remove("hidden");
     }
@@ -545,6 +585,10 @@ function hideSettingsModal() {
     const modal = document.getElementById("settings-modal");
     if (modal) {
         modal.classList.add("hidden");
+        // Remove modal from DOM after animation (optional: setTimeout for fade-out)
+        setTimeout(() => {
+            if (modal.parentNode) modal.parentNode.removeChild(modal);
+        }, 200);
     }
 }
 
@@ -556,7 +600,7 @@ function loadCurrentSettings() {
         .then((response) => response.json())
         .then((data) => {
             const notesPathInput = document.getElementById("notes-path");
-            const passwordHashInput = document.getElementById("password-hash");
+            const passwordHashInput = document.getElementById("password-hash-path");
 
             if (notesPathInput) notesPathInput.value = data.notesPath || "./data";
             if (passwordHashInput)
@@ -567,7 +611,7 @@ function loadCurrentSettings() {
             console.error("Error loading settings:", error);
             // Fallback to defaults
             const notesPathInput = document.getElementById("notes-path");
-            const passwordHashInput = document.getElementById("password-hash");
+            const passwordHashInput = document.getElementById("password-hash-path");
 
             if (notesPathInput) notesPathInput.value = "./data";
             if (passwordHashInput) passwordHashInput.value = "./data/.password_hash";
@@ -576,7 +620,7 @@ function loadCurrentSettings() {
 
 function saveSettings() {
     const notesPathInput = document.getElementById("notes-path");
-    const passwordHashInput = document.getElementById("password-hash");
+    const passwordHashInput = document.getElementById("password-hash-path");
 
     if (notesPathInput && passwordHashInput) {
         const notesPath = notesPathInput.value.trim() || "./data";
@@ -615,9 +659,9 @@ function saveSettings() {
 }
 
 function changePassword() {
-    const oldPasswordInput = document.getElementById("old-password");
-    const newPasswordInput = document.getElementById("new-password");
-    const repeatNewPasswordInput = document.getElementById("repeat-new-password");
+    const oldPasswordInput = document.getElementById("change-old-pass");
+    const newPasswordInput = document.getElementById("change-new-pass");
+    const repeatNewPasswordInput = document.getElementById("change-repeat-new-pass");
     const oldPassword = oldPasswordInput ? oldPasswordInput.value : "";
     const newPassword = newPasswordInput ? newPasswordInput.value : "";
     const repeatNewPassword = repeatNewPasswordInput ? repeatNewPasswordInput.value : "";

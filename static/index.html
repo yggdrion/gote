@@ -155,72 +155,7 @@ function hello() {
             </div>
         </div>
 
-        <!-- Settings modal -->
-        <div id="settings-modal" class="modal-overlay hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>⚙️ Settings</h3>
-                </div>
-                <div class="modal-body">
-                    <div class="settings-section">
-                        <label for="notes-path">Notes Directory Path:</label>
-                        <input type="text" id="notes-path" class="settings-input"
-                            placeholder="./data (or custom path)" />
-                        <small class="help-text">Path where your notes are stored</small>
-                    </div>
-
-                    <div class="settings-section">
-                        <label for="password-hash">Password Hash File:</label>
-                        <input type="text" id="password-hash" class="settings-input"
-                            placeholder="Default: system config directory" />
-                        <small class="help-text">Path where the password hash is stored (Windows:
-                            %APPDATA%\gote\gote_password_hash, Linux:
-                            ~/.config/gote/gote_password_hash)</small>
-                    </div>
-
-                    <div class="settings-section">
-                        <label>File Synchronization:</label>
-                        <button class="btn btn-secondary" onclick="syncFromDisk()" style="width: 100%;">
-                            🔄 Sync from Disk
-                        </button>
-                        <small class="help-text">
-                            Refresh notes from disk. Use this if files were changed by Syncthing or other external
-                            tools.
-                        </small>
-                    </div>
-
-                    <div class="settings-section">
-                        <label>Change Password:</label>
-                        <input type="password" id="old-password" class="settings-input" placeholder="Old password"
-                            autocomplete="current-password" />
-                        <input type="password" id="new-password" class="settings-input" placeholder="New password"
-                            autocomplete="new-password" />
-                        <input type="password" id="repeat-new-password" class="settings-input"
-                            placeholder="Repeat new password" autocomplete="new-password" />
-                        <button class="btn btn-warning change-password-btn" style="width: 100%; margin-top: 8px;">Change
-                            Password</button>
-                        <small class="help-text">Change your password and re-encrypt all notes. This cannot be
-                            undone.</small>
-                    </div>
-
-                    <div class="settings-section">
-                        <div class="logout-section">
-                            <form method="POST" action="/logout">
-                                <button type="submit" class="btn btn-danger">
-                                    🚪 Logout
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary close-settings-btn">Cancel</button>
-                    <button class="btn btn-primary save-settings-btn">
-                        Save Settings
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- Settings modal will be injected dynamically by script.js -->
     </div>
 
     <script src="/static/script.js"></script>
