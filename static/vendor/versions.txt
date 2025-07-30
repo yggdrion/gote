@@ -3,7 +3,7 @@
 
 marked.js=16.1.1
 marked-highlight=2.2.2
-highlight.js=11.11.0
+highlight.js=11.11.1
 
 # Update URLs
 marked.js.url=https://cdn.jsdelivr.net/npm/marked@{version}/lib/marked.umd.js
@@ -12,4 +12,4 @@ highlight.js.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/h
 highlight.js.css.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css
 
 # Last updated
-last_updated=2025-07-28
+last_updated=2025-07-30
