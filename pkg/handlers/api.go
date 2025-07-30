@@ -303,14 +303,9 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 			h.store.MoveNoteToCorrupted(encryptedNote.ID)
 			continue
 		}
-		encryptedContent, err := crypto.Encrypt(decryptedContent, newKey)
-		if err != nil {
-			http.Error(w, "Failed to encrypt note: "+encryptedNote.ID, http.StatusInternalServerError)
-			return
-		}
 		note := &models.Note{
 			ID:        encryptedNote.ID,
-			Content:   encryptedContent,
+			Content:   decryptedContent, // <-- use plaintext here
 			CreatedAt: encryptedNote.CreatedAt,
 			UpdatedAt: encryptedNote.UpdatedAt,
 		}
