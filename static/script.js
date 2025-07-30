@@ -610,6 +610,45 @@ function saveSettings() {
     });
 }
 
+function changePassword() {
+  const oldPass = document.getElementById("change-old-pass").value;
+  const newPass = document.getElementById("change-new-pass").value;
+  const repeatNewPass = document.getElementById("change-repeat-new-pass").value;
+
+  if (!oldPass || !newPass || !repeatNewPass) {
+    alert("Please fill in all password fields.");
+    return;
+  }
+  if (newPass !== repeatNewPass) {
+    alert("New passwords do not match.");
+    return;
+  }
+
+  fetch("/api/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include", // Ensure session cookie is sent
+    body: JSON.stringify({ old_password: oldPass, new_password: newPass }), // <-- fixed keys
+  })
+    .then((response) => {
+      if (response.ok) {
+        alert("Password changed successfully.");
+        // Optionally clear fields
+        document.getElementById("change-old-pass").value = "";
+        document.getElementById("change-new-pass").value = "";
+        document.getElementById("change-repeat-new-pass").value = "";
+      } else {
+        response
+          .text()
+          .then((msg) => alert(msg || "Failed to change password."));
+      }
+    })
+    .catch((error) => {
+      console.error("Error changing password:", error);
+      alert("Error changing password. Please try again.");
+    });
+}
+
 function setupSettingsModalListeners() {
   // Re-attach listeners for modal buttons
   document.querySelectorAll(".close-settings-btn").forEach((button) => {

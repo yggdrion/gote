@@ -1,0 +1,25 @@
+# Air configuration for Go + static asset live reload
+root = "."
+
+[build]
+  # Watch Go files and rebuild
+  bin = "main.exe"
+  cmd = "go build -o main.exe main.go"
+  include_ext = ["go"]
+  exclude_dir = ["tmp", "data", "static/vendor"]
+
+[log]
+  color = "true"
+  time = "true"
+
+[watch]
+  # Watch static files for reload (no rebuild)
+  include_ext = ["js", "css", "html"]
+  paths = [
+    "static",
+    "static/*.js",
+    "static/*.css",
+    "static/*.html"
+  ]
+
+

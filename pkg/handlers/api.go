@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -248,6 +249,7 @@ func (h *APIHandlers) SyncHandler(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user session
 	session := h.authManager.IsAuthenticated(r)
+	fmt.Printf("[DEBUG] Session: %+v\n", session)
 	if session == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -261,9 +263,12 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+	fmt.Printf("[DEBUG] ChangePassword request: old=%q new=%q\n", req.OldPassword, req.NewPassword)
 
 	// Verify old password
-	if !h.authManager.VerifyPassword(req.OldPassword) {
+	verified := h.authManager.VerifyPassword(req.OldPassword)
+	fmt.Printf("[DEBUG] VerifyPassword result: %v\n", verified)
+	if !verified {
 		http.Error(w, "Old password is incorrect", http.StatusUnauthorized)
 		return
 	}
@@ -272,23 +277,44 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 	oldKey := crypto.DeriveKey(req.OldPassword)
 	newKey := crypto.DeriveKey(req.NewPassword)
 
-	// Re-encrypt all notes
-	notes := h.store.GetAllNotes()
-	for _, note := range notes {
-		// Decrypt with old key
-		decryptedContent, err := crypto.Decrypt(note.Content, oldKey)
+	// Re-encrypt all notes from disk
+	noteFiles, err := filepath.Glob(filepath.Join(h.config.NotesPath, "*.json"))
+	if err != nil {
+		http.Error(w, "Failed to list note files", http.StatusInternalServerError)
+		return
+	}
+	var corruptedNotes []string
+	for _, file := range noteFiles {
+		data, err := os.ReadFile(file)
 		if err != nil {
-			http.Error(w, "Failed to decrypt note: "+note.ID, http.StatusInternalServerError)
-			return
+			corruptedNotes = append(corruptedNotes, filepath.Base(file))
+			h.store.MoveNoteToCorrupted(strings.TrimSuffix(filepath.Base(file), ".json"))
+			continue
 		}
-		// Encrypt with new key
+		var encryptedNote models.EncryptedNote
+		if err := json.Unmarshal(data, &encryptedNote); err != nil {
+			corruptedNotes = append(corruptedNotes, filepath.Base(file))
+			h.store.MoveNoteToCorrupted(strings.TrimSuffix(filepath.Base(file), ".json"))
+			continue
+		}
+		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
+		if err != nil {
+			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
+			h.store.MoveNoteToCorrupted(encryptedNote.ID)
+			continue
+		}
 		encryptedContent, err := crypto.Encrypt(decryptedContent, newKey)
 		if err != nil {
-			http.Error(w, "Failed to encrypt note: "+note.ID, http.StatusInternalServerError)
+			http.Error(w, "Failed to encrypt note: "+encryptedNote.ID, http.StatusInternalServerError)
 			return
 		}
-		note.Content = encryptedContent
-		if _, err := h.store.UpdateNote(note.ID, encryptedContent, newKey); err != nil {
+		note := &models.Note{
+			ID:        encryptedNote.ID,
+			Content:   encryptedContent,
+			CreatedAt: encryptedNote.CreatedAt,
+			UpdatedAt: encryptedNote.UpdatedAt,
+		}
+		if err := h.store.SaveNoteDirect(note, newKey); err != nil {
 			http.Error(w, "Failed to save note: "+note.ID, http.StatusInternalServerError)
 			return
 		}
@@ -301,8 +327,16 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": "Password changed and notes re-encrypted successfully",
-	})
+	if len(corruptedNotes) > 0 {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":         true,
+			"message":         fmt.Sprintf("Password changed and notes re-encrypted successfully. %d corrupted note(s) were moved to the 'corrupted' folder.", len(corruptedNotes)),
+			"corrupted_notes": corruptedNotes,
+		})
+	} else {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Password changed and notes re-encrypted successfully.",
+		})
+	}
 }
