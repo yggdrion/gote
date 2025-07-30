@@ -10,6 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"gote/pkg/config"
+	"gote/pkg/crypto"
+	"gote/pkg/models"
 	"gote/pkg/storage"
 )
 
@@ -18,6 +20,15 @@ type APIHandlers struct {
 	store       *storage.NoteStore
 	authManager AuthManager
 	config      *config.Config
+}
+
+// AuthManager interface for dependency injection
+// Add methods used in APIHandlers
+// (This should match the methods on *auth.Manager)
+type AuthManager interface {
+	IsAuthenticated(r *http.Request) *models.Session
+	VerifyPassword(password string) bool
+	StorePasswordHash(password string) error
 }
 
 // NewAPIHandlers creates a new API handlers instance
@@ -227,5 +238,68 @@ func (h *APIHandlers) SyncHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Successfully synced from disk",
+	})
+}
+
+// ChangePasswordHandler changes the user's password and re-encrypts all notes
+func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate user session
+	session := h.authManager.IsAuthenticated(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Verify old password
+	if !h.authManager.VerifyPassword(req.OldPassword) {
+		http.Error(w, "Old password is incorrect", http.StatusUnauthorized)
+		return
+	}
+
+	// Derive old and new keys
+	oldKey := crypto.DeriveKey(req.OldPassword)
+	newKey := crypto.DeriveKey(req.NewPassword)
+
+	// Re-encrypt all notes
+	notes := h.store.GetAllNotes()
+	for _, note := range notes {
+		// Decrypt with old key
+		decryptedContent, err := crypto.Decrypt(note.Content, oldKey)
+		if err != nil {
+			http.Error(w, "Failed to decrypt note: "+note.ID, http.StatusInternalServerError)
+			return
+		}
+		// Encrypt with new key
+		encryptedContent, err := crypto.Encrypt(decryptedContent, newKey)
+		if err != nil {
+			http.Error(w, "Failed to encrypt note: "+note.ID, http.StatusInternalServerError)
+			return
+		}
+		note.Content = encryptedContent
+		if _, err := h.store.UpdateNote(note.ID, encryptedContent, newKey); err != nil {
+			http.Error(w, "Failed to save note: "+note.ID, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Store new password hash
+	if err := h.authManager.StorePasswordHash(req.NewPassword); err != nil {
+		http.Error(w, "Failed to update password hash", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Password changed and notes re-encrypted successfully",
 	})
 }

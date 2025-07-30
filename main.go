@@ -71,6 +71,7 @@ func main() {
 		r.Get("/settings", apiHandlers.GetSettingsHandler)
 		r.Post("/settings", apiHandlers.SettingsHandler)
 		r.Post("/sync", apiHandlers.SyncHandler)
+		r.Post("/change-password", apiHandlers.ChangePasswordHandler)
 	})
 
 	fmt.Println("Server starting on :8080")

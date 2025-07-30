@@ -513,6 +513,13 @@ function setupNoteActionListeners() {
         });
     });
 
+    // Change password functionality
+    document.querySelectorAll(".change-password-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            changePassword();
+        });
+    });
+
     // Close settings modal when clicking outside
     const settingsModal = document.getElementById("settings-modal");
     if (settingsModal) {
@@ -605,6 +612,50 @@ function saveSettings() {
                 showNotification("Failed to save settings", "error");
             });
     }
+}
+
+function changePassword() {
+    const oldPasswordInput = document.getElementById("old-password");
+    const newPasswordInput = document.getElementById("new-password");
+    const repeatNewPasswordInput = document.getElementById("repeat-new-password");
+    const oldPassword = oldPasswordInput ? oldPasswordInput.value : "";
+    const newPassword = newPasswordInput ? newPasswordInput.value : "";
+    const repeatNewPassword = repeatNewPasswordInput ? repeatNewPasswordInput.value : "";
+
+    if (!oldPassword || !newPassword || !repeatNewPassword) {
+        showNotification("Please fill in all password fields.", "error");
+        return;
+    }
+    if (newPassword !== repeatNewPassword) {
+        showNotification("New passwords do not match.", "error");
+        return;
+    }
+
+    fetch("/api/change-password", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            old_password: oldPassword,
+            new_password: newPassword,
+        }),
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.success) {
+                showNotification("Password changed and notes re-encrypted!", "success");
+                oldPasswordInput.value = "";
+                newPasswordInput.value = "";
+                repeatNewPasswordInput.value = "";
+            } else {
+                showNotification(data.message || "Failed to change password", "error");
+            }
+        })
+        .catch((error) => {
+            console.error("Error changing password:", error);
+            showNotification("Failed to change password", "error");
+        });
 }
 
 function showNotification(message, type = "info") {
