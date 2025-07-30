@@ -618,7 +618,8 @@ header a:hover,
   max-width: 500px;
   width: 90%;
   max-height: 80vh;
-  overflow: hidden;
+  overflow-y: auto; /* Allow vertical scrolling */
+  overflow-x: hidden;
   transform: scale(1);
   transition: transform 0.3s ease;
 }

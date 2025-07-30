@@ -578,6 +578,38 @@ function hideSettingsModal() {
   }
 }
 
+function saveSettings() {
+  const notesPathInput = document.getElementById("notes-path");
+  const passwordHashInput = document.getElementById("password-hash-path");
+  const notesPath = notesPathInput ? notesPathInput.value.trim() : "";
+  const passwordHashPath = passwordHashInput
+    ? passwordHashInput.value.trim()
+    : "";
+
+  fetch("/api/settings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      notesPath,
+      passwordHashPath,
+    }),
+  })
+    .then((response) => {
+      if (response.ok) {
+        hideSettingsModal();
+        window.location.reload(); // Reload to reflect new settings
+      } else {
+        alert("Failed to save settings.");
+      }
+    })
+    .catch((error) => {
+      console.error("Error saving settings:", error);
+      alert("Error saving settings. Please try again.");
+    });
+}
+
 function setupSettingsModalListeners() {
   // Re-attach listeners for modal buttons
   document.querySelectorAll(".close-settings-btn").forEach((button) => {
@@ -645,4 +677,20 @@ function showSettingsModal() {
       });
     }
   });
+}
+
+function syncFromDisk() {
+  // Example: call backend to sync notes from disk
+  fetch("/api/sync", { method: "POST" })
+    .then((response) => {
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        alert("Failed to sync from disk.");
+      }
+    })
+    .catch((error) => {
+      console.error("Error syncing from disk:", error);
+      alert("Error syncing from disk. Please try again.");
+    });
 }
