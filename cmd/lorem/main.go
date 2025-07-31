@@ -1,10 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
+
+	"github.com/jaswdr/faker"
+	"golang.org/x/term"
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
@@ -12,21 +15,23 @@ import (
 	"gote/pkg/storage"
 )
 
-// loremIpsum returns a markdown string with lorem ipsum content
+// loremIpsum returns a markdown string with generated lorem ipsum content
 func loremIpsum() string {
-	return `# Lorem Ipsum
+	f := faker.New()
+	paragraph := f.Lorem().Paragraph(2)
+	bullet1 := f.Lorem().Sentence(8)
+	bullet2 := f.Lorem().Sentence(10)
+	quote := f.Lorem().Sentence(40)
+	code := f.Lorem().Word() + " := \"" + f.Lorem().Word() + "\""
 
-Lorem ipsum dolor sit amet, **consectetur** adipiscing elit.
-
-- Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-- Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-> Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-
-` +
+	return "# Lorem Ipsum\n\n" +
+		paragraph + "\n\n" +
+		"- " + bullet1 + "\n" +
+		"- " + bullet2 + "\n\n" +
+		"> " + quote + "\n\n" +
 		"```go\n" +
 		"// Example code block\n" +
-		"fmt.Println(\"Hello, world!\")\n" +
+		code + "\n" +
 		"```\n"
 }
 
@@ -38,9 +43,13 @@ func main() {
 	}
 
 	fmt.Print("Enter password: ")
-	reader := bufio.NewReader(os.Stdin)
-	pw, _ := reader.ReadString('\n')
-	pw = strings.TrimSpace(pw)
+	bytePw, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Println()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to read password")
+		os.Exit(1)
+	}
+	pw := strings.TrimSpace(string(bytePw))
 
 	authManager := auth.NewManager(cfg.PasswordHashPath)
 	if !authManager.VerifyPassword(pw) {
