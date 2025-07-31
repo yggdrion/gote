@@ -3,10 +3,14 @@ root = "."
 
 [build]
   # Watch Go files and rebuild
-  bin = "main.exe"
-  cmd = "go build -o main.exe main.go"
+  bin = "main"
+  cmd = "go build -o main main.go"
   include_ext = ["go"]
   exclude_dir = ["tmp", "data", "static/vendor"]
+
+[build.windows]
+  bin = "main.exe"
+  cmd = "go build -o main.exe main.go"
 
 [log]
   color = "true"
