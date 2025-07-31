@@ -31,7 +31,10 @@ func IsValidShortHashFilename(filename string) bool {
 // GenerateSessionID generates a secure random session ID
 func GenerateSessionID() string {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		// If random read fails, return an empty string for safety
+		return ""
+	}
 	return base64.URLEncoding.EncodeToString(bytes)
 }
 
