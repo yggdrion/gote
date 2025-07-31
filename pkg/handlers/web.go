@@ -18,12 +18,6 @@ type WebHandlers struct {
 	authManager AuthManager
 }
 
-// AuthManager interface for authentication operations
-type AuthManager interface {
-	IsAuthenticated(r *http.Request) *models.Session
-	IsFirstTimeSetup() bool
-}
-
 // NewWebHandlers creates a new web handlers instance
 func NewWebHandlers(store *storage.NoteStore, authManager AuthManager) *WebHandlers {
 	return &WebHandlers{

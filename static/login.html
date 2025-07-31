@@ -28,12 +28,16 @@
                 <input type="password" name="password" placeholder="Enter your master password" required autofocus>
                 <button type="submit" class="btn btn-primary">Login</button>
             </form>
+            <button id="reset-password-btn" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Reset
+                Password</button>
             {{end}}
+            <div id="reset-message" style="color: green; margin-top: 10px;"></div>
             {{if .Error}}
             <div class="error">{{.Error}}</div>
             {{end}}
         </div>
     </div>
+    <script src="/static/script.js"></script>
 </body>
 
 </html>

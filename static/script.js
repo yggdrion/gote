@@ -419,6 +419,28 @@ document.addEventListener("DOMContentLoaded", function () {
             setTimeout(() => searchInput.focus(), 100);
         }
     }
+
+    // Add Reset Password logic for login page
+    if (document.getElementById("reset-password-btn")) {
+        document.getElementById("reset-password-btn").addEventListener("click", async function (e) {
+            e.preventDefault();
+            if (!confirm("Are you sure you want to reset the password? This will remove the current password and you will need to set a new one. This only affects this device.")) {
+                return;
+            }
+            try {
+                const response = await fetch("/reset-password", { method: "POST" });
+                if (response.ok) {
+                    // Optionally show a message, or reload to show setup form
+                    window.location.reload();
+                } else {
+                    const msg = await response.text();
+                    document.getElementById("reset-message").textContent = msg || "Failed to reset password.";
+                }
+            } catch (err) {
+                document.getElementById("reset-message").textContent = "Error resetting password.";
+            }
+        });
+    }
 });
 
 // Set up event listeners for note action buttons
@@ -513,6 +535,13 @@ function setupNoteActionListeners() {
         });
     });
 
+    // Change password functionality
+    document.querySelectorAll(".change-password-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            changePassword();
+        });
+    });
+
     // Close settings modal when clicking outside
     const settingsModal = document.getElementById("settings-modal");
     if (settingsModal) {
@@ -525,19 +554,148 @@ function setupNoteActionListeners() {
 }
 
 // Settings modal functions
-function showSettingsModal() {
-    const modal = document.getElementById("settings-modal");
-    if (modal) {
-        // Load current settings
-        loadCurrentSettings();
-        modal.classList.remove("hidden");
+function createSettingsModal() {
+    // Remove any existing modal before creating a new one
+    const existingModal = document.getElementById("settings-modal");
+    if (existingModal) {
+        existingModal.parentNode.removeChild(existingModal);
     }
+    return fetch("/static/settings.html")
+        .then((response) => response.text())
+        .then((modalHtml) => {
+            const div = document.createElement("div");
+            div.innerHTML = modalHtml;
+            const modal = div.firstElementChild;
+            modal.classList.add("hidden");
+            modal.classList.add("loading");
+            document.body.appendChild(modal);
+            setupSettingsModalListeners();
+            // Wait for modal and fields to exist before resolving
+            return new Promise((resolve) => {
+                function waitForFields(attempts = 0) {
+                    const notesPathInput = document.getElementById("notes-path");
+                    const passwordHashInput =
+                        document.getElementById("password-hash-path");
+                    if (notesPathInput && passwordHashInput) {
+                        resolve();
+                    } else if (attempts < 20) {
+                        setTimeout(() => waitForFields(attempts + 1), 25);
+                    } else {
+                        resolve(); // Give up after 500ms
+                    }
+                }
+                waitForFields();
+            });
+        });
 }
 
 function hideSettingsModal() {
     const modal = document.getElementById("settings-modal");
     if (modal) {
         modal.classList.add("hidden");
+        // Remove modal from DOM after animation (optional: setTimeout for fade-out)
+        setTimeout(() => {
+            if (modal.parentNode) modal.parentNode.removeChild(modal);
+        }, 200);
+    }
+}
+
+function saveSettings() {
+    const notesPathInput = document.getElementById("notes-path");
+    const passwordHashInput = document.getElementById("password-hash-path");
+    const notesPath = notesPathInput ? notesPathInput.value.trim() : "";
+    const passwordHashPath = passwordHashInput
+        ? passwordHashInput.value.trim()
+        : "";
+
+    fetch("/api/settings", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            notesPath,
+            passwordHashPath,
+        }),
+    })
+        .then((response) => {
+            if (response.ok) {
+                hideSettingsModal();
+                window.location.reload(); // Reload to reflect new settings
+            } else {
+                alert("Failed to save settings.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error saving settings:", error);
+            alert("Error saving settings. Please try again.");
+        });
+}
+
+function changePassword() {
+    const oldPass = document.getElementById("change-old-pass").value;
+    const newPass = document.getElementById("change-new-pass").value;
+    const repeatNewPass = document.getElementById("change-repeat-new-pass").value;
+
+    if (!oldPass || !newPass || !repeatNewPass) {
+        alert("Please fill in all password fields.");
+        return;
+    }
+    if (newPass !== repeatNewPass) {
+        alert("New passwords do not match.");
+        return;
+    }
+
+    fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Ensure session cookie is sent
+        body: JSON.stringify({ old_password: oldPass, new_password: newPass }), // <-- fixed keys
+    })
+        .then((response) => {
+            if (response.ok) {
+                alert("Password changed successfully.");
+                // Optionally clear fields
+                document.getElementById("change-old-pass").value = "";
+                document.getElementById("change-new-pass").value = "";
+                document.getElementById("change-repeat-new-pass").value = "";
+            } else {
+                response
+                    .text()
+                    .then((msg) => alert(msg || "Failed to change password."));
+            }
+        })
+        .catch((error) => {
+            console.error("Error changing password:", error);
+            alert("Error changing password. Please try again.");
+        });
+}
+
+function setupSettingsModalListeners() {
+    // Re-attach listeners for modal buttons
+    document.querySelectorAll(".close-settings-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            hideSettingsModal();
+        });
+    });
+    document.querySelectorAll(".save-settings-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            saveSettings();
+        });
+    });
+    document.querySelectorAll(".change-password-btn").forEach((button) => {
+        button.addEventListener("click", function () {
+            changePassword();
+        });
+    });
+    // Close modal when clicking outside
+    const settingsModal = document.getElementById("settings-modal");
+    if (settingsModal) {
+        settingsModal.addEventListener("click", function (e) {
+            if (e.target === settingsModal) {
+                hideSettingsModal();
+            }
+        });
     }
 }
 
@@ -548,8 +706,9 @@ function loadCurrentSettings() {
     })
         .then((response) => response.json())
         .then((data) => {
+            console.log("[DEBUG] /api/settings response:", data); // Debug log
             const notesPathInput = document.getElementById("notes-path");
-            const passwordHashInput = document.getElementById("password-hash");
+            const passwordHashInput = document.getElementById("password-hash-path");
 
             if (notesPathInput) notesPathInput.value = data.notesPath || "./data";
             if (passwordHashInput)
@@ -560,90 +719,39 @@ function loadCurrentSettings() {
             console.error("Error loading settings:", error);
             // Fallback to defaults
             const notesPathInput = document.getElementById("notes-path");
-            const passwordHashInput = document.getElementById("password-hash");
+            const passwordHashInput = document.getElementById("password-hash-path");
 
             if (notesPathInput) notesPathInput.value = "./data";
             if (passwordHashInput) passwordHashInput.value = "./data/.password_hash";
         });
 }
 
-function saveSettings() {
-    const notesPathInput = document.getElementById("notes-path");
-    const passwordHashInput = document.getElementById("password-hash");
-
-    if (notesPathInput && passwordHashInput) {
-        const notesPath = notesPathInput.value.trim() || "./data";
-        const passwordHashPath =
-            passwordHashInput.value.trim() || "./data/.password_hash";
-
-        // Send to server
-        fetch("/api/settings", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                notesPath: notesPath,
-                passwordHashPath: passwordHashPath,
-            }),
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.success) {
-                    hideSettingsModal();
-                    // Show success message
-                    showNotification("Settings saved successfully!", "success");
-                } else {
-                    showNotification(
-                        "Failed to save settings: " + (data.error || "Unknown error"),
-                        "error"
-                    );
-                }
-            })
-            .catch((error) => {
-                console.error("Error saving settings:", error);
-                showNotification("Failed to save settings", "error");
+function showSettingsModal() {
+    createSettingsModal().then(() => {
+        loadCurrentSettings();
+        const modal = document.getElementById("settings-modal");
+        if (modal) {
+            // Force a repaint before showing
+            requestAnimationFrame(() => {
+                modal.classList.remove("hidden");
+                modal.classList.remove("loading");
             });
-    }
-}
-
-function showNotification(message, type = "info") {
-    // Create a simple notification
-    const notification = document.createElement("div");
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
         }
-    }, 3000);
+    });
 }
 
-// Sync function to refresh notes from disk
-async function syncFromDisk() {
-    try {
-        const response = await fetch("/api/sync", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+function syncFromDisk() {
+    // Example: call backend to sync notes from disk
+    fetch("/api/sync", { method: "POST" })
+        .then((response) => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert("Failed to sync from disk.");
+            }
+        })
+        .catch((error) => {
+            console.error("Error syncing from disk:", error);
+            alert("Error syncing from disk. Please try again.");
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            showNotification("Successfully synced from disk", "success");
-
-            // Refresh the notes list
-            window.location.reload();
-        } else {
-            showNotification("Failed to sync from disk", "error");
-        }
-    } catch (error) {
-        console.error("Error syncing from disk:", error);
-        showNotification("Failed to sync from disk", "error");
-    }
 }

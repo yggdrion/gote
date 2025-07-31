@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"gote/pkg/config"
+	"gote/pkg/crypto"
+	"gote/pkg/models"
 	"gote/pkg/storage"
 )
 
@@ -18,6 +21,15 @@ type APIHandlers struct {
 	store       *storage.NoteStore
 	authManager AuthManager
 	config      *config.Config
+}
+
+// AuthManager interface for dependency injection
+// Add methods used in APIHandlers
+// (This should match the methods on *auth.Manager)
+type AuthManager interface {
+	IsAuthenticated(r *http.Request) *models.Session
+	VerifyPassword(password string) bool
+	StorePasswordHash(password string) error
 }
 
 // NewAPIHandlers creates a new API handlers instance
@@ -33,7 +45,9 @@ func NewAPIHandlers(store *storage.NoteStore, authManager AuthManager, config *c
 func (h *APIHandlers) GetNotesHandler(w http.ResponseWriter, r *http.Request) {
 	notes := h.store.GetAllNotes()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(notes)
+	if err := json.NewEncoder(w).Encode(notes); err != nil {
+		fmt.Printf("[ERROR] encoding notes: %v\n", err)
+	}
 }
 
 // CreateNoteHandler creates a new note
@@ -61,7 +75,9 @@ func (h *APIHandlers) CreateNoteHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(note)
+	if err := json.NewEncoder(w).Encode(note); err != nil {
+		fmt.Printf("[ERROR] encoding note: %v\n", err)
+	}
 }
 
 // GetNoteHandler returns a specific note by ID
@@ -79,7 +95,9 @@ func (h *APIHandlers) GetNoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(note)
+	if err := json.NewEncoder(w).Encode(note); err != nil {
+		fmt.Printf("[ERROR] encoding note: %v\n", err)
+	}
 }
 
 // UpdateNoteHandler updates an existing note
@@ -112,7 +130,9 @@ func (h *APIHandlers) UpdateNoteHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(note)
+	if err := json.NewEncoder(w).Encode(note); err != nil {
+		fmt.Printf("[ERROR] encoding note: %v\n", err)
+	}
 }
 
 // DeleteNoteHandler deletes a note by ID
@@ -141,7 +161,9 @@ func (h *APIHandlers) SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	notes := h.store.SearchNotes(query)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(notes)
+	if err := json.NewEncoder(w).Encode(notes); err != nil {
+		fmt.Printf("[ERROR] encoding notes: %v\n", err)
+	}
 }
 
 // GetSettingsHandler returns current configuration
@@ -152,8 +174,13 @@ func (h *APIHandlers) GetSettingsHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Debug: Log the config being sent
+	fmt.Printf("[DEBUG] Sending config: NotesPath=%s, PasswordHashPath=%s\n", h.config.NotesPath, h.config.PasswordHashPath)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.config)
+	if err := json.NewEncoder(w).Encode(h.config); err != nil {
+		fmt.Printf("[ERROR] encoding config: %v\n", err)
+	}
 }
 
 // SettingsHandler updates configuration
@@ -204,10 +231,12 @@ func (h *APIHandlers) SettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// with the new path, but that would require more complex coordination
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Settings saved successfully",
-	})
+	}); err != nil {
+		fmt.Printf("[ERROR] encoding settings response: %v\n", err)
+	}
 }
 
 // SyncHandler forces a sync from disk
@@ -224,8 +253,114 @@ func (h *APIHandlers) SyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Successfully synced from disk",
-	})
+	}); err != nil {
+		fmt.Printf("[ERROR] encoding sync response: %v\n", err)
+	}
+}
+
+// ChangePasswordHandler changes the user's password and re-encrypts all notes
+func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate user session
+	session := h.authManager.IsAuthenticated(r)
+	fmt.Printf("[DEBUG] Session: %+v\n", session)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	fmt.Printf("[DEBUG] ChangePassword request: old=%q new=%q\n", req.OldPassword, req.NewPassword)
+
+	// Verify old password
+	verified := h.authManager.VerifyPassword(req.OldPassword)
+	fmt.Printf("[DEBUG] VerifyPassword result: %v\n", verified)
+	if !verified {
+		http.Error(w, "Old password is incorrect", http.StatusUnauthorized)
+		return
+	}
+
+	// Derive old and new keys
+	oldKey := crypto.DeriveKey(req.OldPassword)
+	newKey := crypto.DeriveKey(req.NewPassword)
+
+	// Re-encrypt all notes from disk
+	noteFiles, err := filepath.Glob(filepath.Join(h.config.NotesPath, "*.json"))
+	if err != nil {
+		http.Error(w, "Failed to list note files", http.StatusInternalServerError)
+		return
+	}
+	var corruptedNotes []string
+	for _, file := range noteFiles {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			corruptedNotes = append(corruptedNotes, filepath.Base(file))
+			if err2 := h.store.MoveNoteToCorrupted(strings.TrimSuffix(filepath.Base(file), ".json")); err2 != nil {
+				fmt.Printf("[ERROR] moving note to corrupted: %v\n", err2)
+			}
+			fmt.Printf("[ERROR] moving note to corrupted: %v\n", err)
+			continue
+		}
+		var encryptedNote models.EncryptedNote
+		if err := json.Unmarshal(data, &encryptedNote); err != nil {
+			corruptedNotes = append(corruptedNotes, filepath.Base(file))
+			if err2 := h.store.MoveNoteToCorrupted(strings.TrimSuffix(filepath.Base(file), ".json")); err2 != nil {
+				fmt.Printf("[ERROR] moving note to corrupted: %v\n", err2)
+			}
+			fmt.Printf("[ERROR] moving note to corrupted: %v\n", err)
+			continue
+		}
+		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
+		if err != nil {
+			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
+			if err2 := h.store.MoveNoteToCorrupted(encryptedNote.ID); err2 != nil {
+				fmt.Printf("[ERROR] moving note to corrupted: %v\n", err2)
+			}
+			fmt.Printf("[ERROR] moving note to corrupted: %v\n", err)
+			continue
+		}
+		note := &models.Note{
+			ID:        encryptedNote.ID,
+			Content:   decryptedContent, // <-- use plaintext here
+			CreatedAt: encryptedNote.CreatedAt,
+			UpdatedAt: encryptedNote.UpdatedAt,
+		}
+		if err := h.store.SaveNoteDirect(note, newKey); err != nil {
+			http.Error(w, "Failed to save note: "+note.ID, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Store new password hash
+	if err := h.authManager.StorePasswordHash(req.NewPassword); err != nil {
+		http.Error(w, "Failed to update password hash", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if len(corruptedNotes) > 0 {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":         true,
+			"message":         fmt.Sprintf("Password changed and notes re-encrypted successfully. %d corrupted note(s) were moved to the 'corrupted' folder.", len(corruptedNotes)),
+			"corrupted_notes": corruptedNotes,
+		}); err != nil {
+			fmt.Printf("[ERROR] encoding password change response: %v\n", err)
+		}
+	} else {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Password changed and notes re-encrypted successfully.",
+		}); err != nil {
+			fmt.Printf("[ERROR] encoding password change response: %v\n", err)
+		}
+	}
 }

@@ -328,6 +328,30 @@ func (s *NoteStore) saveNote(note *models.Note, key []byte) error {
 	return nil
 }
 
+// SaveNoteDirect saves a note to disk, bypassing in-memory update (for password change)
+func (s *NoteStore) SaveNoteDirect(note *models.Note, key []byte) error {
+	// Encrypt the note content
+	encryptedContent, err := crypto.Encrypt(note.Content, key)
+	if err != nil {
+		return err
+	}
+
+	encryptedNote := models.EncryptedNote{
+		ID:            note.ID,
+		EncryptedData: encryptedContent,
+		CreatedAt:     note.CreatedAt,
+		UpdatedAt:     note.UpdatedAt,
+	}
+
+	filename := filepath.Join(s.dataDir, note.ID+".json")
+	data, err := json.MarshalIndent(encryptedNote, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filename, data, 0644)
+}
+
 // deleteNote removes a note from disk
 func (s *NoteStore) deleteNote(id string) error {
 	filename := filepath.Join(s.dataDir, fmt.Sprintf("%s.json", id))
@@ -456,4 +480,23 @@ func (s *NoteStore) Close() error {
 // RefreshFromDisk forces a full refresh from disk
 func (s *NoteStore) RefreshFromDisk() error {
 	return s.syncFromDisk()
+}
+
+// MoveNoteToCorrupted moves a note file to the corrupted folder
+func (s *NoteStore) MoveNoteToCorrupted(noteID string) error {
+	corruptedDir := filepath.Join(s.dataDir, "corrupted")
+	if err := os.MkdirAll(corruptedDir, 0755); err != nil {
+		return err
+	}
+	oldPath := filepath.Join(s.dataDir, noteID+".json")
+	newPath := filepath.Join(corruptedDir, noteID+".json")
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return err
+	}
+	// Remove from in-memory store
+	s.mutex.Lock()
+	delete(s.notes, noteID)
+	delete(s.fileModTimes, oldPath)
+	s.mutex.Unlock()
+	return nil
 }
