@@ -411,6 +411,27 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    // Enhanced Cmd+F / Ctrl+F handler: double-press for browser search
+    let lastSearchHotkeyTime = 0;
+    window.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+            const now = Date.now();
+            const searchInput = document.getElementById("search-input");
+            if (searchInput) {
+                if (now - lastSearchHotkeyTime < 500) {
+                    // Allow default browser search
+                    lastSearchHotkeyTime = 0;
+                    return;
+                } else {
+                    e.preventDefault();
+                    searchInput.focus();
+                    searchInput.select();
+                    lastSearchHotkeyTime = now;
+                }
+            }
+        }
+    });
+
     // Focus management for better UX
     const searchInput = document.querySelector(".search-form input");
     if (searchInput && !isEditing) {
