@@ -1,16 +1,12 @@
 name: 🦋 Lint static assets
 
 on:
-  push:
-    paths:
-      - "static/**.html"
-      - "static/**.css"
-      - "static/**.js"
   pull_request:
-    paths:
-      - "static/**.html"
-      - "static/**.css"
-      - "static/**.js"
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
   lint:
