@@ -411,6 +411,19 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    // Intercept Cmd+F / Ctrl+F to focus the app's search input
+    window.addEventListener("keydown", function (e) {
+        // Mac: metaKey+F, Others: ctrlKey+F
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+            const searchInput = document.getElementById("search-input");
+            if (searchInput) {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+    });
+
     // Focus management for better UX
     const searchInput = document.querySelector(".search-form input");
     if (searchInput && !isEditing) {
