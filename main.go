@@ -64,16 +64,22 @@ func main() {
 		if err := os.Remove(cfg.PasswordHashPath); err != nil {
 			if os.IsNotExist(err) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Password already reset."))
+				if _, err := w.Write([]byte("Password already reset.")); err != nil {
+					log.Printf("Failed to write response: %v", err)
+				}
 				return
 			}
 			log.Printf("Failed to delete password hash file: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Failed to reset password."))
+			if _, err := w.Write([]byte("Failed to reset password.")); err != nil {
+				log.Printf("Failed to write response: %v", err)
+			}
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Password reset. Please set a new password."))
+		if _, err := w.Write([]byte("Password reset. Please set a new password.")); err != nil {
+			log.Printf("Failed to write response: %v", err)
+		}
 	})
 
 	// Protected routes
