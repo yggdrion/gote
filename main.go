@@ -87,7 +87,9 @@ func main() {
 		<-c
 		log.Println("Shutting down gracefully...")
 		if store != nil {
-			store.Close()
+			if err := store.Close(); err != nil {
+				log.Printf("Error closing store: %v", err)
+			}
 		}
 		os.Exit(0)
 	}()
