@@ -411,19 +411,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Intercept Cmd+F / Ctrl+F to focus the app's search input
-    window.addEventListener("keydown", function (e) {
-        // Mac: metaKey+F, Others: ctrlKey+F
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
-            const searchInput = document.getElementById("search-input");
-            if (searchInput) {
-                e.preventDefault();
-                searchInput.focus();
-                searchInput.select();
-            }
-        }
-    });
-
     // Enhanced Cmd+F / Ctrl+F handler: double-press for browser search
     let lastSearchHotkeyTime = 0;
     window.addEventListener("keydown", function (e) {
@@ -431,7 +418,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const now = Date.now();
             const searchInput = document.getElementById("search-input");
             if (searchInput) {
-                if (now - lastSearchHotkeyTime < 1000) {
+                if (now - lastSearchHotkeyTime < 500) {
                     // Allow default browser search
                     lastSearchHotkeyTime = 0;
                     return;
