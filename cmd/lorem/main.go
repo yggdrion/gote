@@ -15,24 +15,54 @@ import (
 	"gote/pkg/storage"
 )
 
-// loremIpsum returns a markdown string with generated lorem ipsum content
+// loremIpsum returns a markdown string with highly randomized and varied content
 func loremIpsum() string {
 	f := faker.New()
-	paragraph := f.Lorem().Paragraph(2)
-	bullet1 := f.Lorem().Sentence(8)
-	bullet2 := f.Lorem().Sentence(10)
-	quote := f.Lorem().Sentence(40)
-	code := f.Lorem().Word() + " := \"" + f.Lorem().Word() + "\""
+	variant := f.IntBetween(1, 4)
 
-	return "# Lorem Ipsum\n\n" +
-		paragraph + "\n\n" +
-		"- " + bullet1 + "\n" +
-		"- " + bullet2 + "\n\n" +
-		"> " + quote + "\n\n" +
-		"```go\n" +
-		"// Example code block\n" +
-		code + "\n" +
-		"```\n"
+	switch variant {
+	case 1:
+		// Full markdown: title, paragraphs, bullets, quote, code
+		paragraphs := []string{}
+		for i := 0; i < f.IntBetween(1, 3); i++ {
+			paragraphs = append(paragraphs, f.Lorem().Paragraph(f.IntBetween(1, 3)))
+		}
+		bullets := []string{}
+		for i := 0; i < f.IntBetween(2, 5); i++ {
+			bullets = append(bullets, f.Lorem().Sentence(f.IntBetween(6, 14)))
+		}
+		quote := f.Lorem().Sentence(f.IntBetween(20, 50))
+		codeLines := []string{"// Example code block"}
+		for i := 0; i < f.IntBetween(1, 3); i++ {
+			codeLines = append(codeLines, f.Lorem().Word()+" := \""+f.Lorem().Word()+"\"")
+		}
+		return "# " + f.Lorem().Word() + " " + f.Lorem().Word() + "\n\n" +
+			strings.Join(paragraphs, "\n\n") + "\n\n" +
+			"- " + strings.Join(bullets, "\n- ") + "\n\n" +
+			"> " + quote + "\n\n" +
+			"```go\n" +
+			strings.Join(codeLines, "\n") + "\n" +
+			"```\n"
+	case 2:
+		// Only code block
+		codeLines := []string{"// Only code block"}
+		for i := 0; i < f.IntBetween(2, 6); i++ {
+			codeLines = append(codeLines, f.Lorem().Word()+" := \""+f.Lorem().Word()+"\"")
+		}
+		return "```go\n" + strings.Join(codeLines, "\n") + "\n```\n"
+	case 3:
+		// Only bullets
+		bullets := []string{}
+		for i := 0; i < f.IntBetween(3, 8); i++ {
+			bullets = append(bullets, f.Lorem().Sentence(f.IntBetween(4, 12)))
+		}
+		return "- " + strings.Join(bullets, "\n- ") + "\n"
+	case 4:
+		// Only quote
+		return "> " + f.Lorem().Sentence(f.IntBetween(30, 60)) + "\n"
+	default:
+		return f.Lorem().Paragraph(1) + "\n"
+	}
 }
 
 func main() {
