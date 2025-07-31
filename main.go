@@ -58,6 +58,24 @@ func main() {
 	r.Post("/auth", authHandlers.AuthHandler)
 	r.Post("/logout", authHandlers.LogoutHandler)
 
+	// Password reset route (no auth required)
+	r.Post("/reset-password", func(w http.ResponseWriter, r *http.Request) {
+		// Delete the password hash file
+		if err := os.Remove(cfg.PasswordHashPath); err != nil {
+			if os.IsNotExist(err) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("Password already reset."))
+				return
+			}
+			log.Printf("Failed to delete password hash file: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Failed to reset password."))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Password reset. Please set a new password."))
+	})
+
 	// Protected routes
 	requireAuth := middleware.RequireAuth(authManager)
 	r.Get("/", requireAuth(webHandlers.IndexHandler))
