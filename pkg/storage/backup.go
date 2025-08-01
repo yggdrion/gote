@@ -29,10 +29,18 @@ func BackupNotes(notesDir string, _ string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer zipFile.Close()
+	defer func() {
+		if cerr := zipFile.Close(); cerr != nil {
+			fmt.Printf("[ERROR] zipFile.Close: %v\n", cerr)
+		}
+	}()
 
 	zipWriter := zip.NewWriter(zipFile)
-	defer zipWriter.Close()
+	defer func() {
+		if cerr := zipWriter.Close(); cerr != nil {
+			fmt.Printf("[ERROR] zipWriter.Close: %v\n", cerr)
+		}
+	}()
 
 	noteFiles, err := filepath.Glob(filepath.Join(notesDir, "*.json"))
 	if err != nil {
@@ -44,7 +52,11 @@ func BackupNotes(notesDir string, _ string) (string, error) {
 		if err != nil {
 			continue // skip unreadable files
 		}
-		defer f.Close()
+		defer func(f *os.File) {
+			if cerr := f.Close(); cerr != nil {
+				fmt.Printf("[ERROR] f.Close: %v\n", cerr)
+			}
+		}(f)
 		w, err := zipWriter.Create(folderName + filepath.Base(file))
 		if err != nil {
 			continue
