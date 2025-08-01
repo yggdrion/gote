@@ -1,7 +1,7 @@
 # Vendor Library Versions
 # This file tracks the versions of locally stored vendor libraries
 
-marked.js=16.1.0
+marked.js=16.1.1
 marked-highlight=2.2.2
 highlight.js=11.11.1
 
