@@ -293,6 +293,14 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 	oldKey := crypto.DeriveKey(req.OldPassword)
 	newKey := crypto.DeriveKey(req.NewPassword)
 
+	// Backup notes before changing password
+	backupPath, err := storage.BackupNotes(h.config.NotesPath, "")
+	if err != nil {
+		http.Error(w, "Failed to create backup: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("[DEBUG] Notes backup created at: %s\n", backupPath)
+
 	// Re-encrypt all notes from disk
 	noteFiles, err := filepath.Glob(filepath.Join(h.config.NotesPath, "*.json"))
 	if err != nil {
@@ -363,4 +371,22 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 			fmt.Printf("[ERROR] encoding password change response: %v\n", err)
 		}
 	}
+}
+
+// BackupHandler triggers a manual backup of notes
+func (h *APIHandlers) BackupHandler(w http.ResponseWriter, r *http.Request) {
+	backupPath, err := storage.BackupNotes(h.config.NotesPath, "")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "Failed to create backup: " + err.Error(),
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Backup created successfully.",
+		"path":    backupPath,
+	})
 }

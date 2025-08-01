@@ -99,6 +99,8 @@ func main() {
 		r.Post("/settings", apiHandlers.SettingsHandler)
 		r.Post("/sync", apiHandlers.SyncHandler)
 		r.Post("/change-password", apiHandlers.ChangePasswordHandler)
+		// Add manual backup endpoint
+		r.Post("/backup", apiHandlers.BackupHandler)
 	})
 
 	fmt.Println("Server starting on :8080")
