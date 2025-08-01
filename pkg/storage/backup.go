@@ -65,6 +65,5 @@ func BackupNotes(notesDir string, _ string) (string, error) {
 			continue
 		}
 	}
-	fmt.Printf("[DEBUG] Backup zip created at: %s\n", zipPath)
 	return zipPath, nil
 }

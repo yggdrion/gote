@@ -753,7 +753,6 @@ function loadCurrentSettings() {
     })
         .then((response) => response.json())
         .then((data) => {
-            console.log("[DEBUG] /api/settings response:", data); // Debug log
             const notesPathInput = document.getElementById("notes-path");
             const passwordHashInput = document.getElementById("password-hash-path");
 

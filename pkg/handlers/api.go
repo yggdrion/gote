@@ -174,9 +174,6 @@ func (h *APIHandlers) GetSettingsHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Debug: Log the config being sent
-	fmt.Printf("[DEBUG] Sending config: NotesPath=%s, PasswordHashPath=%s\n", h.config.NotesPath, h.config.PasswordHashPath)
-
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(h.config); err != nil {
 		fmt.Printf("[ERROR] encoding config: %v\n", err)
@@ -265,7 +262,6 @@ func (h *APIHandlers) SyncHandler(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user session
 	session := h.authManager.IsAuthenticated(r)
-	fmt.Printf("[DEBUG] Session: %+v\n", session)
 	if session == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -279,11 +275,9 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("[DEBUG] ChangePassword request: old=%q new=%q\n", req.OldPassword, req.NewPassword)
 
 	// Verify old password
 	verified := h.authManager.VerifyPassword(req.OldPassword)
-	fmt.Printf("[DEBUG] VerifyPassword result: %v\n", verified)
 	if !verified {
 		http.Error(w, "Old password is incorrect", http.StatusUnauthorized)
 		return
@@ -294,12 +288,11 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 	newKey := crypto.DeriveKey(req.NewPassword)
 
 	// Backup notes before changing password
-	backupPath, err := storage.BackupNotes(h.config.NotesPath, "")
-	if err != nil {
-		http.Error(w, "Failed to create backup: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Printf("[DEBUG] Notes backup created at: %s\n", backupPath)
+	// backupPath, err := storage.BackupNotes(h.config.NotesPath, "")
+	// if err != nil {
+	// 	http.Error(w, "Failed to create backup: "+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// Re-encrypt all notes from disk
 	noteFiles, err := filepath.Glob(filepath.Join(h.config.NotesPath, "*.json"))
