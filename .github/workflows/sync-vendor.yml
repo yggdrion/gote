@@ -1,4 +1,4 @@
-name: Sync Vendor Files
+name: 🔄 Sync Vendor Files
 
 on:
   pull_request:
