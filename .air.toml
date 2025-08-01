@@ -18,12 +18,12 @@ root = "."
 
 [watch]
   # Watch static files for reload (no rebuild)
-  include_ext = ["js", "css", "html"]
-  paths = [
-    "static",
-    "static/*.js",
-    "static/*.css",
-    "static/*.html"
-  ]
+  #include_ext = ["js", "css", "html"]
+  #paths = [
+  #  "static",
+  #  "static/*.js",
+  #  "static/*.css",
+  #  "static/*.html"
+  #]
 
 

@@ -730,7 +730,7 @@ function setupSettingsModalListeners() {
                 manualBackupBtn.textContent = "Backup failed";
             }
             setTimeout(() => {
-                manualBackupBtn.textContent = "🗄️ Create Backup Snapshot";
+                manualBackupBtn.textContent = "🗄️ Create Backup";
                 manualBackupBtn.disabled = false;
             }, 3000);
         });
@@ -820,8 +820,8 @@ if (manualBackupBtn) {
             manualBackupBtn.textContent = "Backup failed";
         }
         setTimeout(() => {
-            manualBackupBtn.textContent = "🗄️ Create Backup Snapshot";
+            manualBackupBtn.textContent = "🗄️ Create Backup";
             manualBackupBtn.disabled = false;
-        }, 3000);
+        }, 30000);
     });
 }
