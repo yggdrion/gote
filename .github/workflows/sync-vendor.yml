@@ -1,15 +1,9 @@
 name: 🔄 Sync Vendor Files
 
 on:
-  pull_request:
-    paths:
-      - "package.json"
-      - "package-lock.json"
-  push:
-    branches: [main]
-    paths:
-      - "package.json"
-      - "package-lock.json"
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 
 jobs:
   sync-vendor:
@@ -21,19 +15,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install
+          go-version: "1.24"
 
       - name: Update vendor files
-        run: npm run update-vendor
-
-      - name: Check vendor health
-        run: npm run check-vendor
+        run: go run cmd/vendor-update/main.go
 
       - name: Check for changes
         id: changes
@@ -44,14 +32,16 @@ jobs:
             echo "changes=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit vendor updates
+      - name: Create Pull Request for vendor updates
         if: steps.changes.outputs.changes == 'true' && github.event_name == 'push'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add static/vendor/
-          git commit -m "vendor: sync vendor files with package.json updates"
-          git push
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "vendor: sync vendor files with latest versions"
+          branch: vendor-update
+          title: "vendor: sync vendor files with latest versions"
+          body: "Automated vendor update from workflow"
+          add-paths: static/vendor/
 
       - name: Update PR with vendor changes
         if: steps.changes.outputs.changes == 'true' && github.event_name == 'pull_request'
@@ -59,5 +49,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add static/vendor/
-          git commit -m "vendor: sync vendor files with package.json updates" || exit 0
+          git commit -m "vendor: sync vendor files with latest versions" || exit 0
           git push origin HEAD:${{ github.head_ref }} || exit 0
