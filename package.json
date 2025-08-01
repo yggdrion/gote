@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "Vendor dependencies for Go note-taking app",
     "private": true,
+    "type": "module",
     "dependencies": {
         "highlight.js": "11.11.1",
         "marked": "16.1.1",

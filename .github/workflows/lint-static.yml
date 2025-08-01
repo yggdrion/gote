@@ -44,7 +44,7 @@ jobs:
         id: lint_js
         continue-on-error: true
         run: |
-          npx eslint 'static/**/*.js' --no-eslintrc --env browser --env es2021
+          npx eslint 'static/**/*.js'
 
       - name: Fail if any linter failed
         if: steps.lint_html.outcome == 'failure' || steps.lint_css.outcome == 'failure' || steps.lint_js.outcome == 'failure'
