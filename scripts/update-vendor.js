@@ -61,7 +61,7 @@ async function downloadFile(url, outputPath) {
 } async function validateJavaScript(filePath) {
     try {
         // Use Node.js to validate JavaScript syntax
-        const { Script } = require('vm');
+        const { Script } = await import('vm');
         new Script(fs.readFileSync(filePath, 'utf8'));
         console.log(`✅ ${path.basename(filePath)} is valid JavaScript`);
         return true;
