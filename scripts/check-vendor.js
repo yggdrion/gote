@@ -110,8 +110,8 @@ async function checkVendorHealth() {
 }
 
 // Run if called directly
-if (import.meta.url === process.argv[1] || import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     checkVendorHealth();
 }
 
-module.exports = { checkVendorHealth };
+export { checkVendorHealth };
