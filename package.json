@@ -9,10 +9,6 @@
         "marked": "16.1.1",
         "marked-highlight": "^2.2.2"
     },
-    "scripts": {
-        "update-vendor": "node scripts/update-vendor.js",
-        "check-vendor": "node scripts/check-vendor.js"
-    },
     "devDependencies": {
         "semver": "^7.0.0",
         "stylelint": "^16.23.0",
