@@ -38,14 +38,14 @@ func BackupNotes(notesDir string, _ string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	notesFolder := "notes/"
+	folderName := "backup-" + timestamp + "/"
 	for _, file := range noteFiles {
 		f, err := os.Open(file)
 		if err != nil {
 			continue // skip unreadable files
 		}
 		defer f.Close()
-		w, err := zipWriter.Create(notesFolder + filepath.Base(file))
+		w, err := zipWriter.Create(folderName + filepath.Base(file))
 		if err != nil {
 			continue
 		}
