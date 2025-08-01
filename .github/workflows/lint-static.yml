@@ -24,6 +24,10 @@ jobs:
         run: |
           npm install -g htmlhint stylelint stylelint-config-standard eslint
 
+      - name: install dependencies
+        run: |
+          npm install
+
       - name: Lint HTML
         run: |
           htmlhint 'static/**/*.html' || exit 1
