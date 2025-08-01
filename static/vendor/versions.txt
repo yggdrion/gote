@@ -12,4 +12,4 @@ highlight.js.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/h
 highlight.js.css.url=https://cdnjs.cloudflare.com/ajax/libs/highlight.js/{version}/styles/github.min.css
 
 # Last updated
-last_updated=2025-07-30
+last_updated=2025-08-01
