@@ -21,7 +21,7 @@ jobs:
           go-version: "1.24"
 
       - name: Update vendor files
-        run: go run cmd/vendor-update/main.go
+        run: go run cmd/sync-vendor/main.go
 
       - name: Check for changes
         id: changes
