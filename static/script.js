@@ -709,6 +709,32 @@ function setupSettingsModalListeners() {
             changePassword();
         });
     });
+    // Manual backup functionality
+    const manualBackupBtn = document.getElementById("manual-backup-btn");
+    if (manualBackupBtn) {
+        manualBackupBtn.addEventListener("click", async function () {
+            manualBackupBtn.disabled = true;
+            manualBackupBtn.textContent = "Creating backup...";
+            try {
+                const response = await fetch("/api/backup", {
+                    method: "POST",
+                    credentials: "same-origin"
+                });
+                const result = await response.json();
+                if (result.success) {
+                    manualBackupBtn.textContent = "Backup created!";
+                } else {
+                    manualBackupBtn.textContent = "Backup failed";
+                }
+            } catch (e) {
+                manualBackupBtn.textContent = "Backup failed";
+            }
+            setTimeout(() => {
+                manualBackupBtn.textContent = "🗄️ Create Backup Snapshot";
+                manualBackupBtn.disabled = false;
+            }, 3000);
+        });
+    }
     // Close modal when clicking outside
     const settingsModal = document.getElementById("settings-modal");
     if (settingsModal) {
@@ -775,4 +801,28 @@ function syncFromDisk() {
             console.error("Error syncing from disk:", error);
             alert("Error syncing from disk. Please try again.");
         });
+}
+
+// Manual backup functionality
+const manualBackupBtn = document.getElementById("manual-backup-btn");
+if (manualBackupBtn) {
+    manualBackupBtn.addEventListener("click", async function () {
+        manualBackupBtn.disabled = true;
+        manualBackupBtn.textContent = "Creating backup...";
+        try {
+            const response = await fetch("/api/backup", { method: "POST" });
+            const result = await response.json();
+            if (result.success) {
+                manualBackupBtn.textContent = "Backup created!";
+            } else {
+                manualBackupBtn.textContent = "Backup failed";
+            }
+        } catch (e) {
+            manualBackupBtn.textContent = "Backup failed";
+        }
+        setTimeout(() => {
+            manualBackupBtn.textContent = "🗄️ Create Backup Snapshot";
+            manualBackupBtn.disabled = false;
+        }, 3000);
+    });
 }
