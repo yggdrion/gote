@@ -33,7 +33,7 @@ jobs:
           fi
 
       - name: Create Pull Request for vendor updates
-        if: steps.changes.outputs.changes == 'true' && github.event_name == 'push'
+        if: steps.changes.outputs.changes == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -42,12 +42,5 @@ jobs:
           title: "vendor: sync vendor files with latest versions"
           body: "Automated vendor update from workflow"
           add-paths: static/vendor/
-
-      - name: Update PR with vendor changes
-        if: steps.changes.outputs.changes == 'true' && github.event_name == 'pull_request'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add static/vendor/
-          git commit -m "vendor: sync vendor files with latest versions" || exit 0
-          git push origin HEAD:${{ github.head_ref }} || exit 0
+          update-branch: true
+          delete-branch: true
