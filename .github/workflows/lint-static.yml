@@ -30,12 +30,12 @@ jobs:
 
       - name: Lint HTML
         run: |
-          htmlhint 'static/**/*.html' || exit 1
+          npx htmlhint 'static/**/*.html' || exit 1
 
       - name: Lint CSS
         run: |
-          stylelint 'static/**/*.css' --config '{"extends": "stylelint-config-standard"}' || exit 1
+          npx stylelint 'static/**/*.css' --config .stylelintrc.json || exit 1
 
       - name: Lint JavaScript
         run: |
-          eslint 'static/**/*.js' --no-eslintrc --env browser --env es2021 || exit 1
+          npx eslint 'static/**/*.js' --no-eslintrc --env browser --env es2021 || exit 1
