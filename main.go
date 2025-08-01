@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -100,7 +99,7 @@ func main() {
 		r.Post("/backup", apiHandlers.BackupHandler)
 	})
 
-	fmt.Println("Server starting on :8080")
+	log.Println("Server starting on :8080")
 
 	// Handle graceful shutdown
 	c := make(chan os.Signal, 1)
