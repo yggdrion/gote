@@ -44,7 +44,11 @@ func getLatestVersion(pkg string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: error closing response body: %v\n", cerr)
+		}
+	}()
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
@@ -65,7 +69,11 @@ func downloadFile(url, outPath string, minSize int64) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: error closing response body: %v\n", cerr)
+		}
+	}()
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
@@ -73,7 +81,11 @@ func downloadFile(url, outPath string, minSize int64) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: error closing file: %v\n", cerr)
+		}
+	}()
 	written, err := io.Copy(f, resp.Body)
 	if err != nil {
 		return err
