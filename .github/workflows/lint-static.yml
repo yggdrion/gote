@@ -29,13 +29,22 @@ jobs:
           npm install
 
       - name: Lint HTML
+        id: lint_html
         run: |
-          npx htmlhint 'static/**/*.html' || exit 1
+          npx htmlhint 'static/**/*.html'
 
       - name: Lint CSS
+        id: lint_css
         run: |
-          npx stylelint 'static/**/*.css' --config .stylelintrc.json || exit 1
+          npx stylelint 'static/**/*.css' --config .stylelintrc.json
 
       - name: Lint JavaScript
+        id: lint_js
         run: |
-          npx eslint 'static/**/*.js' --no-eslintrc --env browser --env es2021 || exit 1
+          npx eslint 'static/**/*.js' --no-eslintrc --env browser --env es2021
+
+      - name: Fail if any linter failed
+        if: steps.lint_html.outcome == 'failure' || steps.lint_css.outcome == 'failure' || steps.lint_js.outcome == 'failure'
+        run: |
+          echo "One or more linters failed."
+          exit 1
