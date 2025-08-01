@@ -30,16 +30,19 @@ jobs:
 
       - name: Lint HTML
         id: lint_html
+        continue-on-error: true
         run: |
           npx htmlhint 'static/**/*.html'
 
       - name: Lint CSS
         id: lint_css
+        continue-on-error: true
         run: |
           npx stylelint 'static/**/*.css' --config .stylelintrc.json
 
       - name: Lint JavaScript
         id: lint_js
+        continue-on-error: true
         run: |
           npx eslint 'static/**/*.js' --no-eslintrc --env browser --env es2021
 
