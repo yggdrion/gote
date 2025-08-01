@@ -42,5 +42,4 @@ jobs:
           title: "vendor: sync vendor files with latest versions"
           body: "Automated vendor update from workflow"
           add-paths: static/vendor/
-          update-branch: true
           delete-branch: true
