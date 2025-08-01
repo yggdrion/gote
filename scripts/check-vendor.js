@@ -4,12 +4,16 @@
  * Health check for vendor libraries
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const VENDOR_DIR = path.join(__dirname, '..', 'static', 'vendor');
 
-function checkVendorHealth() {
+async function checkVendorHealth() {
     console.log('🔍 Checking vendor library health...');
 
     // Check if vendor directory exists
@@ -54,8 +58,8 @@ function checkVendorHealth() {
     for (const jsFile of jsFiles) {
         try {
             const filePath = path.join(VENDOR_DIR, jsFile);
-            const { Script } = require('vm');
-            new Script(fs.readFileSync(filePath, 'utf8'));
+            const vm = await import('vm');
+            new vm.Script(fs.readFileSync(filePath, 'utf8'));
             console.log(`✅ ${jsFile} is valid`);
         } catch (error) {
             console.error(`❌ ${jsFile} is not valid JavaScript:`, error.message);
@@ -106,8 +110,8 @@ function checkVendorHealth() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     checkVendorHealth();
 }
 
-module.exports = { checkVendorHealth };
+export { checkVendorHealth };

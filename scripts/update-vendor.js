@@ -5,9 +5,13 @@
  * This script syncs the static/vendor/ directory with the versions in package.json
  */
 
-const fs = require('fs');
-const path = require('path');
-const https = require('https');
+import fs from 'fs';
+import path from 'path';
+import https from 'https';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const VENDOR_DIR = path.join(__dirname, '..', 'static', 'vendor');
 const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
@@ -57,7 +61,7 @@ async function downloadFile(url, outputPath) {
 } async function validateJavaScript(filePath) {
     try {
         // Use Node.js to validate JavaScript syntax
-        const { Script } = require('vm');
+        const { Script } = await import('vm');
         new Script(fs.readFileSync(filePath, 'utf8'));
         console.log(`✅ ${path.basename(filePath)} is valid JavaScript`);
         return true;
@@ -200,8 +204,8 @@ async function updateVendorFiles() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     updateVendorFiles();
 }
 
-module.exports = { updateVendorFiles };
+export { updateVendorFiles };

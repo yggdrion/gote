@@ -435,7 +435,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Focus management for better UX
     const searchInput = document.querySelector(".search-form input");
     if (searchInput && !isEditing) {
-        // Focus search if no notes are being edited and it's empty
+        // Focus search if no notes are being edited and it's empty.
         if (searchInput.value === "") {
             setTimeout(() => searchInput.focus(), 100);
         }
