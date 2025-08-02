@@ -9,7 +9,6 @@ import (
 	"gote/pkg/auth"
 	"gote/pkg/config"
 	"gote/pkg/crypto"
-	"gote/pkg/models"
 	"gote/pkg/storage"
 )
 
@@ -85,34 +84,48 @@ func (a *App) VerifyPassword(password string) bool {
 }
 
 // Note management methods
-func (a *App) GetAllNotes() []*models.Note {
-	return a.store.GetAllNotes()
+func (a *App) GetAllNotes() []WailsNote {
+	notes := a.store.GetAllNotes()
+	return ConvertToWailsNotes(notes)
 }
 
-func (a *App) GetNote(id string) (*models.Note, error) {
-	return a.store.GetNote(id)
-}
-
-func (a *App) CreateNote(content string) (*models.Note, error) {
-	if a.currentKey == nil {
-		return nil, fmt.Errorf("not authenticated")
+func (a *App) GetNote(id string) (WailsNote, error) {
+	note, err := a.store.GetNote(id)
+	if err != nil {
+		return WailsNote{}, err
 	}
-	return a.store.CreateNote(content, a.currentKey)
+	return ConvertToWailsNote(note), nil
 }
 
-func (a *App) UpdateNote(id, content string) (*models.Note, error) {
+func (a *App) CreateNote(content string) (WailsNote, error) {
 	if a.currentKey == nil {
-		return nil, fmt.Errorf("not authenticated")
+		return WailsNote{}, fmt.Errorf("not authenticated")
 	}
-	return a.store.UpdateNote(id, content, a.currentKey)
+	note, err := a.store.CreateNote(content, a.currentKey)
+	if err != nil {
+		return WailsNote{}, err
+	}
+	return ConvertToWailsNote(note), nil
+}
+
+func (a *App) UpdateNote(id, content string) (WailsNote, error) {
+	if a.currentKey == nil {
+		return WailsNote{}, fmt.Errorf("not authenticated")
+	}
+	note, err := a.store.UpdateNote(id, content, a.currentKey)
+	if err != nil {
+		return WailsNote{}, err
+	}
+	return ConvertToWailsNote(note), nil
 }
 
 func (a *App) DeleteNote(id string) error {
 	return a.store.DeleteNote(id)
 }
 
-func (a *App) SearchNotes(query string) []*models.Note {
-	return a.store.SearchNotes(query)
+func (a *App) SearchNotes(query string) []WailsNote {
+	notes := a.store.SearchNotes(query)
+	return ConvertToWailsNotes(notes)
 }
 
 func (a *App) SyncFromDisk() error {
