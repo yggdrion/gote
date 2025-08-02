@@ -30,7 +30,7 @@ let setupPasswordInput, confirmPasswordInput, setupBtn;
 let loginPasswordInput, loginBtn, loginError;
 let newNoteBtn, searchInput, searchBtn, clearSearchBtn;
 let syncBtn, settingsBtn, notesGrid, noteEditor;
-let noteContent, notePreview, searchResultsHeader, emptyState;
+let noteContent, searchResultsHeader, emptyState;
 let saveNoteBtn, closeEditorBtn, cancelEditorBtn, createFirstNoteBtn;
 let backFromSettings,
   syncFromSettings,
@@ -68,7 +68,6 @@ function initializeDOM() {
   notesGrid = document.getElementById("notes-grid");
   noteEditor = document.getElementById("note-editor");
   noteContent = document.getElementById("note-content");
-  notePreview = document.getElementById("note-preview");
   searchResultsHeader = document.getElementById("search-results-header");
   emptyState = document.getElementById("empty-state");
   saveNoteBtn = document.getElementById("save-note-btn");
@@ -124,7 +123,6 @@ function setupEventListeners() {
   saveNoteBtn.addEventListener("click", saveCurrentNote);
   closeEditorBtn.addEventListener("click", closeEditor);
   cancelEditorBtn.addEventListener("click", closeEditor);
-  noteContent.addEventListener("input", updatePreview);
 
   // Settings listeners
   backFromSettings.addEventListener("click", closeSettings);
@@ -353,9 +351,7 @@ function escapeHtml(text) {
 
 async function createNewNote() {
   try {
-    const newNote = await CreateNote(
-      "# New Note\n\nStart writing your note here..."
-    );
+    const newNote = await CreateNote("");
     allNotes.push(newNote);
     filteredNotes = searchQuery ? filteredNotes : [...allNotes];
     renderNotesList();
@@ -376,7 +372,6 @@ async function editNote(noteId) {
 
     currentNote = note;
     noteContent.value = note.content;
-    updatePreview();
     showEditor();
   } catch (error) {
     console.error("Error loading note:", error);
@@ -393,17 +388,6 @@ function closeEditor() {
   noteEditor.classList.add("hidden");
   currentNote = null;
   noteContent.value = "";
-  notePreview.innerHTML = "";
-}
-
-function updatePreview() {
-  if (!noteContent.value) {
-    notePreview.innerHTML =
-      '<p style="color: #999; font-style: italic;">Preview will appear here...</p>';
-    return;
-  }
-
-  notePreview.innerHTML = renderMarkdown(noteContent.value);
 }
 
 async function saveCurrentNote() {

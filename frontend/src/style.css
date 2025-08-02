@@ -456,28 +456,6 @@ header a:hover,
   line-height: 1.6;
 }
 
-.preview-container {
-  flex: 1;
-  background: #fafbfc;
-  border-left: 1px solid #eee;
-  overflow-y: auto;
-}
-
-.preview-header {
-  padding: 15px 20px;
-  background: #f1f3f4;
-  border-bottom: 1px solid #eee;
-  font-weight: 600;
-  color: #666;
-  font-size: 14px;
-}
-
-.note-preview {
-  padding: 20px;
-  line-height: 1.7;
-  color: #333;
-}
-
 /* Auth Screen Styles */
 .auth-screen {
   display: flex;
