@@ -1,0 +1,23 @@
+run:
+  skip-dirs:
+    - frontend/dist
+  skip-files:
+    - "frontend/dist/**/*"
+
+issues:
+  exclude-rules:
+    - path: frontend/dist/.*
+      linters:
+        - typecheck
+        - govet
+        - errcheck
+        - staticcheck
+        - unused
+        - gosimple
+        - structcheck
+        - varcheck
+        - ineffassign
+        - deadcode
+        - golint
+        - gofmt
+        - goimports
