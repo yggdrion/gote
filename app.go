@@ -8,6 +8,7 @@ import (
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
+	"gote/pkg/crypto"
 	"gote/pkg/models"
 	"gote/pkg/storage"
 )
@@ -65,8 +66,8 @@ func (a *App) IsPasswordSet() bool {
 func (a *App) SetPassword(password string) error {
 	err := a.authManager.StorePasswordHash(password)
 	if err == nil {
-		// Generate encryption key from password
-		a.currentKey = []byte(password) // In a real app, use proper key derivation
+		// Generate encryption key from password using proper key derivation
+		a.currentKey = crypto.DeriveKey(password)
 		// Load existing notes with the new key
 		a.store.LoadNotes(a.currentKey)
 	}
@@ -75,7 +76,7 @@ func (a *App) SetPassword(password string) error {
 
 func (a *App) VerifyPassword(password string) bool {
 	if a.authManager.VerifyPassword(password) {
-		a.currentKey = []byte(password) // In a real app, use proper key derivation
+		a.currentKey = crypto.DeriveKey(password)
 		// Load notes with the key
 		a.store.LoadNotes(a.currentKey)
 		return true
@@ -135,7 +136,7 @@ func (a *App) ChangePassword(oldPassword, newPassword string) error {
 	}
 	err := a.authManager.StorePasswordHash(newPassword)
 	if err == nil {
-		a.currentKey = []byte(newPassword) // In a real app, use proper key derivation
+		a.currentKey = crypto.DeriveKey(newPassword)
 	}
 	return err
 }

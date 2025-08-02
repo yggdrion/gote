@@ -41,112 +41,137 @@
 
       <!-- Main Notes App -->
       <div id="main-app" style="display: none">
-        <header class="header">
-          <div class="header-actions">
-            <div class="header-left">
-              <button id="new-note-btn" class="btn btn-primary">
-                New Note
-              </button>
-            </div>
-            <div class="header-center">
-              <div class="search-form">
-                <input
-                  type="text"
-                  id="search-input"
-                  placeholder="Search your notes..."
-                />
-                <button id="search-btn" class="btn btn-secondary">
-                  Search
-                </button>
-                <button
-                  id="clear-search-btn"
-                  class="btn btn-secondary"
-                  style="display: none"
-                >
-                  Clear
+        <div class="container">
+          <header>
+            <div class="header-actions">
+              <div class="header-left">
+                <button id="new-note-btn" class="btn btn-primary">
+                  New Note
                 </button>
               </div>
-            </div>
-            <div class="header-right">
-              <button
-                id="sync-btn"
-                class="btn btn-secondary"
-                title="Sync from disk"
-              >
-                🔄
-              </button>
-              <button id="settings-btn" class="btn btn-secondary">⚙️</button>
-            </div>
-          </div>
-        </header>
-
-        <main class="main-content">
-          <div class="sidebar">
-            <div id="notes-list" class="notes-list">
-              <!-- Notes will be populated here -->
-            </div>
-          </div>
-          <div class="editor-container">
-            <div id="note-editor" class="note-editor" style="display: none">
-              <div class="editor-header">
-                <span id="note-info"></span>
-                <div class="editor-actions">
-                  <button id="save-btn" class="btn btn-primary">Save</button>
-                  <button id="delete-btn" class="btn btn-danger">Delete</button>
+              <div class="header-center">
+                <div class="search-form">
+                  <div class="search-input-container">
+                    <input
+                      type="text"
+                      id="search-input"
+                      placeholder="Search your notes..."
+                    />
+                    <button
+                      id="clear-search-btn"
+                      class="clear-search-btn"
+                      style="display: none"
+                      title="Clear search"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <button id="search-btn" class="btn btn-secondary">
+                    Search
+                  </button>
                 </div>
               </div>
-              <textarea
-                id="note-content"
-                class="note-content"
-                placeholder="Start writing your note..."
-              ></textarea>
-              <div class="preview-container">
-                <div id="note-preview" class="note-preview"></div>
+              <div class="header-right">
+                <button
+                  id="sync-btn"
+                  class="btn btn-secondary"
+                  title="Sync from disk"
+                >
+                  🔄
+                </button>
+                <button id="settings-btn" class="btn btn-secondary">⚙️</button>
               </div>
             </div>
-            <div id="welcome-screen" class="welcome-screen">
-              <h2>Welcome to Gote Notes</h2>
-              <p>
-                Click "New Note" to create your first note, or select an
-                existing note from the sidebar.
+          </header>
+
+          <main>
+            <div id="search-results-header" class="search-results-header" style="display: none">
+              <p id="search-results-text"></p>
+            </div>
+
+            <div id="notes-grid" class="notes-grid">
+              <!-- Notes will be populated here -->
+            </div>
+
+            <div id="empty-state" class="empty-state" style="display: none">
+              <p id="empty-state-text">
+                No notes found.
+                <button class="link-button" id="create-first-note">
+                  Create your first note
+                </button>
               </p>
             </div>
-          </div>
-        </main>
-      </div>
+          </main>
+        </div>
 
-      <!-- Settings Modal -->
-      <div id="settings-modal" class="modal" style="display: none">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2>Settings</h2>
-            <button id="close-settings" class="close-btn">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="setting-group">
-              <h3>Change Password</h3>
-              <input
-                type="password"
-                id="current-password"
-                placeholder="Current password"
-              />
-              <input
-                type="password"
-                id="new-password"
-                placeholder="New password"
-              />
-              <input
-                type="password"
-                id="confirm-new-password"
-                placeholder="Confirm new password"
-              />
-              <button id="change-password-btn" class="btn btn-primary">
-                Change Password
-              </button>
+        <!-- Note Editor Overlay -->
+        <div id="note-editor" class="note-editor hidden">
+          <div class="editor-header">
+            <button class="btn btn-secondary" id="close-editor-btn">← Back</button>
+            <div class="editor-actions">
+              <button class="btn btn-primary" id="save-note-btn">Save</button>
+              <button class="btn btn-secondary" id="cancel-editor-btn">Cancel</button>
             </div>
-            <div class="setting-group">
-              <h3>Storage</h3>
-              <p><strong>Notes Path:</strong> <span id="notes-path"></span></p>
+          </div>
+          <div class="editor-content">
+            <textarea
+              id="note-content"
+              placeholder="Write your note here...
+
+GitHub Markdown supported:
+**bold** *italic* `inline code`
+
+```
+code blocks
+```
+
+- Lists
+- [x] Task lists"
+            ></textarea>
+            <div class="preview-container">
+              <div class="preview-header">Preview</div>
+              <div id="note-preview" class="note-preview markdown-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal" style="display: none">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Settings</h2>
+              <button id="close-settings" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="setting-group">
+                <h3>Change Password</h3>
+                <input
+                  type="password"
+                  id="current-password"
+                  placeholder="Current password"
+                />
+                <input
+                  type="password"
+                  id="new-password"
+                  placeholder="New password"
+                />
+                <input
+                  type="password"
+                  id="confirm-new-password"
+                  placeholder="Confirm new password"
+                />
+                <button id="change-password-btn" class="btn btn-primary">
+                  Change Password
+                </button>
+              </div>
+              <div class="setting-group">
+                <h3>Storage</h3>
+                <p><strong>Notes Path:</strong> <span id="notes-path"></span></p>
+                <p>
+                  <strong>Password Hash Path:</strong>
+                  <span id="password-hash-path"></span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
