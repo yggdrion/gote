@@ -1,12 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>gote</title>
-</head>
-<body>
-<div id="app"></div>
-<script src="./src/main.js" type="module"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Gote - Notes App</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Password Setup/Login Screen -->
+      <div id="auth-screen" class="auth-screen" style="display: none">
+        <div class="auth-container">
+          <h1>Gote Notes</h1>
+          <div id="password-setup" style="display: none">
+            <h2>Set Master Password</h2>
+            <p>Set a master password to secure your notes.</p>
+            <input
+              type="password"
+              id="setup-password"
+              placeholder="Enter master password"
+            />
+            <input
+              type="password"
+              id="confirm-password"
+              placeholder="Confirm password"
+            />
+            <button id="setup-btn" class="btn btn-primary">Set Password</button>
+          </div>
+          <div id="password-login" style="display: none">
+            <h2>Enter Password</h2>
+            <input
+              type="password"
+              id="login-password"
+              placeholder="Enter your password"
+            />
+            <button id="login-btn" class="btn btn-primary">Login</button>
+            <div id="login-error" class="error" style="display: none"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Notes App -->
+      <div id="main-app" style="display: none">
+        <header class="header">
+          <div class="header-actions">
+            <div class="header-left">
+              <button id="new-note-btn" class="btn btn-primary">
+                New Note
+              </button>
+            </div>
+            <div class="header-center">
+              <div class="search-form">
+                <input
+                  type="text"
+                  id="search-input"
+                  placeholder="Search your notes..."
+                />
+                <button id="search-btn" class="btn btn-secondary">
+                  Search
+                </button>
+                <button
+                  id="clear-search-btn"
+                  class="btn btn-secondary"
+                  style="display: none"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div class="header-right">
+              <button
+                id="sync-btn"
+                class="btn btn-secondary"
+                title="Sync from disk"
+              >
+                🔄
+              </button>
+              <button id="settings-btn" class="btn btn-secondary">⚙️</button>
+            </div>
+          </div>
+        </header>
+
+        <main class="main-content">
+          <div class="sidebar">
+            <div id="notes-list" class="notes-list">
+              <!-- Notes will be populated here -->
+            </div>
+          </div>
+          <div class="editor-container">
+            <div id="note-editor" class="note-editor" style="display: none">
+              <div class="editor-header">
+                <span id="note-info"></span>
+                <div class="editor-actions">
+                  <button id="save-btn" class="btn btn-primary">Save</button>
+                  <button id="delete-btn" class="btn btn-danger">Delete</button>
+                </div>
+              </div>
+              <textarea
+                id="note-content"
+                class="note-content"
+                placeholder="Start writing your note..."
+              ></textarea>
+              <div class="preview-container">
+                <div id="note-preview" class="note-preview"></div>
+              </div>
+            </div>
+            <div id="welcome-screen" class="welcome-screen">
+              <h2>Welcome to Gote Notes</h2>
+              <p>
+                Click "New Note" to create your first note, or select an
+                existing note from the sidebar.
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="modal" style="display: none">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>Settings</h2>
+            <button id="close-settings" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="setting-group">
+              <h3>Change Password</h3>
+              <input
+                type="password"
+                id="current-password"
+                placeholder="Current password"
+              />
+              <input
+                type="password"
+                id="new-password"
+                placeholder="New password"
+              />
+              <input
+                type="password"
+                id="confirm-new-password"
+                placeholder="Confirm new password"
+              />
+              <button id="change-password-btn" class="btn btn-primary">
+                Change Password
+              </button>
+            </div>
+            <div class="setting-group">
+              <h3>Storage</h3>
+              <p><strong>Notes Path:</strong> <span id="notes-path"></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./src/main.js" type="module"></script>
+  </body>
 </html>
