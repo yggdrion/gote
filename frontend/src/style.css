@@ -482,6 +482,26 @@ header a:hover,
   font-weight: 600;
 }
 
+.app-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.app-title h1 {
+  margin: 0;
+  line-height: 1;
+}
+
+.app-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .auth-container h2 {
   color: #333;
   margin-bottom: 20px;
@@ -520,8 +540,8 @@ header a:hover,
 }
 
 .reset-password-section {
-  margin-top: 30px;
-  padding-top: 20px;
+  margin-top: 20px;
+  padding-top: 15px;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   text-align: center;
 }
