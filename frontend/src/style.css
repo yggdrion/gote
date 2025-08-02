@@ -397,7 +397,7 @@ header a:hover,
   position: fixed;
   top: 0;
   right: 0;
-  width: 50%;
+  width: 75%;
   height: 100vh;
   background: white;
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
