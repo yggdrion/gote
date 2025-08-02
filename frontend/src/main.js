@@ -114,7 +114,7 @@ let loginPasswordInput, loginBtn, loginError, resetPasswordBtn;
 let newNoteBtn, searchInput, searchBtn, clearSearchBtn;
 let syncBtn, settingsBtn, notesGrid, noteEditor;
 let noteContent, searchResultsHeader, emptyState;
-let saveNoteBtn, closeEditorBtn, cancelEditorBtn, createFirstNoteBtn;
+let saveNoteBtn, cancelEditorBtn, createFirstNoteBtn;
 let backFromSettings,
   syncFromSettings,
   currentPassword,
@@ -158,7 +158,6 @@ function initializeDOM() {
   searchResultsHeader = document.getElementById("search-results-header");
   emptyState = document.getElementById("empty-state");
   saveNoteBtn = document.getElementById("save-note-btn");
-  closeEditorBtn = document.getElementById("close-editor-btn");
   cancelEditorBtn = document.getElementById("cancel-editor-btn");
   createFirstNoteBtn = document.getElementById("create-first-note");
   backFromSettings = document.getElementById("back-from-settings");
@@ -210,7 +209,6 @@ function setupEventListeners() {
 
   // Editor listeners
   saveNoteBtn.addEventListener("click", saveCurrentNote);
-  closeEditorBtn.addEventListener("click", closeEditor);
   cancelEditorBtn.addEventListener("click", closeEditor);
 
   // Settings listeners
@@ -471,14 +469,16 @@ async function saveCurrentNote() {
       renderNotesList();
     }
 
-    // Show save feedback
+    // Show save feedback briefly, then close editor
     const originalText = saveNoteBtn.textContent;
     saveNoteBtn.textContent = "Saved!";
     saveNoteBtn.disabled = true;
+
     setTimeout(() => {
       saveNoteBtn.textContent = originalText;
       saveNoteBtn.disabled = false;
-    }, 1000);
+      closeEditor(); // Close the editor after saving
+    }, 500); // Shorter feedback time since we're closing
   } catch (error) {
     console.error("Error saving note:", error);
     alert("Failed to save note");
