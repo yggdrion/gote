@@ -6,6 +6,10 @@ export function ChangePassword(arg1, arg2) {
   return window['go']['main']['App']['ChangePassword'](arg1, arg2);
 }
 
+export function CreateBackup() {
+  return window['go']['main']['App']['CreateBackup']();
+}
+
 export function CreateNote(arg1) {
   return window['go']['main']['App']['CreateNote'](arg1);
 }

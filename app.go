@@ -233,6 +233,21 @@ func (a *App) Logout() error {
 	return nil
 }
 
+// CreateBackup creates a zip backup of all notes
+func (a *App) CreateBackup() (string, error) {
+	if a.currentKey == nil {
+		return "", fmt.Errorf("not authenticated")
+	}
+
+	// Use the storage backup function
+	backupPath, err := storage.BackupNotes(a.config.NotesPath, "")
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup: %v", err)
+	}
+
+	return backupPath, nil
+}
+
 // Greet returns a greeting for the given name (keeping for compatibility)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)

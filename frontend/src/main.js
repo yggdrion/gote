@@ -17,6 +17,7 @@ import {
   ChangePassword,
   ResetApplication,
   Logout,
+  CreateBackup,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -621,16 +622,18 @@ async function handleCreateBackup() {
     createBackupBtn.textContent = "Creating backup...";
     createBackupBtn.disabled = true;
 
-    // Note: This would need to be implemented in the Go backend
-    // For now just show a placeholder message
-    alert("Backup functionality will be implemented soon");
+    // Call the backend to create backup
+    const backupPath = await CreateBackup();
+
+    // Show success message with the backup path
+    alert(`Backup created successfully!\n\nSaved to: ${backupPath}`);
 
     // Restore button state
     createBackupBtn.textContent = originalText;
     createBackupBtn.disabled = false;
   } catch (error) {
     console.error("Error creating backup:", error);
-    alert("Failed to create backup");
+    alert("Failed to create backup: " + error.message);
 
     // Restore button state
     createBackupBtn.textContent = "🗄️ Create Backup Snapshot";

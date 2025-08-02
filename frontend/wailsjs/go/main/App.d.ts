@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function ChangePassword(arg1:string,arg2:string):Promise<void>;
 
+export function CreateBackup():Promise<string>;
+
 export function CreateNote(arg1:string):Promise<main.WailsNote>;
 
 export function DeleteNote(arg1:string):Promise<void>;
