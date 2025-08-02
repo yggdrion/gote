@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function ChangePassword(arg1:string,arg2:string):Promise<void>;
 
+export function CompleteInitialSetup(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
 export function CreateBackup():Promise<string>;
 
 export function CreateNote(arg1:string):Promise<main.WailsNote>;
@@ -17,6 +19,8 @@ export function GetNote(arg1:string):Promise<main.WailsNote>;
 export function GetSettings():Promise<Record<string, any>>;
 
 export function Greet(arg1:string):Promise<string>;
+
+export function IsConfigured():Promise<boolean>;
 
 export function IsPasswordSet():Promise<boolean>;
 

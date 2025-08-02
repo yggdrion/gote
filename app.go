@@ -34,35 +34,108 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Load configuration
-	cfg, err := config.Load()
-	if err != nil {
-		log.Printf("Failed to load configuration, using defaults: %v", err)
-		cfg = &config.Config{
-			NotesPath:        "./data/notes",
-			PasswordHashPath: "./data/password_hash",
+	// Check if this is first-time setup (no config file exists)
+	configExists := a.IsConfigured()
+
+	if configExists {
+		// Load existing configuration
+		cfg, err := config.Load()
+		if err != nil {
+			log.Printf("Failed to load configuration, using defaults: %v", err)
+			cfg = &config.Config{
+				NotesPath:        config.GetDefaultDataPath(),
+				PasswordHashPath: config.GetDefaultPasswordHashPath(),
+			}
+		}
+
+		// Initialize components
+		a.authManager = auth.NewManager(cfg.PasswordHashPath)
+		a.store = storage.NewNoteStore(cfg.NotesPath)
+		a.config = cfg
+
+		log.Printf("Note app initialized:")
+		log.Printf("  Notes directory: %s", cfg.NotesPath)
+		log.Printf("  Password hash file: %s", cfg.PasswordHashPath)
+	} else {
+		log.Printf("First-time setup required - no configuration file found")
+		// Initialize with default config for now, will be replaced during setup
+		a.config = &config.Config{
+			NotesPath:        config.GetDefaultDataPath(),
+			PasswordHashPath: config.GetDefaultPasswordHashPath(),
 		}
 	}
-
-	// Ensure data directory exists
-	if err := os.MkdirAll("./data", 0755); err != nil {
-		log.Printf("Failed to create data directory: %v", err)
-	}
-
-	// Initialize components
-	a.authManager = auth.NewManager(cfg.PasswordHashPath)
-	a.store = storage.NewNoteStore(cfg.NotesPath)
-	a.config = cfg
-
-	log.Printf("Note app initialized:")
-	log.Printf("  Notes directory: %s", cfg.NotesPath)
-	log.Printf("  Password hash file: %s", cfg.PasswordHashPath)
 }
 
 // Authentication methods
 func (a *App) IsPasswordSet() bool {
 	_, err := os.Stat(a.config.PasswordHashPath)
 	return err == nil
+}
+
+// IsConfigured checks if the configuration file exists (not first-time setup)
+func (a *App) IsConfigured() bool {
+	configFile := config.GetConfigFilePath()
+	_, err := os.Stat(configFile)
+	return err == nil
+}
+
+// CompleteInitialSetup handles the first-time setup process
+func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confirmPassword string) error {
+	// Validate passwords match
+	if password != confirmPassword {
+		return fmt.Errorf("passwords do not match")
+	}
+
+	if len(password) < 6 {
+		return fmt.Errorf("password must be at least 6 characters long")
+	}
+
+	// Use defaults if paths are empty
+	if notesPath == "" {
+		notesPath = config.GetDefaultDataPath()
+	}
+	if passwordHashPath == "" {
+		passwordHashPath = config.GetDefaultPasswordHashPath()
+	}
+
+	// Create directories
+	if err := os.MkdirAll(notesPath, 0755); err != nil {
+		return fmt.Errorf("failed to create notes directory: %v", err)
+	}
+
+	passwordDir := filepath.Dir(passwordHashPath)
+	if err := os.MkdirAll(passwordDir, 0755); err != nil {
+		return fmt.Errorf("failed to create password hash directory: %v", err)
+	}
+
+	// Create and save configuration
+	a.config = &config.Config{
+		NotesPath:        notesPath,
+		PasswordHashPath: passwordHashPath,
+	}
+
+	if err := a.config.Save(); err != nil {
+		return fmt.Errorf("failed to save configuration: %v", err)
+	}
+
+	// Initialize components with new configuration
+	a.authManager = auth.NewManager(a.config.PasswordHashPath)
+	a.store = storage.NewNoteStore(a.config.NotesPath)
+
+	// Set the initial password
+	if err := a.authManager.StorePasswordHash(password); err != nil {
+		return fmt.Errorf("failed to store password: %v", err)
+	}
+
+	// Generate encryption key and initialize
+	a.currentKey = crypto.DeriveKey(password)
+	a.store.LoadNotes(a.currentKey)
+
+	log.Printf("Initial setup completed:")
+	log.Printf("  Notes directory: %s", a.config.NotesPath)
+	log.Printf("  Password hash file: %s", a.config.PasswordHashPath)
+
+	return nil
 }
 
 func (a *App) SetPassword(password string) error {

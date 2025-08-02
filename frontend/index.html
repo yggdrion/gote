@@ -7,6 +7,82 @@
   </head>
   <body>
     <div id="app">
+      <!-- Initial Setup Screen -->
+      <div id="initial-setup-screen" class="auth-screen" style="display: none">
+        <div class="auth-container setup-container">
+          <div class="app-title">
+            <img
+              src="./src/assets/images/appicon_transparent.png"
+              alt="Gote Logo"
+              class="app-logo"
+            />
+            <h1>Welcome to Gote</h1>
+          </div>
+          <div class="setup-content">
+            <h2>Initial Setup</h2>
+            <p>
+              Configure your storage locations and create your master password.
+            </p>
+
+            <div class="setup-section">
+              <h3>Storage Configuration</h3>
+              <div class="setup-field">
+                <label for="setup-notes-path">Notes Directory:</label>
+                <input
+                  type="text"
+                  id="setup-notes-path"
+                  class="setup-input"
+                  placeholder="Leave empty for default location"
+                />
+                <small class="help-text"
+                  >Where your encrypted notes will be stored</small
+                >
+              </div>
+              <div class="setup-field">
+                <label for="setup-password-hash-path"
+                  >Password Hash File:</label
+                >
+                <input
+                  type="text"
+                  id="setup-password-hash-path"
+                  class="setup-input"
+                  placeholder="Leave empty for system default"
+                  readonly
+                />
+                <small class="help-text"
+                  >Where your password hash will be stored (recommended to keep
+                  default)</small
+                >
+              </div>
+            </div>
+
+            <div class="setup-section">
+              <h3>Master Password</h3>
+              <div class="setup-field">
+                <input
+                  type="password"
+                  id="setup-master-password"
+                  class="setup-input"
+                  placeholder="Enter master password (min 6 characters)"
+                />
+              </div>
+              <div class="setup-field">
+                <input
+                  type="password"
+                  id="setup-confirm-password"
+                  class="setup-input"
+                  placeholder="Confirm master password"
+                />
+              </div>
+            </div>
+
+            <button id="complete-setup-btn" class="btn btn-primary btn-large">
+              🚀 Complete Setup
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Password Setup/Login Screen -->
       <div id="auth-screen" class="auth-screen" style="display: none">
         <div class="auth-container">

@@ -19,6 +19,8 @@ import {
   ResetApplication,
   Logout,
   CreateBackup,
+  IsConfigured,
+  CompleteInitialSetup,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -125,6 +127,10 @@ let backFromSettings,
 let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath, logoutBtn;
 let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 
+// Setup screen elements
+let initialSetupScreen, setupNotesPath, setupPasswordHashPath;
+let setupMasterPassword, setupConfirmPassword, completeSetupBtn;
+
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("DOM loaded, initializing markdown...");
@@ -132,7 +138,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("Markdown initialization complete, initializing DOM...");
   initializeDOM();
   setupEventListeners();
-  checkAuthState();
+  await checkInitialState();
 });
 
 function initializeDOM() {
@@ -178,9 +184,20 @@ function initializeDOM() {
   notesPathInput = document.getElementById("notes-path-input");
   passwordHashPathInput = document.getElementById("password-hash-path-input");
   saveSettingsBtn = document.getElementById("save-settings-btn");
+
+  // Initial setup elements
+  initialSetupScreen = document.getElementById("initial-setup-screen");
+  setupNotesPath = document.getElementById("setup-notes-path");
+  setupPasswordHashPath = document.getElementById("setup-password-hash-path");
+  setupMasterPassword = document.getElementById("setup-master-password");
+  setupConfirmPassword = document.getElementById("setup-confirm-password");
+  completeSetupBtn = document.getElementById("complete-setup-btn");
 }
 
 function setupEventListeners() {
+  // Initial setup listener
+  completeSetupBtn.addEventListener("click", handleCompleteSetup);
+
   // Authentication listeners
   setupBtn.addEventListener("click", handlePasswordSetup);
   loginBtn.addEventListener("click", handleLogin);
@@ -303,6 +320,75 @@ function showLoginError(message) {
   setTimeout(() => {
     loginError.style.display = "none";
   }, 3000);
+}
+
+async function checkInitialState() {
+  try {
+    const isConfigured = await IsConfigured();
+
+    if (!isConfigured) {
+      // Show initial setup screen
+      showInitialSetup();
+    } else {
+      // Continue with normal auth flow
+      checkAuthState();
+    }
+  } catch (error) {
+    console.error("Error checking initial state:", error);
+    // Fall back to normal auth flow
+    checkAuthState();
+  }
+}
+
+function showInitialSetup() {
+  // Hide other screens
+  authScreen.style.display = "none";
+  mainApp.style.display = "none";
+
+  // Show setup screen
+  initialSetupScreen.style.display = "flex";
+
+  // Pre-populate the password hash path with default (read-only)
+  GetSettings()
+    .then((settings) => {
+      setupPasswordHashPath.value = settings.passwordHashPath || "";
+    })
+    .catch((err) => {
+      console.error("Error loading default settings:", err);
+    });
+
+  // Focus on the first input
+  setupNotesPath.focus();
+}
+
+async function handleCompleteSetup() {
+  const notesPath = setupNotesPath.value.trim();
+  const passwordHashPath = setupPasswordHashPath.value.trim();
+  const password = setupMasterPassword.value;
+  const confirmPassword = setupConfirmPassword.value;
+
+  // Disable button during setup
+  completeSetupBtn.disabled = true;
+  completeSetupBtn.textContent = "Setting up...";
+
+  try {
+    await CompleteInitialSetup(
+      notesPath,
+      passwordHashPath,
+      password,
+      confirmPassword
+    );
+
+    // Setup completed successfully, initialize the app
+    initialSetupScreen.style.display = "none";
+    initializeApp();
+  } catch (error) {
+    console.error("Error completing setup:", error);
+    alert("Setup failed: " + error.message);
+  } finally {
+    completeSetupBtn.disabled = false;
+    completeSetupBtn.textContent = "🚀 Complete Setup";
+  }
 }
 
 async function initializeApp() {

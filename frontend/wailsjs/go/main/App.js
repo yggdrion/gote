@@ -6,6 +6,10 @@ export function ChangePassword(arg1, arg2) {
   return window['go']['main']['App']['ChangePassword'](arg1, arg2);
 }
 
+export function CompleteInitialSetup(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['CompleteInitialSetup'](arg1, arg2, arg3, arg4);
+}
+
 export function CreateBackup() {
   return window['go']['main']['App']['CreateBackup']();
 }
@@ -32,6 +36,10 @@ export function GetSettings() {
 
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
+}
+
+export function IsConfigured() {
+  return window['go']['main']['App']['IsConfigured']();
 }
 
 export function IsPasswordSet() {

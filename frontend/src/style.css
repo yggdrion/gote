@@ -892,6 +892,91 @@ header a:hover,
   color: #664d03;
 }
 
+/* Initial Setup Styles */
+.setup-container {
+  max-width: 500px;
+  width: 95%;
+}
+
+.setup-content {
+  text-align: left;
+}
+
+.setup-content h2 {
+  color: white;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.setup-content > p {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 30px;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.setup-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.setup-section h3 {
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.setup-field {
+  margin-bottom: 15px;
+}
+
+.setup-field:last-child {
+  margin-bottom: 0;
+}
+
+.setup-field label {
+  display: block;
+  color: white;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.setup-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  transition: all 0.3s ease;
+  font-family: "Courier New", monospace;
+}
+
+.setup-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.setup-input[readonly] {
+  background: rgba(255, 255, 255, 0.7);
+  color: #666;
+}
+
+.btn-large {
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
 .info-item {
   display: flex;
   justify-content: space-between;
