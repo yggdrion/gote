@@ -14,6 +14,7 @@ import {
   SearchNotes,
   SyncFromDisk,
   GetSettings,
+  UpdateSettings,
   ChangePassword,
   ResetApplication,
   Logout,
@@ -122,6 +123,7 @@ let backFromSettings,
   newPassword,
   confirmNewPassword;
 let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath, logoutBtn;
+let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", async () => {
@@ -171,6 +173,11 @@ function initializeDOM() {
   notesPath = document.getElementById("notes-path");
   passwordHashPath = document.getElementById("password-hash-path");
   logoutBtn = document.getElementById("logout-btn");
+
+  // Settings input elements
+  notesPathInput = document.getElementById("notes-path-input");
+  passwordHashPathInput = document.getElementById("password-hash-path-input");
+  saveSettingsBtn = document.getElementById("save-settings-btn");
 }
 
 function setupEventListeners() {
@@ -217,6 +224,7 @@ function setupEventListeners() {
   syncFromSettings.addEventListener("click", handleSync);
   changePasswordBtn.addEventListener("click", handleChangePassword);
   createBackupBtn.addEventListener("click", handleCreateBackup);
+  saveSettingsBtn.addEventListener("click", handleSaveSettings);
   logoutBtn.addEventListener("click", handleLogout);
 
   // Global keyboard shortcuts
@@ -556,8 +564,14 @@ async function handleSync() {
 async function openSettings() {
   try {
     const settings = await GetSettings();
+
+    // Update display elements
     notesPath.textContent = settings.notesPath || "Not set";
     passwordHashPath.textContent = settings.passwordHashPath || "Not set";
+
+    // Update input fields for editing
+    notesPathInput.value = settings.notesPath || "";
+    passwordHashPathInput.value = settings.passwordHashPath || "";
 
     // Hide main app and show settings screen
     mainApp.style.display = "none";
@@ -579,6 +593,52 @@ function closeSettings() {
   currentPassword.value = "";
   newPassword.value = "";
   confirmNewPassword.value = "";
+}
+
+async function handleSaveSettings() {
+  const notesPathValue = notesPathInput.value.trim();
+  const passwordHashPathValue = passwordHashPathInput.value.trim();
+
+  // Disable the button to prevent multiple clicks
+  saveSettingsBtn.disabled = true;
+  saveSettingsBtn.textContent = "Saving...";
+
+  try {
+    await UpdateSettings(notesPathValue, passwordHashPathValue);
+
+    // Update the display values
+    const settings = await GetSettings();
+    notesPath.textContent = settings.notesPath || "Not set";
+    passwordHashPath.textContent = settings.passwordHashPath || "Not set";
+
+    // Update the input values with the actual saved values
+    notesPathInput.value = settings.notesPath || "";
+    passwordHashPathInput.value = settings.passwordHashPath || "";
+
+    alert(
+      "Settings saved successfully!\n\nYou have been logged out for security reasons. Please log in again to access your notes from the new location."
+    );
+
+    // User has been logged out on the backend, so redirect to auth screen
+    settingsScreen.style.display = "none";
+    authScreen.style.display = "flex";
+    mainApp.style.display = "none";
+
+    // Clear any cached data
+    allNotes = [];
+    filteredNotes = [];
+    currentNote = null;
+
+    // Check auth state to show appropriate login screen
+    checkAuthState();
+  } catch (error) {
+    console.error("Error saving settings:", error);
+    alert("Failed to save settings: " + error.message);
+  } finally {
+    // Re-enable the button
+    saveSettingsBtn.disabled = false;
+    saveSettingsBtn.textContent = "💾 Save Settings";
+  }
 }
 
 async function handleChangePassword() {

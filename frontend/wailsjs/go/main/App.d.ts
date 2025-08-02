@@ -32,4 +32,6 @@ export function SyncFromDisk():Promise<void>;
 
 export function UpdateNote(arg1:string,arg2:string):Promise<main.WailsNote>;
 
+export function UpdateSettings(arg1:string,arg2:string):Promise<void>;
+
 export function VerifyPassword(arg1:string):Promise<boolean>;

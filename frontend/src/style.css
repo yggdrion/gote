@@ -848,6 +848,50 @@ header a:hover,
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.settings-field {
+  margin-bottom: 20px;
+}
+
+.settings-field label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  border-radius: 10px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  transition: border-color 0.3s ease;
+  font-family: "Courier New", monospace;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.settings-warning {
+  background: rgba(255, 193, 7, 0.1);
+  border: 2px solid rgba(255, 193, 7, 0.3);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+  color: #856404;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.settings-warning strong {
+  color: #664d03;
+}
+
 .info-item {
   display: flex;
   justify-content: space-between;

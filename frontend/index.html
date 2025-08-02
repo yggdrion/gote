@@ -229,13 +229,53 @@
             </div>
 
             <div class="settings-section">
+              <h3>Storage Configuration</h3>
+              <div class="settings-warning">
+                <strong>⚠️ Important:</strong> Changing storage paths will log
+                you out for security reasons. You'll need to log in again to
+                access notes from the new location.
+              </div>
+              <div class="settings-field">
+                <label for="notes-path-input">Notes Directory:</label>
+                <input
+                  type="text"
+                  id="notes-path-input"
+                  class="settings-input"
+                  placeholder="e.g., ./data/notes or C:\MyNotes"
+                />
+                <small class="help-text"
+                  >Path where your notes are stored. Leave empty for default
+                  location.</small
+                >
+              </div>
+              <div class="settings-field">
+                <label for="password-hash-path-input"
+                  >Password Hash File:</label
+                >
+                <input
+                  type="text"
+                  id="password-hash-path-input"
+                  class="settings-input"
+                  placeholder="e.g., ./data/password_hash or custom path"
+                />
+                <small class="help-text"
+                  >Path where the password hash is stored. Leave empty for
+                  system default.</small
+                >
+              </div>
+              <button id="save-settings-btn" class="btn btn-primary">
+                💾 Save Settings
+              </button>
+            </div>
+
+            <div class="settings-section">
               <h3>Storage Information</h3>
               <div class="info-item">
-                <label>Notes Directory:</label>
+                <label>Current Notes Directory:</label>
                 <span id="notes-path" class="path-info">Loading...</span>
               </div>
               <div class="info-item">
-                <label>Password Hash File:</label>
+                <label>Current Password Hash File:</label>
                 <span id="password-hash-path" class="path-info"
                   >Loading...</span
                 >

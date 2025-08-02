@@ -62,6 +62,10 @@ export function UpdateNote(arg1, arg2) {
   return window['go']['main']['App']['UpdateNote'](arg1, arg2);
 }
 
+export function UpdateSettings(arg1, arg2) {
+  return window['go']['main']['App']['UpdateSettings'](arg1, arg2);
+}
+
 export function VerifyPassword(arg1) {
   return window['go']['main']['App']['VerifyPassword'](arg1);
 }

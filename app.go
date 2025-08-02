@@ -146,6 +146,50 @@ func (a *App) GetSettings() map[string]interface{} {
 	}
 }
 
+func (a *App) UpdateSettings(notesPath, passwordHashPath string) error {
+	// Validate paths
+	if notesPath == "" {
+		notesPath = config.GetDefaultDataPath()
+	}
+	if passwordHashPath == "" {
+		passwordHashPath = config.GetDefaultPasswordHashPath()
+	}
+
+	// Create directories if they don't exist
+	if err := os.MkdirAll(notesPath, 0755); err != nil {
+		return fmt.Errorf("failed to create notes directory: %v", err)
+	}
+
+	passwordDir := filepath.Dir(passwordHashPath)
+	if err := os.MkdirAll(passwordDir, 0755); err != nil {
+		return fmt.Errorf("failed to create password hash directory: %v", err)
+	}
+
+	// Update configuration
+	a.config.NotesPath = notesPath
+	a.config.PasswordHashPath = passwordHashPath
+
+	// Save configuration to file
+	if err := a.config.Save(); err != nil {
+		return fmt.Errorf("failed to save configuration: %v", err)
+	}
+
+	// Clear current session and unload notes for security
+	// This ensures the user must re-authenticate with the new configuration
+	a.currentKey = nil
+
+	// Update components with new paths
+	a.authManager = auth.NewManager(a.config.PasswordHashPath)
+	a.store = storage.NewNoteStore(a.config.NotesPath)
+
+	log.Printf("Settings updated:")
+	log.Printf("  Notes directory: %s", a.config.NotesPath)
+	log.Printf("  Password hash file: %s", a.config.PasswordHashPath)
+	log.Printf("User logged out - re-authentication required")
+
+	return nil
+}
+
 func (a *App) ChangePassword(oldPassword, newPassword string) error {
 	if !a.authManager.VerifyPassword(oldPassword) {
 		return fmt.Errorf("invalid current password")
