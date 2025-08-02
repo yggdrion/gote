@@ -18,6 +18,8 @@ export function Greet(arg1:string):Promise<string>;
 
 export function IsPasswordSet():Promise<boolean>;
 
+export function Logout():Promise<void>;
+
 export function ResetApplication():Promise<void>;
 
 export function SearchNotes(arg1:string):Promise<Array<main.WailsNote>>;

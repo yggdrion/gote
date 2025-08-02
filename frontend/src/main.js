@@ -16,6 +16,7 @@ import {
   GetSettings,
   ChangePassword,
   ResetApplication,
+  Logout,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -38,7 +39,7 @@ let backFromSettings,
   currentPassword,
   newPassword,
   confirmNewPassword;
-let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath;
+let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath, logoutBtn;
 
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
@@ -85,6 +86,7 @@ function initializeDOM() {
   createBackupBtn = document.getElementById("create-backup-btn");
   notesPath = document.getElementById("notes-path");
   passwordHashPath = document.getElementById("password-hash-path");
+  logoutBtn = document.getElementById("logout-btn");
 }
 
 function setupEventListeners() {
@@ -132,6 +134,7 @@ function setupEventListeners() {
   syncFromSettings.addEventListener("click", handleSync);
   changePasswordBtn.addEventListener("click", handleChangePassword);
   createBackupBtn.addEventListener("click", handleCreateBackup);
+  logoutBtn.addEventListener("click", handleLogout);
 
   // Global keyboard shortcuts
   document.addEventListener("keydown", handleGlobalKeyboard);
@@ -570,6 +573,41 @@ async function handleCreateBackup() {
     // Restore button state
     createBackupBtn.textContent = "🗄️ Create Backup Snapshot";
     createBackupBtn.disabled = false;
+  }
+}
+
+async function handleLogout() {
+  try {
+    // Call backend logout to clear session
+    await Logout();
+
+    // Clear any sensitive data from memory
+    allNotes = [];
+    filteredNotes = [];
+    searchQuery = "";
+
+    // Clear input fields
+    loginPasswordInput.value = "";
+    setupPasswordInput.value = "";
+    confirmPasswordInput.value = "";
+    currentPassword.value = "";
+    newPassword.value = "";
+    confirmNewPassword.value = "";
+
+    // Clear any displayed errors
+    loginError.style.display = "none";
+    loginError.textContent = "";
+
+    // Return to auth screen
+    authScreen.style.display = "flex";
+    mainApp.style.display = "none";
+    settingsScreen.style.display = "none";
+
+    // Check auth state to show appropriate login/setup screen
+    checkAuthState();
+  } catch (error) {
+    console.error("Error logging out:", error);
+    alert("Failed to logout: " + error.message);
   }
 }
 

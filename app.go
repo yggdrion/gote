@@ -166,6 +166,13 @@ func (a *App) ResetApplication() error {
 	return nil
 }
 
+// Logout clears the current session without removing password hash
+func (a *App) Logout() error {
+	// Clear the current key to end the session
+	a.currentKey = nil
+	return nil
+}
+
 // Greet returns a greeting for the given name (keeping for compatibility)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)

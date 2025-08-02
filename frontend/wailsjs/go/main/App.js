@@ -34,6 +34,10 @@ export function IsPasswordSet() {
   return window['go']['main']['App']['IsPasswordSet']();
 }
 
+export function Logout() {
+  return window['go']['main']['App']['Logout']();
+}
+
 export function ResetApplication() {
   return window['go']['main']['App']['ResetApplication']();
 }
