@@ -51,7 +51,41 @@
             "@semantic-release/changelog"
         ],
         [
-            "@semantic-release/github"
+            "@semantic-release/github",
+            {
+                "assets": [
+                    {
+                        "path": "release-assets/gote-linux-amd64",
+                        "name": "gote-linux-amd64",
+                        "label": "Gote for Linux (AMD64)"
+                    },
+                    {
+                        "path": "release-assets/gote-linux-arm64",
+                        "name": "gote-linux-arm64",
+                        "label": "Gote for Linux (ARM64)"
+                    },
+                    {
+                        "path": "release-assets/gote-windows-amd64.exe",
+                        "name": "gote-windows-amd64.exe",
+                        "label": "Gote for Windows (AMD64)"
+                    },
+                    {
+                        "path": "release-assets/gote-windows-arm64.exe",
+                        "name": "gote-windows-arm64.exe",
+                        "label": "Gote for Windows (ARM64)"
+                    },
+                    {
+                        "path": "release-assets/gote-macos-amd64.app.zip",
+                        "name": "gote-macos-amd64.app.zip",
+                        "label": "Gote for macOS (Intel)"
+                    },
+                    {
+                        "path": "release-assets/gote-macos-arm64.app.zip",
+                        "name": "gote-macos-arm64.app.zip",
+                        "label": "Gote for macOS (Apple Silicon)"
+                    }
+                ]
+            }
         ],
         [
             "@semantic-release/git",
