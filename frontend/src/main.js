@@ -555,8 +555,12 @@ async function handleChangePassword() {
 
   try {
     await ChangePassword(current, newPass);
-    alert("Password changed successfully");
-    closeSettings();
+    alert(
+      "Password changed successfully. You will be logged out and need to log in with your new password."
+    );
+
+    // Password change clears the session, so perform logout cleanup
+    await performLogoutCleanup();
   } catch (error) {
     console.error("Error changing password:", error);
     alert("Failed to change password: " + error.message);
@@ -587,38 +591,43 @@ async function handleCreateBackup() {
   }
 }
 
+async function performLogoutCleanup() {
+  // Stop activity tracking
+  stopActivityTracking();
+
+  // Clear any sensitive data from memory
+  allNotes = [];
+  filteredNotes = [];
+  searchQuery = "";
+
+  // Clear input fields
+  loginPasswordInput.value = "";
+  setupPasswordInput.value = "";
+  confirmPasswordInput.value = "";
+  currentPassword.value = "";
+  newPassword.value = "";
+  confirmNewPassword.value = "";
+
+  // Clear any displayed errors
+  loginError.style.display = "none";
+  loginError.textContent = "";
+
+  // Return to auth screen
+  authScreen.style.display = "flex";
+  mainApp.style.display = "none";
+  settingsScreen.style.display = "none";
+
+  // Check auth state to show appropriate login/setup screen
+  checkAuthState();
+}
+
 async function handleLogout() {
   try {
-    // Stop activity tracking
-    stopActivityTracking();
-
     // Call backend logout to clear session
     await Logout();
 
-    // Clear any sensitive data from memory
-    allNotes = [];
-    filteredNotes = [];
-    searchQuery = "";
-
-    // Clear input fields
-    loginPasswordInput.value = "";
-    setupPasswordInput.value = "";
-    confirmPasswordInput.value = "";
-    currentPassword.value = "";
-    newPassword.value = "";
-    confirmNewPassword.value = "";
-
-    // Clear any displayed errors
-    loginError.style.display = "none";
-    loginError.textContent = "";
-
-    // Return to auth screen
-    authScreen.style.display = "flex";
-    mainApp.style.display = "none";
-    settingsScreen.style.display = "none";
-
-    // Check auth state to show appropriate login/setup screen
-    checkAuthState();
+    // Perform cleanup
+    await performLogoutCleanup();
   } catch (error) {
     console.error("Error logging out:", error);
     alert("Failed to logout: " + error.message);

@@ -147,11 +147,17 @@ func (a *App) ChangePassword(oldPassword, newPassword string) error {
 	if !a.authManager.VerifyPassword(oldPassword) {
 		return fmt.Errorf("invalid current password")
 	}
+
+	// Store the new password hash
 	err := a.authManager.StorePasswordHash(newPassword)
-	if err == nil {
-		a.currentKey = crypto.DeriveKey(newPassword)
+	if err != nil {
+		return err
 	}
-	return err
+
+	// Clear the current session - user will need to log in again with new password
+	a.currentKey = nil
+
+	return nil
 }
 
 func (a *App) ResetApplication() error {
