@@ -1,4 +1,10 @@
+# golangci-lint configuration
+# See https://golangci-lint.run/usage/configuration/ for details
+
+# This file contains only configs which differ from defaults.
+# All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 run:
+  timeout: 5m
   skip-dirs:
     - frontend/dist
   skip-files:
@@ -21,3 +27,14 @@ issues:
         - golint
         - gofmt
         - goimports
+
+linters:
+  enable-all: false
+  enable:
+    - typecheck
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
