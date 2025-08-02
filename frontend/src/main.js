@@ -26,6 +26,11 @@ let allNotes = [];
 let filteredNotes = [];
 let searchQuery = "";
 
+// Auto-logout functionality
+let inactivityTimer = null;
+let lastActivityTime = Date.now();
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
 // DOM elements
 let authScreen, mainApp, settingsScreen, passwordSetup, passwordLogin;
 let setupPasswordInput, confirmPasswordInput, setupBtn;
@@ -218,6 +223,9 @@ async function initializeApp() {
   authScreen.style.display = "none";
   mainApp.style.display = "block";
   currentUser = { authenticated: true };
+
+  // Start activity tracking for auto-logout
+  startActivityTracking();
 
   // Load notes
   await loadNotes();
@@ -516,6 +524,9 @@ function closeSettings() {
   settingsScreen.style.display = "none";
   mainApp.style.display = "block";
 
+  // Reset activity timer when returning to main app
+  resetInactivityTimer();
+
   // Clear password fields
   currentPassword.value = "";
   newPassword.value = "";
@@ -578,6 +589,9 @@ async function handleCreateBackup() {
 
 async function handleLogout() {
   try {
+    // Stop activity tracking
+    stopActivityTracking();
+
     // Call backend logout to clear session
     await Logout();
 
@@ -630,6 +644,60 @@ async function handlePasswordReset() {
   } catch (error) {
     console.error("Error resetting password:", error);
     alert("Failed to reset password: " + error.message);
+  }
+}
+
+// Auto-logout functionality
+function resetInactivityTimer() {
+  lastActivityTime = Date.now();
+
+  // Clear existing timer
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+  }
+
+  // Only set timer if user is logged in (not on auth screen)
+  if (
+    authScreen.style.display === "none" &&
+    mainApp.style.display === "block"
+  ) {
+    inactivityTimer = setTimeout(() => {
+      autoLogout();
+    }, INACTIVITY_TIMEOUT);
+  }
+}
+
+function autoLogout() {
+  console.log("Auto-logout triggered due to inactivity");
+
+  // Call the same logout function but without user confirmation
+  handleLogout();
+}
+
+function startActivityTracking() {
+  // Track various user activities
+  const activityEvents = [
+    "mousedown",
+    "mousemove",
+    "keypress",
+    "scroll",
+    "touchstart",
+    "click",
+  ];
+
+  activityEvents.forEach((event) => {
+    document.addEventListener(event, resetInactivityTimer, true);
+  });
+
+  // Start the initial timer
+  resetInactivityTimer();
+}
+
+function stopActivityTracking() {
+  // Clear the timer
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = null;
   }
 }
 
