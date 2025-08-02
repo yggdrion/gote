@@ -296,8 +296,8 @@ header a:hover,
 }
 
 .markdown-content pre {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
   border-radius: 6px;
   font-size: 13px;
   line-height: 1.45;
@@ -307,8 +307,8 @@ header a:hover,
 }
 
 .markdown-content code {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
   border-radius: 3px;
   font-size: 13px;
   margin: 0;
@@ -323,7 +323,7 @@ header a:hover,
   padding: 0;
   border-radius: 0;
   font-size: 13px;
-  color: #24292f;
+  color: inherit;
   display: block;
   white-space: pre;
   font-family: "SF Mono", "Monaco", "Consolas", "Liberation Mono", "Courier New",

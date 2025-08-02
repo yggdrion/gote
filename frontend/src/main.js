@@ -26,6 +26,82 @@ let allNotes = [];
 let filteredNotes = [];
 let searchQuery = "";
 
+// Markdown instance
+let markedInstance = null;
+
+// Initialize markdown with syntax highlighting
+async function initializeMarked() {
+  try {
+    console.log("Loading markdown libraries...");
+
+    // Dynamic imports for offline support
+    const { marked } = await import("marked");
+    const { markedHighlight } = await import("marked-highlight");
+    const hljsModule = await import("highlight.js");
+    const hljs = hljsModule.default || hljsModule;
+
+    // Import CSS for syntax highlighting
+    await import("highlight.js/styles/github.css");
+
+    console.log("All markdown libraries loaded successfully");
+
+    // Configure highlight.js
+    hljs.configure({
+      ignoreUnescapedHTML: true,
+      languages: [
+        "javascript",
+        "python",
+        "html",
+        "css",
+        "json",
+        "bash",
+        "go",
+        "java",
+        "cpp",
+        "sql",
+        "typescript",
+        "markdown",
+        "yaml",
+        "xml",
+      ],
+    });
+
+    // Configure marked with highlight extension
+    marked.use(
+      markedHighlight({
+        langPrefix: "hljs language-",
+        highlight(code, lang) {
+          try {
+            const language = hljs.getLanguage(lang) ? lang : "plaintext";
+            return hljs.highlight(code, { language }).value;
+          } catch (e) {
+            console.warn("Highlight error:", e);
+            return code;
+          }
+        },
+      })
+    );
+
+    // Configure additional options
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false,
+    });
+
+    // Store the marked function as our instance
+    markedInstance = marked;
+
+    console.log("Markdown initialized successfully with syntax highlighting");
+    return true;
+  } catch (error) {
+    console.error("Error initializing markdown:", error);
+    markedInstance = null;
+    return false;
+  }
+}
+
 // Auto-logout functionality
 let inactivityTimer = null;
 let lastActivityTime = Date.now();
@@ -47,7 +123,10 @@ let backFromSettings,
 let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath, logoutBtn;
 
 // Initialize app when DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("DOM loaded, initializing markdown...");
+  await initializeMarked();
+  console.log("Markdown initialization complete, initializing DOM...");
   initializeDOM();
   setupEventListeners();
   checkAuthState();
@@ -310,54 +389,22 @@ function renderNotesList() {
 }
 
 function renderMarkdown(content) {
-  if (!content) return "";
+  if (!content || content.trim() === "") {
+    return '<em style="color: #999;">Empty note...</em>';
+  }
 
-  let html = escapeHtml(content);
+  try {
+    if (markedInstance && typeof markedInstance === "function") {
+      return markedInstance(content);
+    } else if (markedInstance && typeof markedInstance.parse === "function") {
+      return markedInstance.parse(content);
+    }
+  } catch (error) {
+    console.error("Error rendering markdown:", error);
+  }
 
-  // Headers
-  html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
-  html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
-  html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
-
-  // Bold
-  html = html.replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>");
-
-  // Italic
-  html = html.replace(/\*(.*?)\*/gim, "<em>$1</em>");
-
-  // Code blocks
-  html = html.replace(/```([^`]*?)```/gims, "<pre><code>$1</code></pre>");
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/gim, "<code>$1</code>");
-
-  // Task lists
-  html = html.replace(
-    /^\s*- \[x\] (.*)$/gim,
-    '<input type="checkbox" checked disabled> $1'
-  );
-  html = html.replace(
-    /^\s*- \[ \] (.*)$/gim,
-    '<input type="checkbox" disabled> $1'
-  );
-
-  // Regular lists
-  html = html.replace(/^\s*- (.*)$/gim, "<li>$1</li>");
-  html = html.replace(/(<li>.*<\/li>)/gims, "<ul>$1</ul>");
-
-  // Links
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/gim,
-    '<a href="$2" target="_blank">$1</a>'
-  );
-
-  // Blockquotes
-  html = html.replace(/^> (.*)$/gim, "<blockquote>$1</blockquote>");
-
-  // Line breaks
-  html = html.replace(/\n/gim, "<br>");
-
-  return html;
+  // Simple fallback - just escape HTML and preserve line breaks
+  return escapeHtml(content).replace(/\n/g, "<br>");
 }
 
 function escapeHtml(text) {
