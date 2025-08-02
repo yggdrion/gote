@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
 	"gote/pkg/crypto"
+	"gote/pkg/models"
 	"gote/pkg/storage"
 )
 
@@ -148,14 +151,65 @@ func (a *App) ChangePassword(oldPassword, newPassword string) error {
 		return fmt.Errorf("invalid current password")
 	}
 
-	// Store the new password hash
-	err := a.authManager.StorePasswordHash(newPassword)
+	// Derive old and new keys
+	oldKey := crypto.DeriveKey(oldPassword)
+	newKey := crypto.DeriveKey(newPassword)
+
+	// Re-encrypt all notes from disk
+	noteFiles, err := filepath.Glob(filepath.Join(a.config.NotesPath, "*.json"))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list note files: %v", err)
+	}
+
+	var corruptedNotes []string
+	for _, file := range noteFiles {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			corruptedNotes = append(corruptedNotes, filepath.Base(file))
+			log.Printf("Error reading file %s: %v", file, err)
+			continue
+		}
+
+		var encryptedNote models.EncryptedNote
+		if err := json.Unmarshal(data, &encryptedNote); err != nil {
+			corruptedNotes = append(corruptedNotes, filepath.Base(file))
+			log.Printf("Error unmarshalling file %s: %v", file, err)
+			continue
+		}
+
+		// Decrypt with old key
+		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
+		if err != nil {
+			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
+			log.Printf("Error decrypting note %s: %v", encryptedNote.ID, err)
+			continue
+		}
+
+		// Create note with decrypted content
+		note := &models.Note{
+			ID:        encryptedNote.ID,
+			Content:   decryptedContent,
+			CreatedAt: encryptedNote.CreatedAt,
+			UpdatedAt: encryptedNote.UpdatedAt,
+		}
+
+		// Save with new key using SaveNoteDirect
+		if err := a.store.SaveNoteDirect(note, newKey); err != nil {
+			return fmt.Errorf("failed to save note %s: %v", note.ID, err)
+		}
+	}
+
+	// Store new password hash only after all notes are successfully re-encrypted
+	if err := a.authManager.StorePasswordHash(newPassword); err != nil {
+		return fmt.Errorf("failed to update password hash: %v", err)
 	}
 
 	// Clear the current session - user will need to log in again with new password
 	a.currentKey = nil
+
+	if len(corruptedNotes) > 0 {
+		log.Printf("Password changed successfully. %d corrupted notes were skipped: %v", len(corruptedNotes), corruptedNotes)
+	}
 
 	return nil
 }
