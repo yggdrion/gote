@@ -129,6 +129,9 @@ function setupEventListeners() {
   syncFromSettings.addEventListener("click", handleSync);
   changePasswordBtn.addEventListener("click", handleChangePassword);
   createBackupBtn.addEventListener("click", handleCreateBackup);
+
+  // Global keyboard shortcuts
+  document.addEventListener("keydown", handleGlobalKeyboard);
 }
 
 async function checkAuthState() {
@@ -570,3 +573,57 @@ async function handleCreateBackup() {
 // Make some functions globally available for inline event handlers
 window.clearSearch = clearSearch;
 window.createNewNote = createNewNote;
+
+function handleGlobalKeyboard(e) {
+  // Check for Ctrl/Cmd key combinations
+  const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+  if (isCtrlOrCmd && e.key === "s") {
+    // Ctrl+S / Cmd+S: Save note and close editor
+    e.preventDefault();
+    if (currentNote && !noteEditor.classList.contains("hidden")) {
+      saveAndCloseNote();
+    }
+    return;
+  }
+
+  if (isCtrlOrCmd && e.key === "f") {
+    // Ctrl+F / Cmd+F: Focus search input
+    e.preventDefault();
+    // Only if we're in the main app (not auth or settings screen)
+    if (
+      mainApp.style.display !== "none" &&
+      authScreen.style.display === "none" &&
+      settingsScreen.style.display === "none"
+    ) {
+      searchInput.focus();
+      searchInput.select();
+    }
+    return;
+  }
+}
+
+async function saveAndCloseNote() {
+  if (!currentNote) return;
+
+  try {
+    const updatedNote = await UpdateNote(currentNote.id, noteContent.value);
+    currentNote = updatedNote;
+
+    // Update notes list
+    const index = allNotes.findIndex((n) => n.id === currentNote.id);
+    if (index !== -1) {
+      allNotes[index] = updatedNote;
+      filteredNotes = searchQuery
+        ? filteredNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n))
+        : [...allNotes];
+      renderNotesList();
+    }
+
+    // Close the editor
+    closeEditor();
+  } catch (error) {
+    console.error("Error saving note:", error);
+    alert("Failed to save note");
+  }
+}
