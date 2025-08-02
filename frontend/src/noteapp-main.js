@@ -32,7 +32,11 @@ let newNoteBtn, searchInput, searchBtn, clearSearchBtn;
 let syncBtn, settingsBtn, notesGrid, noteEditor;
 let noteContent, notePreview, searchResultsHeader, emptyState;
 let saveNoteBtn, closeEditorBtn, cancelEditorBtn, createFirstNoteBtn;
-let settingsModal, closeSettings, currentPassword, newPassword, confirmNewPassword;
+let settingsModal,
+  closeSettings,
+  currentPassword,
+  newPassword,
+  confirmNewPassword;
 let changePasswordBtn, notesPath, passwordHashPath;
 
 // Initialize app when DOM is loaded
@@ -236,14 +240,18 @@ function renderNotesList() {
   if (searchQuery) {
     searchResultsHeader.style.display = "block";
     const resultsText = document.getElementById("search-results-text");
-    resultsText.innerHTML = `Search results for "<strong>${escapeHtml(searchQuery)}</strong>" (${filteredNotes.length} found)`;
+    resultsText.innerHTML = `Search results for "<strong>${escapeHtml(
+      searchQuery
+    )}</strong>" (${filteredNotes.length} found)`;
   }
 
   if (filteredNotes.length === 0) {
     emptyState.style.display = "block";
     const emptyText = document.getElementById("empty-state-text");
     if (searchQuery) {
-      emptyText.innerHTML = `No notes found for "${escapeHtml(searchQuery)}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`;
+      emptyText.innerHTML = `No notes found for "${escapeHtml(
+        searchQuery
+      )}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`;
     } else {
       emptyText.innerHTML = `No notes found. <button class="link-button" onclick="createNewNote()">Create your first note</button>`;
     }
@@ -302,7 +310,7 @@ function renderMarkdown(content) {
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>");
 
-  // Italic  
+  // Italic
   html = html.replace(/\*(.*?)\*/gim, "<em>$1</em>");
 
   // Code blocks
@@ -312,15 +320,24 @@ function renderMarkdown(content) {
   html = html.replace(/`([^`]+)`/gim, "<code>$1</code>");
 
   // Task lists
-  html = html.replace(/^\s*- \[x\] (.*)$/gim, '<input type="checkbox" checked disabled> $1');
-  html = html.replace(/^\s*- \[ \] (.*)$/gim, '<input type="checkbox" disabled> $1');
+  html = html.replace(
+    /^\s*- \[x\] (.*)$/gim,
+    '<input type="checkbox" checked disabled> $1'
+  );
+  html = html.replace(
+    /^\s*- \[ \] (.*)$/gim,
+    '<input type="checkbox" disabled> $1'
+  );
 
   // Regular lists
   html = html.replace(/^\s*- (.*)$/gim, "<li>$1</li>");
   html = html.replace(/(<li>.*<\/li>)/gims, "<ul>$1</ul>");
 
   // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>');
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/gim,
+    '<a href="$2" target="_blank">$1</a>'
+  );
 
   // Blockquotes
   html = html.replace(/^> (.*)$/gim, "<blockquote>$1</blockquote>");
@@ -339,7 +356,9 @@ function escapeHtml(text) {
 
 async function createNewNote() {
   try {
-    const newNote = await CreateNote("# New Note\n\nStart writing your note here...");
+    const newNote = await CreateNote(
+      "# New Note\n\nStart writing your note here..."
+    );
     allNotes.push(newNote);
     filteredNotes = searchQuery ? filteredNotes : [...allNotes];
     renderNotesList();
@@ -382,7 +401,8 @@ function closeEditor() {
 
 function updatePreview() {
   if (!noteContent.value) {
-    notePreview.innerHTML = '<p style="color: #999; font-style: italic;">Preview will appear here...</p>';
+    notePreview.innerHTML =
+      '<p style="color: #999; font-style: italic;">Preview will appear here...</p>';
     return;
   }
 
@@ -400,7 +420,7 @@ async function saveCurrentNote() {
     const index = allNotes.findIndex((n) => n.id === currentNote.id);
     if (index !== -1) {
       allNotes[index] = updatedNote;
-      filteredNotes = searchQuery 
+      filteredNotes = searchQuery
         ? filteredNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n))
         : [...allNotes];
       renderNotesList();

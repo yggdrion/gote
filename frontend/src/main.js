@@ -25,15 +25,19 @@ let filteredNotes = [];
 let searchQuery = "";
 
 // DOM elements
-let authScreen, mainApp, passwordSetup, passwordLogin;
+let authScreen, mainApp, settingsScreen, passwordSetup, passwordLogin;
 let setupPasswordInput, confirmPasswordInput, setupBtn;
 let loginPasswordInput, loginBtn, loginError;
 let newNoteBtn, searchInput, searchBtn, clearSearchBtn;
 let syncBtn, settingsBtn, notesGrid, noteEditor;
 let noteContent, notePreview, searchResultsHeader, emptyState;
 let saveNoteBtn, closeEditorBtn, cancelEditorBtn, createFirstNoteBtn;
-let settingsModal, closeSettings, currentPassword, newPassword, confirmNewPassword;
-let changePasswordBtn, notesPath, passwordHashPath;
+let backFromSettings,
+  syncFromSettings,
+  currentPassword,
+  newPassword,
+  confirmNewPassword;
+let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath;
 
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
@@ -46,6 +50,7 @@ function initializeDOM() {
   // Get DOM elements
   authScreen = document.getElementById("auth-screen");
   mainApp = document.getElementById("main-app");
+  settingsScreen = document.getElementById("settings-screen");
   passwordSetup = document.getElementById("password-setup");
   passwordLogin = document.getElementById("password-login");
   setupPasswordInput = document.getElementById("setup-password");
@@ -70,12 +75,13 @@ function initializeDOM() {
   closeEditorBtn = document.getElementById("close-editor-btn");
   cancelEditorBtn = document.getElementById("cancel-editor-btn");
   createFirstNoteBtn = document.getElementById("create-first-note");
-  settingsModal = document.getElementById("settings-modal");
-  closeSettings = document.getElementById("close-settings");
+  backFromSettings = document.getElementById("back-from-settings");
+  syncFromSettings = document.getElementById("sync-from-settings");
   currentPassword = document.getElementById("current-password");
   newPassword = document.getElementById("new-password");
   confirmNewPassword = document.getElementById("confirm-new-password");
   changePasswordBtn = document.getElementById("change-password-btn");
+  createBackupBtn = document.getElementById("create-backup-btn");
   notesPath = document.getElementById("notes-path");
   passwordHashPath = document.getElementById("password-hash-path");
 }
@@ -121,15 +127,10 @@ function setupEventListeners() {
   noteContent.addEventListener("input", updatePreview);
 
   // Settings listeners
-  closeSettings.addEventListener("click", closeSettingsModal);
+  backFromSettings.addEventListener("click", closeSettings);
+  syncFromSettings.addEventListener("click", handleSync);
   changePasswordBtn.addEventListener("click", handleChangePassword);
-
-  // Modal click outside to close
-  settingsModal.addEventListener("click", (e) => {
-    if (e.target === settingsModal) {
-      closeSettingsModal();
-    }
-  });
+  createBackupBtn.addEventListener("click", handleCreateBackup);
 }
 
 async function checkAuthState() {
@@ -236,14 +237,18 @@ function renderNotesList() {
   if (searchQuery) {
     searchResultsHeader.style.display = "block";
     const resultsText = document.getElementById("search-results-text");
-    resultsText.innerHTML = `Search results for "<strong>${escapeHtml(searchQuery)}</strong>" (${filteredNotes.length} found)`;
+    resultsText.innerHTML = `Search results for "<strong>${escapeHtml(
+      searchQuery
+    )}</strong>" (${filteredNotes.length} found)`;
   }
 
   if (filteredNotes.length === 0) {
     emptyState.style.display = "block";
     const emptyText = document.getElementById("empty-state-text");
     if (searchQuery) {
-      emptyText.innerHTML = `No notes found for "${escapeHtml(searchQuery)}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`;
+      emptyText.innerHTML = `No notes found for "${escapeHtml(
+        searchQuery
+      )}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`;
     } else {
       emptyText.innerHTML = `No notes found. <button class="link-button" onclick="createNewNote()">Create your first note</button>`;
     }
@@ -302,7 +307,7 @@ function renderMarkdown(content) {
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>");
 
-  // Italic  
+  // Italic
   html = html.replace(/\*(.*?)\*/gim, "<em>$1</em>");
 
   // Code blocks
@@ -312,15 +317,24 @@ function renderMarkdown(content) {
   html = html.replace(/`([^`]+)`/gim, "<code>$1</code>");
 
   // Task lists
-  html = html.replace(/^\s*- \[x\] (.*)$/gim, '<input type="checkbox" checked disabled> $1');
-  html = html.replace(/^\s*- \[ \] (.*)$/gim, '<input type="checkbox" disabled> $1');
+  html = html.replace(
+    /^\s*- \[x\] (.*)$/gim,
+    '<input type="checkbox" checked disabled> $1'
+  );
+  html = html.replace(
+    /^\s*- \[ \] (.*)$/gim,
+    '<input type="checkbox" disabled> $1'
+  );
 
   // Regular lists
   html = html.replace(/^\s*- (.*)$/gim, "<li>$1</li>");
   html = html.replace(/(<li>.*<\/li>)/gims, "<ul>$1</ul>");
 
   // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>');
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/gim,
+    '<a href="$2" target="_blank">$1</a>'
+  );
 
   // Blockquotes
   html = html.replace(/^> (.*)$/gim, "<blockquote>$1</blockquote>");
@@ -339,7 +353,9 @@ function escapeHtml(text) {
 
 async function createNewNote() {
   try {
-    const newNote = await CreateNote("# New Note\n\nStart writing your note here...");
+    const newNote = await CreateNote(
+      "# New Note\n\nStart writing your note here..."
+    );
     allNotes.push(newNote);
     filteredNotes = searchQuery ? filteredNotes : [...allNotes];
     renderNotesList();
@@ -382,7 +398,8 @@ function closeEditor() {
 
 function updatePreview() {
   if (!noteContent.value) {
-    notePreview.innerHTML = '<p style="color: #999; font-style: italic;">Preview will appear here...</p>';
+    notePreview.innerHTML =
+      '<p style="color: #999; font-style: italic;">Preview will appear here...</p>';
     return;
   }
 
@@ -400,7 +417,7 @@ async function saveCurrentNote() {
     const index = allNotes.findIndex((n) => n.id === currentNote.id);
     if (index !== -1) {
       allNotes[index] = updatedNote;
-      filteredNotes = searchQuery 
+      filteredNotes = searchQuery
         ? filteredNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n))
         : [...allNotes];
       renderNotesList();
@@ -492,14 +509,21 @@ async function openSettings() {
     const settings = await GetSettings();
     notesPath.textContent = settings.notesPath || "Not set";
     passwordHashPath.textContent = settings.passwordHashPath || "Not set";
-    settingsModal.style.display = "flex";
+
+    // Hide main app and show settings screen
+    mainApp.style.display = "none";
+    settingsScreen.style.display = "flex";
   } catch (error) {
     console.error("Error loading settings:", error);
   }
 }
 
-function closeSettingsModal() {
-  settingsModal.style.display = "none";
+function closeSettings() {
+  // Hide settings screen and show main app
+  settingsScreen.style.display = "none";
+  mainApp.style.display = "block";
+
+  // Clear password fields
   currentPassword.value = "";
   newPassword.value = "";
   confirmNewPassword.value = "";
@@ -528,10 +552,34 @@ async function handleChangePassword() {
   try {
     await ChangePassword(current, newPass);
     alert("Password changed successfully");
-    closeSettingsModal();
+    closeSettings();
   } catch (error) {
     console.error("Error changing password:", error);
     alert("Failed to change password: " + error.message);
+  }
+}
+
+async function handleCreateBackup() {
+  try {
+    // Show loading state
+    const originalText = createBackupBtn.textContent;
+    createBackupBtn.textContent = "Creating backup...";
+    createBackupBtn.disabled = true;
+
+    // Note: This would need to be implemented in the Go backend
+    // For now just show a placeholder message
+    alert("Backup functionality will be implemented soon");
+
+    // Restore button state
+    createBackupBtn.textContent = originalText;
+    createBackupBtn.disabled = false;
+  } catch (error) {
+    console.error("Error creating backup:", error);
+    alert("Failed to create backup");
+
+    // Restore button state
+    createBackupBtn.textContent = "🗄️ Create Backup Snapshot";
+    createBackupBtn.disabled = false;
   }
 }
 

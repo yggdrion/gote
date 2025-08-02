@@ -85,7 +85,11 @@
           </header>
 
           <main>
-            <div id="search-results-header" class="search-results-header" style="display: none">
+            <div
+              id="search-results-header"
+              class="search-results-header"
+              style="display: none"
+            >
               <p id="search-results-text"></p>
             </div>
 
@@ -107,10 +111,14 @@
         <!-- Note Editor Overlay -->
         <div id="note-editor" class="note-editor hidden">
           <div class="editor-header">
-            <button class="btn btn-secondary" id="close-editor-btn">← Back</button>
+            <button class="btn btn-secondary" id="close-editor-btn">
+              ← Back
+            </button>
             <div class="editor-actions">
               <button class="btn btn-primary" id="save-note-btn">Save</button>
-              <button class="btn btn-secondary" id="cancel-editor-btn">Cancel</button>
+              <button class="btn btn-secondary" id="cancel-editor-btn">
+                Cancel
+              </button>
             </div>
           </div>
           <div class="editor-content">
@@ -130,48 +138,94 @@ code blocks
             ></textarea>
             <div class="preview-container">
               <div class="preview-header">Preview</div>
-              <div id="note-preview" class="note-preview markdown-content"></div>
+              <div
+                id="note-preview"
+                class="note-preview markdown-content"
+              ></div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Settings Modal -->
-        <div id="settings-modal" class="modal" style="display: none">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h2>Settings</h2>
-              <button id="close-settings" class="close-btn">&times;</button>
+      <!-- Settings Screen -->
+      <div id="settings-screen" class="settings-screen" style="display: none">
+        <div class="settings-container">
+          <div class="settings-header">
+            <button id="back-from-settings" class="btn btn-secondary">
+              ← Back to Notes
+            </button>
+            <h1>⚙️ Settings</h1>
+          </div>
+
+          <div class="settings-content">
+            <div class="settings-section">
+              <h3>File Synchronization</h3>
+              <button
+                id="sync-from-settings"
+                class="btn btn-secondary sync-btn"
+              >
+                🔄 Sync from Disk
+              </button>
+              <small class="help-text"
+                >Refresh notes from disk. Use this if files were changed by
+                external tools.</small
+              >
             </div>
-            <div class="modal-body">
-              <div class="setting-group">
-                <h3>Change Password</h3>
+
+            <div class="settings-section">
+              <h3>Change Password</h3>
+              <div class="password-fields">
                 <input
                   type="password"
                   id="current-password"
                   placeholder="Current password"
+                  autocomplete="current-password"
                 />
                 <input
                   type="password"
                   id="new-password"
                   placeholder="New password"
+                  autocomplete="new-password"
                 />
                 <input
                   type="password"
                   id="confirm-new-password"
                   placeholder="Confirm new password"
+                  autocomplete="new-password"
                 />
-                <button id="change-password-btn" class="btn btn-primary">
+                <button id="change-password-btn" class="btn btn-warning">
                   Change Password
                 </button>
               </div>
-              <div class="setting-group">
-                <h3>Storage</h3>
-                <p><strong>Notes Path:</strong> <span id="notes-path"></span></p>
-                <p>
-                  <strong>Password Hash Path:</strong>
-                  <span id="password-hash-path"></span>
-                </p>
+              <small class="help-text"
+                >Change your password and re-encrypt all notes. This cannot be
+                undone.</small
+              >
+            </div>
+
+            <div class="settings-section">
+              <h3>Storage Information</h3>
+              <div class="info-item">
+                <label>Notes Directory:</label>
+                <span id="notes-path" class="path-info">Loading...</span>
               </div>
+              <div class="info-item">
+                <label>Password Hash File:</label>
+                <span id="password-hash-path" class="path-info"
+                  >Loading...</span
+                >
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h3>Manual Backup</h3>
+              <button id="create-backup-btn" class="btn btn-primary">
+                🗄️ Create Backup Snapshot
+              </button>
+              <small class="help-text"
+                >Create a backup of all your notes. Useful before making major
+                changes.</small
+              >
             </div>
           </div>
         </div>
