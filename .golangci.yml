@@ -17,7 +17,6 @@ issues:
   exclude-rules:
     - path: frontend/dist/.*
       linters:
-        - typecheck
         - govet
         - errcheck
         - staticcheck
@@ -30,7 +29,6 @@ issues:
 linters:
   enable-all: false
   enable:
-    - typecheck
     - govet
     - errcheck
     - staticcheck
