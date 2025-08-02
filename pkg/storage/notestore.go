@@ -500,3 +500,27 @@ func (s *NoteStore) MoveNoteToCorrupted(noteID string) error {
 	s.mutex.Unlock()
 	return nil
 }
+
+// ClearAllNotes removes all notes from storage and file system
+func (s *NoteStore) ClearAllNotes() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Remove all files from data directory
+	files, err := filepath.Glob(filepath.Join(s.dataDir, "*.json"))
+	if err != nil {
+		return fmt.Errorf("failed to list note files: %v", err)
+	}
+
+	for _, file := range files {
+		if err := os.Remove(file); err != nil {
+			log.Printf("Failed to remove file %s: %v", file, err)
+		}
+	}
+
+	// Clear in-memory storage
+	s.notes = make(map[string]*models.Note)
+	s.fileModTimes = make(map[string]time.Time)
+
+	return nil
+}

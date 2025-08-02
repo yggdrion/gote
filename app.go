@@ -154,6 +154,18 @@ func (a *App) ChangePassword(oldPassword, newPassword string) error {
 	return err
 }
 
+func (a *App) ResetApplication() error {
+	// Clear the current key to prevent any operations
+	a.currentKey = nil
+
+	// Remove password hash file only - keep the encrypted notes
+	if err := a.authManager.RemovePasswordHash(); err != nil {
+		return fmt.Errorf("failed to remove password hash: %v", err)
+	}
+
+	return nil
+}
+
 // Greet returns a greeting for the given name (keeping for compatibility)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)

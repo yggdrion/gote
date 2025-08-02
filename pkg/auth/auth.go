@@ -117,3 +117,12 @@ func (m *Manager) DeleteSession(sessionID string) {
 func (m *Manager) IsAuthenticated(r *http.Request) *models.Session {
 	return m.GetSession(r)
 }
+
+// RemovePasswordHash deletes the password hash file
+func (m *Manager) RemovePasswordHash() error {
+	if _, err := os.Stat(m.passwordHashPath); os.IsNotExist(err) {
+		// File doesn't exist, nothing to remove
+		return nil
+	}
+	return os.Remove(m.passwordHashPath)
+}

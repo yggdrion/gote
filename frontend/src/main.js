@@ -15,6 +15,7 @@ import {
   SyncFromDisk,
   GetSettings,
   ChangePassword,
+  ResetApplication,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -27,7 +28,7 @@ let searchQuery = "";
 // DOM elements
 let authScreen, mainApp, settingsScreen, passwordSetup, passwordLogin;
 let setupPasswordInput, confirmPasswordInput, setupBtn;
-let loginPasswordInput, loginBtn, loginError;
+let loginPasswordInput, loginBtn, loginError, resetPasswordBtn;
 let newNoteBtn, searchInput, searchBtn, clearSearchBtn;
 let syncBtn, settingsBtn, notesGrid, noteEditor;
 let noteContent, searchResultsHeader, emptyState;
@@ -59,6 +60,7 @@ function initializeDOM() {
   loginPasswordInput = document.getElementById("login-password");
   loginBtn = document.getElementById("login-btn");
   loginError = document.getElementById("login-error");
+  resetPasswordBtn = document.getElementById("reset-password-btn");
   newNoteBtn = document.getElementById("new-note-btn");
   searchInput = document.getElementById("search-input");
   searchBtn = document.getElementById("search-btn");
@@ -89,6 +91,7 @@ function setupEventListeners() {
   // Authentication listeners
   setupBtn.addEventListener("click", handlePasswordSetup);
   loginBtn.addEventListener("click", handleLogin);
+  resetPasswordBtn.addEventListener("click", handlePasswordReset);
 
   // Enter key listeners for auth
   setupPasswordInput.addEventListener("keypress", (e) => {
@@ -567,6 +570,28 @@ async function handleCreateBackup() {
     // Restore button state
     createBackupBtn.textContent = "🗄️ Create Backup Snapshot";
     createBackupBtn.disabled = false;
+  }
+}
+
+async function handlePasswordReset() {
+  const confirmMessage =
+    "Reset password file?\n\n" +
+    "This will remove the stored password hash so you can set a new password.\n" +
+    "Your encrypted notes will remain safe but inaccessible until you set a new password.\n\n" +
+    "Continue?";
+
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    await ResetApplication();
+    alert("Password reset successfully. You can now set a new password.");
+    // Refresh the auth state to show password setup
+    checkAuthState();
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    alert("Failed to reset password: " + error.message);
   }
 }
 
