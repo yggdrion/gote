@@ -987,35 +987,6 @@ header a:hover,
   margin-top: 10px;
 }
 
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
-}
-
-.info-item:last-child {
-  border-bottom: none;
-}
-
-.info-item label {
-  font-weight: 600;
-  color: #555;
-}
-
-.path-info {
-  font-family: "Courier New", monospace;
-  background: rgba(102, 126, 234, 0.1);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .help-text {
   display: block;
   margin-top: 8px;
@@ -1065,15 +1036,5 @@ header a:hover,
 
   .settings-header h1 {
     font-size: 2rem;
-  }
-
-  .info-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-
-  .path-info {
-    max-width: 100%;
   }
 }

@@ -124,7 +124,7 @@ let backFromSettings,
   currentPassword,
   newPassword,
   confirmNewPassword;
-let changePasswordBtn, createBackupBtn, notesPath, passwordHashPath, logoutBtn;
+let changePasswordBtn, createBackupBtn, logoutBtn;
 let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 
 // Setup screen elements
@@ -176,8 +176,6 @@ function initializeDOM() {
   confirmNewPassword = document.getElementById("confirm-new-password");
   changePasswordBtn = document.getElementById("change-password-btn");
   createBackupBtn = document.getElementById("create-backup-btn");
-  notesPath = document.getElementById("notes-path");
-  passwordHashPath = document.getElementById("password-hash-path");
   logoutBtn = document.getElementById("logout-btn");
 
   // Settings input elements
@@ -651,10 +649,6 @@ async function openSettings() {
   try {
     const settings = await GetSettings();
 
-    // Update display elements
-    notesPath.textContent = settings.notesPath || "Not set";
-    passwordHashPath.textContent = settings.passwordHashPath || "Not set";
-
     // Update input fields for editing
     notesPathInput.value = settings.notesPath || "";
     passwordHashPathInput.value = settings.passwordHashPath || "";
@@ -782,7 +776,7 @@ async function handleCreateBackup() {
     alert("Failed to create backup: " + error.message);
 
     // Restore button state
-    createBackupBtn.textContent = "🗄️ Create Backup Snapshot";
+    createBackupBtn.textContent = "🗄️ Create Backup";
     createBackupBtn.disabled = false;
   }
 }
