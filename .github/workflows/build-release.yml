@@ -99,12 +99,12 @@ jobs:
       - name: Set up Go 🐹
         uses: actions/setup-go@39e5c4a1c7f3ff93d1b0a2b5b3e9c57eb22e2ce6
         with:
-          go-version: "1.21"
+          go-version: "1.24"
 
       - name: Set up Node.js 📦
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Wails 📦
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
