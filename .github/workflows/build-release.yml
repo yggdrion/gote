@@ -1,4 +1,4 @@
-name: 📦 Build Wails App - Release
+name: 📦 Build - Release
 
 on:
   workflow_dispatch:
@@ -159,23 +159,35 @@ jobs:
         run: |
           mkdir -p release-assets
 
+          # Debug: List all artifacts
+          echo "=== Available artifacts ==="
+          find artifacts -type f -name "*" | head -20
+
           # Copy Windows binaries
           if [ -f artifacts/gote-windows-amd64.exe/gote.exe ]; then
+            echo "Found Windows binary, copying..."
             cp artifacts/gote-windows-amd64.exe/gote.exe release-assets/gote-windows-amd64.exe
+          else
+            echo "Windows binary not found at artifacts/gote-windows-amd64.exe/gote.exe"
           fi
 
           # Copy macOS apps
           for arch in amd64 arm64; do
             if [ -f artifacts/gote-macos-${arch}.app/gote-macos-${arch}.app.zip ]; then
+              echo "Found macOS ${arch} zip, copying..."
               cp artifacts/gote-macos-${arch}.app/gote-macos-${arch}.app.zip release-assets/
             elif [ -d artifacts/gote-macos-${arch}.app/gote.app ]; then
+              echo "Found macOS ${arch} app directory, zipping..."
               cd artifacts/gote-macos-${arch}.app
               zip -r ../../release-assets/gote-macos-${arch}.app.zip gote.app
               cd ../..
+            else
+              echo "macOS ${arch} binary not found"
             fi
           done
 
           # List what we have
+          echo "=== Final release assets ==="
           ls -la release-assets/
 
       - name: Run semantic-release 🚀
