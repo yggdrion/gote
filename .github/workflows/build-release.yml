@@ -126,7 +126,7 @@ jobs:
           mv ${{ matrix.artifact_name }}.zip ../
 
       - name: Upload build artifacts 📤
-        uses: actions/upload-artifact@396b56b8e14b7b97e80a6b3b39b5b23e07b95c73
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ matrix.artifact_name }}
           path: |
