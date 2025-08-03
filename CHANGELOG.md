@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/yggdrion/gote/compare/v1.2.1...v1.2.2) (2025-08-03)
+
+### Bug Fixes
+
+* image zoom ([2d4477b](https://github.com/yggdrion/gote/commit/2d4477b869d0b96a0aeee3494cb3bbe3194b4081))
+
 ## [1.2.1](https://github.com/yggdrion/gote/compare/v1.2.0...v1.2.1) (2025-08-03)
 
 ### Bug Fixes
