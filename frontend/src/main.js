@@ -43,6 +43,9 @@ import {
   GetImageStats,
 } from "../wailsjs/go/main/App.js";
 
+// Import Wails runtime for browser functionality
+import { BrowserOpenURL } from "../wailsjs/runtime/runtime.js";
+
 // State management
 let currentUser = null;
 let currentNote = null;
@@ -516,6 +519,9 @@ function renderNotesList() {
 
       // Load images after HTML is inserted into DOM
       loadImagesInDOM(noteContentDiv);
+
+      // Add external link handlers after HTML is inserted into DOM
+      addExternalLinkHandlersToContainer(noteContentDiv);
 
       // Add event listeners
       noteCard.querySelector(".edit-btn").addEventListener("click", (e) => {
@@ -1308,5 +1314,52 @@ function addImageClickHandlersToContainer(container) {
   const images = container.querySelectorAll("img.note-image");
   images.forEach((img) => {
     addImageClickHandler(img);
+  });
+}
+
+// External link handling functions
+
+// Add click handler to an external link element
+function addExternalLinkHandler(linkElement) {
+  if (!linkElement || linkElement.dataset.externalHandlerAdded) {
+    return; // Already has handler or invalid element
+  }
+
+  linkElement.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const href = linkElement.href;
+
+    // Check if it's an external link (starts with http:// or https://)
+    if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+      try {
+        BrowserOpenURL(href);
+      } catch (error) {
+        console.error("Error opening external link:", error);
+        // Fallback - try window.open (though this might not work in Wails)
+        window.open(href, "_blank");
+      }
+    }
+  });
+
+  // Mark as having click handler to avoid duplicates
+  linkElement.dataset.externalHandlerAdded = "true";
+
+  // Add visual indication that link opens externally
+  linkElement.title = linkElement.title || "Opens in external browser";
+}
+
+// Add click handlers to all external links in a container
+function addExternalLinkHandlersToContainer(container) {
+  if (!container) return;
+
+  const links = container.querySelectorAll("a[href]");
+  links.forEach((link) => {
+    const href = link.href;
+    // Only handle external links (http/https)
+    if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+      addExternalLinkHandler(link);
+    }
   });
 }

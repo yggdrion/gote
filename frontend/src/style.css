@@ -297,6 +297,21 @@ header a:hover,
   text-decoration: underline;
 }
 
+/* External links styling */
+.markdown-content a[href^="http://"],
+.markdown-content a[href^="https://"]
+{
+  cursor: pointer;
+}
+
+.markdown-content a[href^="http://"]:after,
+.markdown-content a[href^="https://"]:after
+{
+  content: " 🔗";
+  font-size: 0.8em;
+  opacity: 0.6;
+}
+
 .markdown-content blockquote {
   margin: 16px 0;
   padding: 0 16px;
