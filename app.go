@@ -60,8 +60,9 @@ func (a *App) startup(ctx context.Context) {
 		a.noteService = services.NewNoteService(a.store)
 
 		log.Printf("Note app initialized:")
-		log.Printf("  Notes directory: %s", cfg.NotesPath)
+		log.Printf("  Configuration file: %s", config.GetConfigFilePath())
 		log.Printf("  Password hash file: %s", cfg.PasswordHashPath)
+		log.Printf("  Notes directory: %s", cfg.NotesPath)
 	} else {
 		log.Printf("First-time setup required - no configuration file found")
 		// Initialize with default config for now, will be replaced during setup
@@ -199,8 +200,9 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	a.store.LoadNotes(a.currentKey)
 
 	log.Printf("Initial setup completed:")
-	log.Printf("  Notes directory: %s", a.config.NotesPath)
+	log.Printf("  Configuration file: %s", config.GetConfigFilePath())
 	log.Printf("  Password hash file: %s", a.config.PasswordHashPath)
+	log.Printf("  Notes directory: %s", a.config.NotesPath)
 
 	return nil
 }

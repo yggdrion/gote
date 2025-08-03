@@ -47,25 +47,15 @@ func GetDefaultPasswordHashPath() string {
 		return filepath.Join("./data", ".password_hash")
 	}
 
-	var configDir string
-	if runtime.GOOS == "windows" {
-		configDir = os.Getenv("APPDATA")
-		if configDir == "" {
-			configDir = currentUser.HomeDir
-		}
-	} else {
-		configDir = os.Getenv("XDG_CONFIG_HOME")
-		if configDir == "" {
-			configDir = filepath.Join(currentUser.HomeDir, ".config")
-		}
-	}
-
+	// Use .config/gote directory for all platforms
+	configDir := filepath.Join(currentUser.HomeDir, ".config")
 	configPath := filepath.Join(configDir, "gote")
+
 	if err := os.MkdirAll(configPath, 0755); err != nil {
 		return filepath.Join("./data", ".password_hash")
 	}
 
-	return filepath.Join(configPath, "gote_password_hash")
+	return filepath.Join(configPath, "password_hash")
 }
 
 // GetConfigFilePath returns the path where the config file should be stored
@@ -75,25 +65,15 @@ func GetConfigFilePath() string {
 		return "./config.json"
 	}
 
-	var configDir string
-	if runtime.GOOS == "windows" {
-		configDir = os.Getenv("APPDATA")
-		if configDir == "" {
-			configDir = currentUser.HomeDir
-		}
-	} else {
-		configDir = os.Getenv("XDG_CONFIG_HOME")
-		if configDir == "" {
-			configDir = filepath.Join(currentUser.HomeDir, ".config")
-		}
-	}
-
+	// Use .config/gote directory for all platforms
+	configDir := filepath.Join(currentUser.HomeDir, ".config")
 	configPath := filepath.Join(configDir, "gote")
+
 	if err := os.MkdirAll(configPath, 0755); err != nil {
 		return "./config.json"
 	}
 
-	return filepath.Join(configPath, "config.json")
+	return filepath.Join(configPath, "config")
 }
 
 // Load loads configuration from file, using defaults if file doesn't exist
