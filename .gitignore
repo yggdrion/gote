@@ -143,6 +143,10 @@ vite.config.ts.timestamp-*
 data/
 tmp/
 
+# Security configurations - keep private
+*.config
+password_hash*
+
 # Vendor library backups (keep main files)
 static/vendor/*.backup
 static/vendor/backup-*

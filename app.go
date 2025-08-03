@@ -615,3 +615,27 @@ func (a *App) ValidateSetupInputs(notesPath, passwordHashPath, password, confirm
 		"valid": true,
 	}
 }
+
+// Security information methods
+
+// GetSecurityInfo returns information about current security configuration
+func (a *App) GetSecurityInfo() map[string]interface{} {
+	if a.authService != nil {
+		return a.authService.GetSecurityInfo()
+	}
+
+	// Fallback for cases where service is not initialized
+	return map[string]interface{}{
+		"method":          "unknown",
+		"secure":          false,
+		"recommendations": []string{"Initialize authentication to check security status"},
+	}
+}
+
+// IsUsingSecureMethod checks if enhanced security is enabled
+func (a *App) IsUsingSecureMethod() bool {
+	if a.authService != nil {
+		return a.authService.IsUsingSecureMethod()
+	}
+	return false
+}

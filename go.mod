@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/wailsapp/wails/v2 v2.10.2
+	golang.org/x/crypto v0.33.0
 )
 
 require (
@@ -34,7 +35,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.19 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
