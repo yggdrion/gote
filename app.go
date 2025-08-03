@@ -639,3 +639,22 @@ func (a *App) IsUsingSecureMethod() bool {
 	}
 	return false
 }
+
+// Performance monitoring methods
+
+// GetPerformanceStats returns performance statistics
+func (a *App) GetPerformanceStats() map[string]interface{} {
+	stats := map[string]interface{}{
+		"notes_count":       len(a.GetAllNotes()),
+		"has_service_layer": a.noteService != nil,
+		"has_auth_service":  a.authService != nil,
+	}
+
+	// Add basic performance information
+	if a.config != nil {
+		stats["notes_path"] = a.config.NotesPath
+		stats["authenticated"] = a.currentKey != nil
+	}
+
+	return stats
+}

@@ -6,6 +6,15 @@ import {
   MESSAGES,
 } from "./constants.js";
 
+// Import performance utilities
+import {
+  Debouncer,
+  Throttler,
+  SearchOptimizer,
+  DOMOptimizer,
+  PerformanceMonitor,
+} from "./performance.js";
+
 // Import Wails runtime
 import {
   IsPasswordSet,
@@ -34,6 +43,13 @@ let currentNote = null;
 let allNotes = [];
 let filteredNotes = [];
 let searchQuery = "";
+
+// Performance optimization instances
+let searchDebouncer = new Debouncer(300); // 300ms debounce for search
+let syncThrottler = new Throttler(2000); // Max 1 sync every 2 seconds
+let searchOptimizer = new SearchOptimizer();
+let domOptimizer = new DOMOptimizer();
+let performanceMonitor = new PerformanceMonitor();
 
 // Markdown instance
 let markedInstance = null;
@@ -225,13 +241,16 @@ function setupEventListeners() {
   settingsBtn.addEventListener("click", openSettings);
   createFirstNoteBtn.addEventListener("click", createNewNote);
 
-  // Search input listener
+  // Search input listener with debouncing
   searchInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") handleSearch();
   });
   searchInput.addEventListener("input", (e) => {
     if (e.target.value === "") {
       clearSearch();
+    } else {
+      // Use debounced search for real-time search
+      handleSearchInput();
     }
   });
 
@@ -407,11 +426,21 @@ async function initializeApp() {
 }
 
 async function loadNotes() {
+  performanceMonitor.startTiming("loadNotes");
+
   try {
     allNotes = (await GetAllNotes()) || [];
     filteredNotes = [...allNotes];
+
+    // Build search index for better performance
+    searchOptimizer.buildIndex(allNotes);
+
     renderNotesList();
+
+    const loadTime = performanceMonitor.endTiming("loadNotes");
+    console.log(`Notes loaded in ${loadTime.toFixed(2)}ms`);
   } catch (error) {
+    performanceMonitor.endTiming("loadNotes");
     console.error("Error loading notes:", error);
     allNotes = [];
     filteredNotes = [];
@@ -420,67 +449,81 @@ async function loadNotes() {
 }
 
 function renderNotesList() {
-  notesGrid.innerHTML = "";
-  searchResultsHeader.style.display = "none";
-  emptyState.style.display = "none";
+  performanceMonitor.startTiming("renderNotes");
 
-  if (searchQuery) {
-    searchResultsHeader.style.display = "block";
-    const resultsText = document.getElementById("search-results-text");
-    resultsText.innerHTML = `Search results for "<strong>${escapeHtml(
-      searchQuery
-    )}</strong>" (${filteredNotes.length} found)`;
-  }
+  // Use batch DOM operations for better performance
+  domOptimizer.batchUpdate(() => {
+    notesGrid.innerHTML = "";
+    domOptimizer.toggleClass(searchResultsHeader, "hidden", !searchQuery);
+    domOptimizer.toggleClass(emptyState, "hidden", filteredNotes.length > 0);
 
-  if (filteredNotes.length === 0) {
-    emptyState.style.display = "block";
-    const emptyText = document.getElementById("empty-state-text");
     if (searchQuery) {
-      emptyText.innerHTML = `No notes found for "${escapeHtml(
-        searchQuery
-      )}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`;
-    } else {
-      emptyText.innerHTML = `No notes found. <button class="link-button" onclick="createNewNote()">Create your first note</button>`;
+      const resultsText = document.getElementById("search-results-text");
+      domOptimizer.updateTextContent(
+        resultsText,
+        `Search results for "${escapeHtml(searchQuery)}" (${
+          filteredNotes.length
+        } found)`
+      );
     }
-    return;
-  }
 
-  // Sort notes by updated date (most recent first)
-  const sortedNotes = [...filteredNotes].sort(
-    (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
-  );
+    if (filteredNotes.length === 0) {
+      const emptyText = document.getElementById("empty-state-text");
+      const message = searchQuery
+        ? `No notes found for "${escapeHtml(
+            searchQuery
+          )}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`
+        : `No notes found. <button class="link-button" onclick="createNewNote()">Create your first note</button>`;
+      emptyText.innerHTML = message;
+      performanceMonitor.endTiming("renderNotes");
+      return;
+    }
 
-  sortedNotes.forEach((note) => {
-    const noteCard = document.createElement("div");
-    noteCard.className = "note-card";
-    noteCard.dataset.noteId = note.id;
+    // Sort notes by updated date (most recent first)
+    const sortedNotes = [...filteredNotes].sort(
+      (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+    );
 
-    const noteActions = document.createElement("div");
-    noteActions.className = "note-actions";
-    noteActions.innerHTML = `
-      <button class="edit-btn" data-note-id="${note.id}">Edit</button>
-      <button class="delete-btn" data-note-id="${note.id}">Delete</button>
-    `;
+    // Use document fragment for efficient DOM manipulation
+    const fragment = document.createDocumentFragment();
 
-    const noteContentDiv = document.createElement("div");
-    noteContentDiv.className = "note-content markdown-content";
-    noteContentDiv.innerHTML = renderMarkdown(note.content);
+    sortedNotes.forEach((note) => {
+      const noteCard = domOptimizer.getElement("div", "note-card");
+      noteCard.dataset.noteId = note.id;
 
-    noteCard.appendChild(noteActions);
-    noteCard.appendChild(noteContentDiv);
+      const noteActions = domOptimizer.getElement("div", "note-actions");
+      noteActions.innerHTML = `
+        <button class="edit-btn" data-note-id="${note.id}">Edit</button>
+        <button class="delete-btn" data-note-id="${note.id}">Delete</button>
+      `;
 
-    // Add event listeners
-    noteCard.querySelector(".edit-btn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      editNote(note.id);
+      const noteContentDiv = domOptimizer.getElement(
+        "div",
+        "note-content markdown-content"
+      );
+      noteContentDiv.innerHTML = renderMarkdown(note.content);
+
+      noteCard.appendChild(noteActions);
+      noteCard.appendChild(noteContentDiv);
+
+      // Add event listeners
+      noteCard.querySelector(".edit-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        editNote(note.id);
+      });
+
+      noteCard.querySelector(".delete-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteNote(note.id);
+      });
+
+      fragment.appendChild(noteCard);
     });
 
-    noteCard.querySelector(".delete-btn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      deleteNote(note.id);
-    });
+    notesGrid.appendChild(fragment);
 
-    notesGrid.appendChild(noteCard);
+    const renderTime = performanceMonitor.endTiming("renderNotes");
+    console.log(`Notes rendered in ${renderTime.toFixed(2)}ms`);
   });
 }
 
@@ -614,15 +657,31 @@ async function handleSearch() {
     return;
   }
 
+  performanceMonitor.startTiming("search");
+
   try {
     searchQuery = query;
-    filteredNotes = (await SearchNotes(query)) || [];
+
+    // Use optimized search with caching and indexing
+    filteredNotes = searchOptimizer.search(query, allNotes);
+
     renderNotesList();
     clearSearchBtn.style.display = "block";
+
+    const searchTime = performanceMonitor.endTiming("search");
+    console.log(`Search completed in ${searchTime.toFixed(2)}ms`);
   } catch (error) {
+    performanceMonitor.endTiming("search");
     console.error("Error searching notes:", error);
     alert("Search failed");
   }
+}
+
+// Optimized search with debouncing for real-time search
+function handleSearchInput() {
+  searchDebouncer.debounce("search", () => {
+    handleSearch();
+  });
 }
 
 function clearSearch() {
@@ -634,20 +693,28 @@ function clearSearch() {
 }
 
 async function handleSync() {
-  try {
-    await SyncFromDisk();
-    await loadNotes();
+  syncThrottler.throttle("sync", async () => {
+    performanceMonitor.startTiming("sync");
 
-    // Show sync feedback
-    const originalText = syncBtn.textContent;
-    syncBtn.textContent = "✓";
-    setTimeout(() => {
-      syncBtn.textContent = originalText;
-    }, 1000);
-  } catch (error) {
-    console.error("Error syncing:", error);
-    alert("Sync failed");
-  }
+    try {
+      await SyncFromDisk();
+      await loadNotes();
+
+      // Show sync feedback
+      const originalText = syncBtn.textContent;
+      syncBtn.textContent = "✓";
+      setTimeout(() => {
+        syncBtn.textContent = originalText;
+      }, 1000);
+
+      const syncTime = performanceMonitor.endTiming("sync");
+      console.log(`Sync completed in ${syncTime.toFixed(2)}ms`);
+    } catch (error) {
+      performanceMonitor.endTiming("sync");
+      console.error("Error syncing:", error);
+      alert("Sync failed");
+    }
+  });
 }
 
 async function openSettings() {
