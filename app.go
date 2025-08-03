@@ -23,7 +23,7 @@ type App struct {
 	store       *storage.NoteStore
 	config      *config.Config
 	currentKey  []byte
-	
+
 	// Service layer - new architecture
 	authService *services.AuthService
 	noteService *services.NoteService
@@ -57,7 +57,7 @@ func (a *App) startup(ctx context.Context) {
 		a.authManager = auth.NewManager(cfg.PasswordHashPath)
 		a.store = storage.NewNoteStore(cfg.NotesPath)
 		a.config = cfg
-		
+
 		// Initialize services
 		a.authService = services.NewAuthService(a.authManager, cfg)
 		a.noteService = services.NewNoteService(a.store)
@@ -165,7 +165,7 @@ func (a *App) SetPassword(password string) error {
 		}
 		return err
 	}
-	
+
 	// Fallback to direct usage for backward compatibility
 	err := a.authManager.StorePasswordHash(password)
 	if err == nil {
@@ -190,7 +190,7 @@ func (a *App) VerifyPassword(password string) bool {
 		}
 		return false
 	}
-	
+
 	// Fallback to direct usage
 	if a.authManager.VerifyPassword(password) {
 		a.currentKey = crypto.DeriveKey(password)
@@ -214,13 +214,13 @@ func (a *App) GetAllNotes() []WailsNote {
 func (a *App) GetNote(id string) (WailsNote, error) {
 	var note *models.Note
 	var err error
-	
+
 	if a.noteService != nil {
 		note, err = a.noteService.GetNote(id)
 	} else {
 		note, err = a.store.GetNote(id)
 	}
-	
+
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -231,16 +231,16 @@ func (a *App) CreateNote(content string) (WailsNote, error) {
 	if a.currentKey == nil {
 		return WailsNote{}, fmt.Errorf("not authenticated")
 	}
-	
+
 	var note *models.Note
 	var err error
-	
+
 	if a.noteService != nil {
 		note, err = a.noteService.CreateNote(content, a.currentKey)
 	} else {
 		note, err = a.store.CreateNote(content, a.currentKey)
 	}
-	
+
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -251,16 +251,16 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 	if a.currentKey == nil {
 		return WailsNote{}, fmt.Errorf("not authenticated")
 	}
-	
+
 	var note *models.Note
 	var err error
-	
+
 	if a.noteService != nil {
 		note, err = a.noteService.UpdateNote(id, content, a.currentKey)
 	} else {
 		note, err = a.store.UpdateNote(id, content, a.currentKey)
 	}
-	
+
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -288,7 +288,7 @@ func (a *App) SyncFromDisk() error {
 	if a.currentKey == nil {
 		return fmt.Errorf("not authenticated")
 	}
-	
+
 	if a.noteService != nil {
 		return a.noteService.SyncFromDisk()
 	}
