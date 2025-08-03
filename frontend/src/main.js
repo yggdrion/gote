@@ -1263,7 +1263,7 @@ function openImageModal(imageSrc, imageAlt = "", imageInfo = "") {
 
   modalImg.src = imageSrc;
   modalImg.alt = imageAlt;
-  modalInfo.textContent = imageInfo || imageAlt || "Click outside to close";
+  modalInfo.textContent = imageInfo || imageAlt || "";
 
   modal.classList.add("show");
   document.body.style.overflow = "hidden"; // Prevent background scrolling
@@ -1300,11 +1300,9 @@ function addImageClickHandler(imgElement) {
     const imageAlt = imgElement.alt || "Image";
 
     // Extract additional info if available
-    let imageInfo = imageAlt;
+    let imageInfo = "";
     if (imgElement.title && imgElement.title !== imageAlt) {
       imageInfo = imgElement.title;
-    } else {
-      imageInfo = "Click outside or press Escape to close";
     }
 
     openImageModal(imageSrc, imageAlt, imageInfo);
