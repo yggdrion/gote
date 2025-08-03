@@ -159,16 +159,24 @@ jobs:
         run: |
           mkdir -p release-assets
 
-          # Debug: List all artifacts
-          echo "=== Available artifacts ==="
-          find artifacts -type f -name "*" | head -20
+          # Debug: List all artifacts with full structure
+          echo "=== Available artifacts directory structure ==="
+          find artifacts -type f -ls
+          echo "=== Detailed listing ==="
+          ls -la artifacts/
+          for dir in artifacts/*/; do
+            echo "Contents of $dir:"
+            ls -la "$dir"
+          done
 
           # Copy Windows binaries
-          if [ -f artifacts/gote-windows-amd64.exe/gote.exe ]; then
+          if [ -f artifacts/gote-windows-amd64.exe/build/bin/gote.exe ]; then
             echo "Found Windows binary, copying..."
-            cp artifacts/gote-windows-amd64.exe/gote.exe release-assets/gote-windows-amd64.exe
+            cp artifacts/gote-windows-amd64.exe/build/bin/gote.exe release-assets/gote-windows-amd64.exe
           else
-            echo "Windows binary not found at artifacts/gote-windows-amd64.exe/gote.exe"
+            echo "Windows binary not found at artifacts/gote-windows-amd64.exe/build/bin/gote.exe"
+            echo "Checking alternative paths..."
+            find artifacts -name "*.exe" -type f
           fi
 
           # Copy macOS apps
@@ -188,9 +196,7 @@ jobs:
 
           # List what we have
           echo "=== Final release assets ==="
-          ls -la release-assets/
-
-      - name: Run semantic-release 🚀
+          ls -la release-assets/      - name: Run semantic-release 🚀
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
