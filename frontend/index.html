@@ -32,10 +32,11 @@
                   type="text"
                   id="setup-notes-path"
                   class="setup-input"
-                  placeholder="Leave empty for default location"
+                  placeholder="Leave empty to use: Documents/Gote/Notes"
                 />
                 <small class="help-text"
-                  >Where your encrypted notes will be stored</small
+                  >Where your encrypted notes will be stored. Leave empty to use
+                  the default location in your Documents folder.</small
                 >
               </div>
               <div class="setup-field">
@@ -270,37 +271,6 @@
               <small class="help-text"
                 >Refresh notes from disk. Use this if files were changed by
                 external tools.</small
-              >
-            </div>
-
-            <div class="settings-section">
-              <h3>Change Password</h3>
-              <div class="password-fields">
-                <input
-                  type="password"
-                  id="current-password"
-                  placeholder="Current password"
-                  autocomplete="current-password"
-                />
-                <input
-                  type="password"
-                  id="new-password"
-                  placeholder="New password"
-                  autocomplete="new-password"
-                />
-                <input
-                  type="password"
-                  id="confirm-new-password"
-                  placeholder="Confirm new password"
-                  autocomplete="new-password"
-                />
-                <button id="change-password-btn" class="btn btn-warning">
-                  Change Password
-                </button>
-              </div>
-              <small class="help-text"
-                >Change your password and re-encrypt all notes. This cannot be
-                undone.</small
               >
             </div>
 

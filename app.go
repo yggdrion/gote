@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,8 +9,9 @@ import (
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
-	"gote/pkg/crypto"
+	"gote/pkg/errors"
 	"gote/pkg/models"
+	"gote/pkg/services"
 	"gote/pkg/storage"
 )
 
@@ -22,6 +22,9 @@ type App struct {
 	store       *storage.NoteStore
 	config      *config.Config
 	currentKey  []byte
+
+	// Service layer - simplified architecture
+	noteService *services.NoteService
 }
 
 // NewApp creates a new App application struct
@@ -53,9 +56,13 @@ func (a *App) startup(ctx context.Context) {
 		a.store = storage.NewNoteStore(cfg.NotesPath)
 		a.config = cfg
 
+		// Initialize services - simplified
+		a.noteService = services.NewNoteService(a.store)
+
 		log.Printf("Note app initialized:")
-		log.Printf("  Notes directory: %s", cfg.NotesPath)
+		log.Printf("  Configuration file: %s", config.GetConfigFilePath())
 		log.Printf("  Password hash file: %s", cfg.PasswordHashPath)
+		log.Printf("  Notes directory: %s", cfg.NotesPath)
 	} else {
 		log.Printf("First-time setup required - no configuration file found")
 		// Initialize with default config for now, will be replaced during setup
@@ -68,8 +75,7 @@ func (a *App) startup(ctx context.Context) {
 
 // Authentication methods
 func (a *App) IsPasswordSet() bool {
-	_, err := os.Stat(a.config.PasswordHashPath)
-	return err == nil
+	return !a.authManager.IsFirstTimeSetup()
 }
 
 // IsConfigured checks if the configuration file exists (not first-time setup)
@@ -79,15 +85,23 @@ func (a *App) IsConfigured() bool {
 	return err == nil
 }
 
-// CompleteInitialSetup handles the first-time setup process
+// CompleteInitialSetup handles the first-time setup process with enhanced validation
 func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confirmPassword string) error {
-	// Validate passwords match
-	if password != confirmPassword {
-		return fmt.Errorf("passwords do not match")
+	// Create validator for input validation
+	validator := errors.NewValidator()
+
+	// Validate password
+	if result := validator.ValidatePassword(password); !result.IsValid {
+		err := result.GetFirstError()
+		err.Log()
+		return err
 	}
 
-	if len(password) < 6 {
-		return fmt.Errorf("password must be at least 6 characters long")
+	// Validate password match
+	if result := validator.ValidatePasswordMatch(password, confirmPassword); !result.IsValid {
+		err := result.GetFirstError()
+		err.Log()
+		return err
 	}
 
 	// Use defaults if paths are empty
@@ -98,14 +112,46 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 		passwordHashPath = config.GetDefaultPasswordHashPath()
 	}
 
-	// Create directories
-	if err := os.MkdirAll(notesPath, 0755); err != nil {
-		return fmt.Errorf("failed to create notes directory: %v", err)
+	// Validate directory paths
+	if result := validator.ValidateDirectoryPath(notesPath); !result.IsValid {
+		err := result.GetFirstError()
+		err.Log()
+		return err
 	}
 
-	passwordDir := filepath.Dir(passwordHashPath)
-	if err := os.MkdirAll(passwordDir, 0755); err != nil {
-		return fmt.Errorf("failed to create password hash directory: %v", err)
+	if result := validator.ValidateDirectoryPath(filepath.Dir(passwordHashPath)); !result.IsValid {
+		err := result.GetFirstError()
+		err.Log()
+		return err
+	}
+
+	// Create directories with retry logic
+	retryHandler := errors.NewRetryHandler(3)
+
+	err := retryHandler.Execute(func() error {
+		if err := os.MkdirAll(notesPath, 0755); err != nil {
+			return errors.Wrap(err, errors.ErrTypeFileSystem, "DIR_CREATE_FAILED",
+				"failed to create notes directory").
+				WithUserMessage("Unable to create notes directory. Check permissions").
+				WithRetryable(true)
+		}
+
+		passwordDir := filepath.Dir(passwordHashPath)
+		if err := os.MkdirAll(passwordDir, 0755); err != nil {
+			return errors.Wrap(err, errors.ErrTypeFileSystem, "DIR_CREATE_FAILED",
+				"failed to create password hash directory").
+				WithUserMessage("Unable to create password directory. Check permissions").
+				WithRetryable(true)
+		}
+		return nil
+	})
+
+	if err != nil {
+		if appErr, ok := err.(*errors.AppError); ok {
+			appErr.Log()
+			return appErr
+		}
+		return err
 	}
 
 	// Create and save configuration
@@ -115,58 +161,119 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	}
 
 	if err := a.config.Save(); err != nil {
-		return fmt.Errorf("failed to save configuration: %v", err)
+		appErr := errors.Wrap(err, errors.ErrTypeConfig, "CONFIG_SAVE_FAILED",
+			"failed to save configuration").
+			WithUserMessage("Unable to save settings. Check permissions")
+		appErr.Log()
+		return appErr
 	}
 
 	// Initialize components with new configuration
 	a.authManager = auth.NewManager(a.config.PasswordHashPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
 
-	// Set the initial password
-	if err := a.authManager.StorePasswordHash(password); err != nil {
-		return fmt.Errorf("failed to store password: %v", err)
+	// Set the initial password with retry logic
+	err = retryHandler.Execute(func() error {
+		if err := a.authManager.StorePasswordHash(password); err != nil {
+			return errors.Wrap(err, errors.ErrTypeAuth, "PASSWORD_STORE_FAILED",
+				"failed to store password").
+				WithUserMessage("Unable to save password. Please try again").
+				WithRetryable(true)
+		}
+		return nil
+	})
+
+	if err != nil {
+		if appErr, ok := err.(*errors.AppError); ok {
+			appErr.Log()
+			return appErr
+		}
+		return err
 	}
 
 	// Generate encryption key and initialize
-	a.currentKey = crypto.DeriveKey(password)
+	key, err := a.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		return fmt.Errorf("failed to derive encryption key: %v", err)
+	}
+	a.currentKey = key
 	a.store.LoadNotes(a.currentKey)
 
 	log.Printf("Initial setup completed:")
-	log.Printf("  Notes directory: %s", a.config.NotesPath)
+	log.Printf("  Configuration file: %s", config.GetConfigFilePath())
 	log.Printf("  Password hash file: %s", a.config.PasswordHashPath)
+	log.Printf("  Notes directory: %s", a.config.NotesPath)
 
 	return nil
 }
 
 func (a *App) SetPassword(password string) error {
+	// Store password hash
 	err := a.authManager.StorePasswordHash(password)
-	if err == nil {
-		// Generate encryption key from password using proper key derivation
-		a.currentKey = crypto.DeriveKey(password)
-		// Load existing notes with the new key
+	if err != nil {
+		return fmt.Errorf("failed to store password: %v", err)
+	}
+
+	// Derive encryption key
+	key, err := a.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		return fmt.Errorf("failed to derive encryption key: %v", err)
+	}
+
+	a.currentKey = key
+	// Load existing notes with the new key
+	if a.noteService != nil {
+		a.noteService.LoadNotes(a.currentKey)
+	} else {
 		a.store.LoadNotes(a.currentKey)
 	}
-	return err
+	return nil
 }
 
 func (a *App) VerifyPassword(password string) bool {
-	if a.authManager.VerifyPassword(password) {
-		a.currentKey = crypto.DeriveKey(password)
-		// Load notes with the key
-		a.store.LoadNotes(a.currentKey)
-		return true
+	// Verify password
+	if !a.authManager.VerifyPassword(password) {
+		return false
 	}
-	return false
+
+	// Derive encryption key
+	key, err := a.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		log.Printf("Failed to derive encryption key: %v", err)
+		return false
+	}
+
+	a.currentKey = key
+	// Load notes with the key
+	if a.noteService != nil {
+		a.noteService.LoadNotes(a.currentKey)
+	} else {
+		a.store.LoadNotes(a.currentKey)
+	}
+	return true
 }
 
 // Note management methods
 func (a *App) GetAllNotes() []WailsNote {
-	notes := a.store.GetAllNotes()
+	var notes []*models.Note
+	if a.noteService != nil {
+		notes = a.noteService.GetAllNotes()
+	} else {
+		notes = a.store.GetAllNotes()
+	}
 	return ConvertToWailsNotes(notes)
 }
 
 func (a *App) GetNote(id string) (WailsNote, error) {
-	note, err := a.store.GetNote(id)
+	var note *models.Note
+	var err error
+
+	if a.noteService != nil {
+		note, err = a.noteService.GetNote(id)
+	} else {
+		note, err = a.store.GetNote(id)
+	}
+
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -175,9 +282,35 @@ func (a *App) GetNote(id string) (WailsNote, error) {
 
 func (a *App) CreateNote(content string) (WailsNote, error) {
 	if a.currentKey == nil {
-		return WailsNote{}, fmt.Errorf("not authenticated")
+		err := errors.ErrNotAuthenticated
+		err.Log()
+		return WailsNote{}, err
 	}
-	note, err := a.store.CreateNote(content, a.currentKey)
+
+	var note *models.Note
+	var err error
+
+	if a.noteService != nil {
+		note, err = a.noteService.CreateNote(content, a.currentKey)
+	} else {
+		// Fallback with basic validation
+		validator := errors.NewValidator()
+		if result := validator.ValidateNoteContent(content); !result.IsValid {
+			appErr := result.GetFirstError()
+			appErr.Log()
+			return WailsNote{}, appErr
+		}
+
+		note, err = a.store.CreateNote(content, a.currentKey)
+		if err != nil {
+			appErr := errors.Wrap(err, errors.ErrTypeFileSystem, "NOTE_CREATE_FAILED",
+				"failed to create note").
+				WithUserMessage("Unable to save the note. Please try again")
+			appErr.Log()
+			return WailsNote{}, appErr
+		}
+	}
+
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -186,9 +319,48 @@ func (a *App) CreateNote(content string) (WailsNote, error) {
 
 func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 	if a.currentKey == nil {
-		return WailsNote{}, fmt.Errorf("not authenticated")
+		err := errors.ErrNotAuthenticated
+		err.Log()
+		return WailsNote{}, err
 	}
-	note, err := a.store.UpdateNote(id, content, a.currentKey)
+
+	var note *models.Note
+	var err error
+
+	if a.noteService != nil {
+		note, err = a.noteService.UpdateNote(id, content, a.currentKey)
+	} else {
+		// Fallback with basic validation
+		validator := errors.NewValidator()
+		if result := validator.ValidateNoteID(id); !result.IsValid {
+			appErr := result.GetFirstError()
+			appErr.Log()
+			return WailsNote{}, appErr
+		}
+
+		if result := validator.ValidateNoteContent(content); !result.IsValid {
+			appErr := result.GetFirstError()
+			appErr.Log()
+			return WailsNote{}, appErr
+		}
+
+		note, err = a.store.UpdateNote(id, content, a.currentKey)
+		if err != nil {
+			if err.Error() == "note not found" {
+				appErr := errors.ErrNoteNotFound.WithContext("noteId", id)
+				appErr.Log()
+				return WailsNote{}, appErr
+			}
+
+			appErr := errors.Wrap(err, errors.ErrTypeFileSystem, "NOTE_UPDATE_FAILED",
+				"failed to update note").
+				WithUserMessage("Unable to save changes. Please try again").
+				WithContext("noteId", id)
+			appErr.Log()
+			return WailsNote{}, appErr
+		}
+	}
+
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -196,17 +368,29 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 }
 
 func (a *App) DeleteNote(id string) error {
+	if a.noteService != nil {
+		return a.noteService.DeleteNote(id)
+	}
 	return a.store.DeleteNote(id)
 }
 
 func (a *App) SearchNotes(query string) []WailsNote {
-	notes := a.store.SearchNotes(query)
+	var notes []*models.Note
+	if a.noteService != nil {
+		notes = a.noteService.SearchNotes(query)
+	} else {
+		notes = a.store.SearchNotes(query)
+	}
 	return ConvertToWailsNotes(notes)
 }
 
 func (a *App) SyncFromDisk() error {
 	if a.currentKey == nil {
 		return fmt.Errorf("not authenticated")
+	}
+
+	if a.noteService != nil {
+		return a.noteService.SyncFromDisk()
 	}
 	return a.store.LoadNotes(a.currentKey)
 }
@@ -264,71 +448,7 @@ func (a *App) UpdateSettings(notesPath, passwordHashPath string) error {
 }
 
 func (a *App) ChangePassword(oldPassword, newPassword string) error {
-	if !a.authManager.VerifyPassword(oldPassword) {
-		return fmt.Errorf("invalid current password")
-	}
-
-	// Derive old and new keys
-	oldKey := crypto.DeriveKey(oldPassword)
-	newKey := crypto.DeriveKey(newPassword)
-
-	// Re-encrypt all notes from disk
-	noteFiles, err := filepath.Glob(filepath.Join(a.config.NotesPath, "*.json"))
-	if err != nil {
-		return fmt.Errorf("failed to list note files: %v", err)
-	}
-
-	var corruptedNotes []string
-	for _, file := range noteFiles {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			log.Printf("Error reading file %s: %v", file, err)
-			continue
-		}
-
-		var encryptedNote models.EncryptedNote
-		if err := json.Unmarshal(data, &encryptedNote); err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			log.Printf("Error unmarshalling file %s: %v", file, err)
-			continue
-		}
-
-		// Decrypt with old key
-		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
-			log.Printf("Error decrypting note %s: %v", encryptedNote.ID, err)
-			continue
-		}
-
-		// Create note with decrypted content
-		note := &models.Note{
-			ID:        encryptedNote.ID,
-			Content:   decryptedContent,
-			CreatedAt: encryptedNote.CreatedAt,
-			UpdatedAt: encryptedNote.UpdatedAt,
-		}
-
-		// Save with new key using SaveNoteDirect
-		if err := a.store.SaveNoteDirect(note, newKey); err != nil {
-			return fmt.Errorf("failed to save note %s: %v", note.ID, err)
-		}
-	}
-
-	// Store new password hash only after all notes are successfully re-encrypted
-	if err := a.authManager.StorePasswordHash(newPassword); err != nil {
-		return fmt.Errorf("failed to update password hash: %v", err)
-	}
-
-	// Clear the current session - user will need to log in again with new password
-	a.currentKey = nil
-
-	if len(corruptedNotes) > 0 {
-		log.Printf("Password changed successfully. %d corrupted notes were skipped: %v", len(corruptedNotes), corruptedNotes)
-	}
-
-	return nil
+	return fmt.Errorf("password change not supported in simplified mode. Please backup your notes, delete data, and set up fresh with new password")
 }
 
 func (a *App) ResetApplication() error {
@@ -368,4 +488,98 @@ func (a *App) CreateBackup() (string, error) {
 // Greet returns a greeting for the given name (keeping for compatibility)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+// Error handling helpers for frontend
+
+// HandleError converts application errors to frontend-friendly format
+func (a *App) HandleError(err error) map[string]interface{} {
+	errorHandler := errors.NewErrorHandler()
+	frontendErr := errorHandler.HandleError(err, nil)
+
+	return map[string]interface{}{
+		"error": frontendErr,
+	}
+}
+
+// ValidateSetupInputs validates initial setup inputs
+func (a *App) ValidateSetupInputs(notesPath, passwordHashPath, password, confirmPassword string) map[string]interface{} {
+	validator := errors.NewValidator()
+	var validationErrors []*errors.AppError
+
+	// Validate password
+	if result := validator.ValidatePassword(password); !result.IsValid {
+		validationErrors = append(validationErrors, result.Errors...)
+	}
+
+	// Validate password match
+	if result := validator.ValidatePasswordMatch(password, confirmPassword); !result.IsValid {
+		validationErrors = append(validationErrors, result.Errors...)
+	}
+
+	// Validate paths if provided
+	if notesPath != "" {
+		if result := validator.ValidateDirectoryPath(notesPath); !result.IsValid {
+			validationErrors = append(validationErrors, result.Errors...)
+		}
+	}
+
+	if passwordHashPath != "" {
+		if result := validator.ValidateDirectoryPath(filepath.Dir(passwordHashPath)); !result.IsValid {
+			validationErrors = append(validationErrors, result.Errors...)
+		}
+	}
+
+	if len(validationErrors) > 0 {
+		// Return the first validation error
+		errorHandler := errors.NewErrorHandler()
+		frontendErr := errorHandler.HandleError(validationErrors[0], nil)
+
+		return map[string]interface{}{
+			"valid": false,
+			"error": frontendErr,
+		}
+	}
+
+	return map[string]interface{}{
+		"valid": true,
+	}
+}
+
+// Security information methods
+
+// GetSecurityInfo returns information about current security configuration
+func (a *App) GetSecurityInfo() map[string]interface{} {
+	return map[string]interface{}{
+		"method":          "PBKDF2",
+		"secure":          true,
+		"iterations":      100000,
+		"key_length":      32,
+		"salt_length":     32,
+		"recommendations": []string{"Using OWASP-compliant PBKDF2 with salt"},
+	}
+}
+
+// IsUsingSecureMethod checks if enhanced security is enabled
+func (a *App) IsUsingSecureMethod() bool {
+	return true // Always using PBKDF2 in simplified mode
+}
+
+// Performance monitoring methods
+
+// GetPerformanceStats returns performance statistics
+func (a *App) GetPerformanceStats() map[string]interface{} {
+	stats := map[string]interface{}{
+		"notes_count":       len(a.GetAllNotes()),
+		"has_service_layer": a.noteService != nil,
+		"security_method":   "PBKDF2",
+	}
+
+	// Add basic performance information
+	if a.config != nil {
+		stats["notes_path"] = a.config.NotesPath
+		stats["authenticated"] = a.currentKey != nil
+	}
+
+	return stats
 }

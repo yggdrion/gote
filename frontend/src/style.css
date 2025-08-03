@@ -112,7 +112,6 @@ header a:hover,
   outline: none;
   box-shadow: 0 6px 25px rgba(102, 126, 234, 0.3);
   background: white;
-  transform: scale(1.02);
 }
 
 .clear-search-btn {
@@ -604,7 +603,6 @@ header a:hover,
   outline: none;
   box-shadow: 0 6px 25px rgba(102, 126, 234, 0.3);
   background: white;
-  transform: scale(1.02);
 }
 
 .auth-container .btn {

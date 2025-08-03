@@ -16,13 +16,21 @@ export function GetAllNotes():Promise<Array<main.WailsNote>>;
 
 export function GetNote(arg1:string):Promise<main.WailsNote>;
 
+export function GetPerformanceStats():Promise<Record<string, any>>;
+
+export function GetSecurityInfo():Promise<Record<string, any>>;
+
 export function GetSettings():Promise<Record<string, any>>;
 
 export function Greet(arg1:string):Promise<string>;
 
+export function HandleError(arg1:Error):Promise<Record<string, any>>;
+
 export function IsConfigured():Promise<boolean>;
 
 export function IsPasswordSet():Promise<boolean>;
+
+export function IsUsingSecureMethod():Promise<boolean>;
 
 export function Logout():Promise<void>;
 
@@ -37,5 +45,7 @@ export function SyncFromDisk():Promise<void>;
 export function UpdateNote(arg1:string,arg2:string):Promise<main.WailsNote>;
 
 export function UpdateSettings(arg1:string,arg2:string):Promise<void>;
+
+export function ValidateSetupInputs(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Record<string, any>>;
 
 export function VerifyPassword(arg1:string):Promise<boolean>;

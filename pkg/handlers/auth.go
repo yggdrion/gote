@@ -4,8 +4,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-
-	"gote/pkg/crypto"
 )
 
 // AuthHandlers contains authentication-related handlers
@@ -22,11 +20,13 @@ type AuthManagerFull interface {
 	VerifyPassword(password string) bool
 	CreateSession(key []byte) string
 	DeleteSession(sessionID string)
+	DeriveEncryptionKey(password string) ([]byte, error)
 }
 
 // NoteStore interface for note operations
 type NoteStore interface {
 	LoadNotes(key []byte) error
+	GetDataDir() string
 }
 
 // NewAuthHandlers creates new auth handlers
@@ -101,7 +101,13 @@ func (h *AuthHandlers) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	key := crypto.DeriveKey(password)
+	// Use PBKDF2 key derivation with stored salt
+	key, err := h.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		log.Printf("Error deriving encryption key: %v", err)
+		http.Redirect(w, r, "/login?error=Authentication failed", http.StatusSeeOther)
+		return
+	}
 
 	// Try to load notes with this password
 	if err := h.store.LoadNotes(key); err != nil {

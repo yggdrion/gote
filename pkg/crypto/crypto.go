@@ -8,6 +8,15 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+
+	"golang.org/x/crypto/pbkdf2"
+)
+
+const (
+	// PBKDF2 configuration
+	PBKDF2Iterations = 100000 // OWASP recommended minimum
+	KeyLength        = 32     // 256 bits
+	SaltLength       = 32     // 256 bits
 )
 
 // Encrypt encrypts plaintext using AES-GCM with the provided key
@@ -62,8 +71,16 @@ func Decrypt(ciphertext string, key []byte) (string, error) {
 	return string(plaintext), nil
 }
 
-// DeriveKey derives an encryption key from a password using SHA-256
-func DeriveKey(password string) []byte {
-	hash := sha256.Sum256([]byte(password))
-	return hash[:]
+// DeriveKey derives an encryption key from a password using PBKDF2
+func DeriveKey(password string, salt []byte) []byte {
+	return pbkdf2.Key([]byte(password), salt, PBKDF2Iterations, KeyLength, sha256.New)
+}
+
+// GenerateSalt generates a random salt for key derivation
+func GenerateSalt() ([]byte, error) {
+	salt := make([]byte, SaltLength)
+	if _, err := rand.Read(salt); err != nil {
+		return nil, err
+	}
+	return salt, nil
 }

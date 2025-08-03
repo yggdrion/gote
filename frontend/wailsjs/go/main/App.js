@@ -30,6 +30,14 @@ export function GetNote(arg1) {
   return window['go']['main']['App']['GetNote'](arg1);
 }
 
+export function GetPerformanceStats() {
+  return window['go']['main']['App']['GetPerformanceStats']();
+}
+
+export function GetSecurityInfo() {
+  return window['go']['main']['App']['GetSecurityInfo']();
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
@@ -38,12 +46,20 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function HandleError(arg1) {
+  return window['go']['main']['App']['HandleError'](arg1);
+}
+
 export function IsConfigured() {
   return window['go']['main']['App']['IsConfigured']();
 }
 
 export function IsPasswordSet() {
   return window['go']['main']['App']['IsPasswordSet']();
+}
+
+export function IsUsingSecureMethod() {
+  return window['go']['main']['App']['IsUsingSecureMethod']();
 }
 
 export function Logout() {
@@ -72,6 +88,10 @@ export function UpdateNote(arg1, arg2) {
 
 export function UpdateSettings(arg1, arg2) {
   return window['go']['main']['App']['UpdateSettings'](arg1, arg2);
+}
+
+export function ValidateSetupInputs(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ValidateSetupInputs'](arg1, arg2, arg3, arg4);
 }
 
 export function VerifyPassword(arg1) {
