@@ -196,7 +196,9 @@ jobs:
 
           # List what we have
           echo "=== Final release assets ==="
-          ls -la release-assets/      - name: Run semantic-release 🚀
+          ls -la release-assets/
+
+      - name: Run semantic-release 🚀
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
