@@ -12,6 +12,7 @@ import (
 	"gote/pkg/config"
 	"gote/pkg/crypto"
 	"gote/pkg/models"
+	"gote/pkg/services"
 	"gote/pkg/storage"
 )
 
@@ -22,6 +23,10 @@ type App struct {
 	store       *storage.NoteStore
 	config      *config.Config
 	currentKey  []byte
+	
+	// Service layer - new architecture
+	authService *services.AuthService
+	noteService *services.NoteService
 }
 
 // NewApp creates a new App application struct
@@ -52,6 +57,10 @@ func (a *App) startup(ctx context.Context) {
 		a.authManager = auth.NewManager(cfg.PasswordHashPath)
 		a.store = storage.NewNoteStore(cfg.NotesPath)
 		a.config = cfg
+		
+		// Initialize services
+		a.authService = services.NewAuthService(a.authManager, cfg)
+		a.noteService = services.NewNoteService(a.store)
 
 		log.Printf("Note app initialized:")
 		log.Printf("  Notes directory: %s", cfg.NotesPath)
@@ -68,6 +77,10 @@ func (a *App) startup(ctx context.Context) {
 
 // Authentication methods
 func (a *App) IsPasswordSet() bool {
+	if a.authService != nil {
+		return a.authService.IsPasswordSet()
+	}
+	// Fallback for uninitialized service (during first-time setup)
 	_, err := os.Stat(a.config.PasswordHashPath)
 	return err == nil
 }
@@ -139,20 +152,48 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 }
 
 func (a *App) SetPassword(password string) error {
+	if a.authService != nil {
+		key, err := a.authService.SetPassword(password)
+		if err == nil {
+			a.currentKey = key
+			// Load existing notes with the new key
+			if a.noteService != nil {
+				a.noteService.LoadNotes(a.currentKey)
+			} else {
+				a.store.LoadNotes(a.currentKey)
+			}
+		}
+		return err
+	}
+	
+	// Fallback to direct usage for backward compatibility
 	err := a.authManager.StorePasswordHash(password)
 	if err == nil {
-		// Generate encryption key from password using proper key derivation
 		a.currentKey = crypto.DeriveKey(password)
-		// Load existing notes with the new key
 		a.store.LoadNotes(a.currentKey)
 	}
 	return err
 }
 
 func (a *App) VerifyPassword(password string) bool {
+	if a.authService != nil {
+		key, isValid := a.authService.VerifyPassword(password)
+		if isValid {
+			a.currentKey = key
+			// Load notes with the key
+			if a.noteService != nil {
+				a.noteService.LoadNotes(a.currentKey)
+			} else {
+				a.store.LoadNotes(a.currentKey)
+			}
+			return true
+		}
+		return false
+	}
+	
+	// Fallback to direct usage
 	if a.authManager.VerifyPassword(password) {
 		a.currentKey = crypto.DeriveKey(password)
-		// Load notes with the key
 		a.store.LoadNotes(a.currentKey)
 		return true
 	}
@@ -161,12 +202,25 @@ func (a *App) VerifyPassword(password string) bool {
 
 // Note management methods
 func (a *App) GetAllNotes() []WailsNote {
-	notes := a.store.GetAllNotes()
+	var notes []*models.Note
+	if a.noteService != nil {
+		notes = a.noteService.GetAllNotes()
+	} else {
+		notes = a.store.GetAllNotes()
+	}
 	return ConvertToWailsNotes(notes)
 }
 
 func (a *App) GetNote(id string) (WailsNote, error) {
-	note, err := a.store.GetNote(id)
+	var note *models.Note
+	var err error
+	
+	if a.noteService != nil {
+		note, err = a.noteService.GetNote(id)
+	} else {
+		note, err = a.store.GetNote(id)
+	}
+	
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -177,7 +231,16 @@ func (a *App) CreateNote(content string) (WailsNote, error) {
 	if a.currentKey == nil {
 		return WailsNote{}, fmt.Errorf("not authenticated")
 	}
-	note, err := a.store.CreateNote(content, a.currentKey)
+	
+	var note *models.Note
+	var err error
+	
+	if a.noteService != nil {
+		note, err = a.noteService.CreateNote(content, a.currentKey)
+	} else {
+		note, err = a.store.CreateNote(content, a.currentKey)
+	}
+	
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -188,7 +251,16 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 	if a.currentKey == nil {
 		return WailsNote{}, fmt.Errorf("not authenticated")
 	}
-	note, err := a.store.UpdateNote(id, content, a.currentKey)
+	
+	var note *models.Note
+	var err error
+	
+	if a.noteService != nil {
+		note, err = a.noteService.UpdateNote(id, content, a.currentKey)
+	} else {
+		note, err = a.store.UpdateNote(id, content, a.currentKey)
+	}
+	
 	if err != nil {
 		return WailsNote{}, err
 	}
@@ -196,17 +268,29 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 }
 
 func (a *App) DeleteNote(id string) error {
+	if a.noteService != nil {
+		return a.noteService.DeleteNote(id)
+	}
 	return a.store.DeleteNote(id)
 }
 
 func (a *App) SearchNotes(query string) []WailsNote {
-	notes := a.store.SearchNotes(query)
+	var notes []*models.Note
+	if a.noteService != nil {
+		notes = a.noteService.SearchNotes(query)
+	} else {
+		notes = a.store.SearchNotes(query)
+	}
 	return ConvertToWailsNotes(notes)
 }
 
 func (a *App) SyncFromDisk() error {
 	if a.currentKey == nil {
 		return fmt.Errorf("not authenticated")
+	}
+	
+	if a.noteService != nil {
+		return a.noteService.SyncFromDisk()
 	}
 	return a.store.LoadNotes(a.currentKey)
 }
