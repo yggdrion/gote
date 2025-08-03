@@ -2,6 +2,9 @@ name: 📦 Build Wails App - Release
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}
@@ -105,6 +108,12 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
+
+      - name: Install system dependencies (Linux only) 🐧
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.0-dev
 
       - name: Install Wails 📦
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
