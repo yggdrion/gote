@@ -57,23 +57,7 @@
                 "releasedLabels": false,
                 "failComment": false,
                 "failTitle": false,
-                "assets": [
-                    {
-                        "path": "release-assets/gote-windows-amd64.exe",
-                        "name": "gote-windows-amd64.exe",
-                        "label": "Gote for Windows (AMD64)"
-                    },
-                    {
-                        "path": "release-assets/gote-macos-amd64.app.zip",
-                        "name": "gote-macos-amd64.app.zip",
-                        "label": "Gote for macOS (Intel)"
-                    },
-                    {
-                        "path": "release-assets/gote-macos-arm64.app.zip",
-                        "name": "gote-macos-arm64.app.zip",
-                        "label": "Gote for macOS (Apple Silicon)"
-                    }
-                ]
+                "assets": "release-assets/*"
             }
         ],
         [
