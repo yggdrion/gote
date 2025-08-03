@@ -209,6 +209,9 @@ function initializeDOM() {
   setupMasterPassword = document.getElementById("setup-master-password");
   setupConfirmPassword = document.getElementById("setup-confirm-password");
   completeSetupBtn = document.getElementById("complete-setup-btn");
+
+  // Create image modal for enlarged viewing
+  createImageModal();
 }
 
 function setupEventListeners() {
@@ -1084,6 +1087,10 @@ async function loadImagesInDOM(element) {
       const dataUrl = await GetImageAsDataURL(imageId);
       img.src = dataUrl;
       img.removeAttribute("data-image-id"); // Remove the temporary attribute
+
+      // Add click handler for image enlargement
+      addImageClickHandler(img);
+
       console.log(`Image ${imageId} loaded successfully`);
     } catch (error) {
       console.error(`Failed to load image ${imageId}:`, error);
@@ -1093,6 +1100,9 @@ async function loadImagesInDOM(element) {
       img.title = `Image not found: ${imageId}`;
     }
   }
+
+  // Also add click handlers to any existing loaded images in this element
+  addImageClickHandlersToContainer(element);
 }
 
 // Process custom image syntax in rendered HTML
@@ -1193,3 +1203,126 @@ window.imageDebug = {
     }
   },
 };
+
+// Image modal functionality
+
+// Create the image modal DOM structure
+function createImageModal() {
+  const modal = document.createElement("div");
+  modal.id = "image-modal";
+  modal.className = "image-modal";
+
+  modal.innerHTML = `
+    <div class="image-modal-content">
+      <button class="image-modal-close" id="image-modal-close">&times;</button>
+      <img class="image-modal-image" id="image-modal-image" alt="Enlarged image">
+      <div class="image-modal-info" id="image-modal-info"></div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Set up event listeners
+  const closeBtn = document.getElementById("image-modal-close");
+  const modalImg = document.getElementById("image-modal-image");
+
+  // Close modal on close button click
+  closeBtn.addEventListener("click", closeImageModal);
+
+  // Close modal on background click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      closeImageModal();
+    }
+  });
+
+  // Close modal on escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("show")) {
+      closeImageModal();
+    }
+  });
+
+  // Prevent click propagation on modal content
+  const modalContent = modal.querySelector(".image-modal-content");
+  modalContent.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+}
+
+// Open image modal with the given image
+function openImageModal(imageSrc, imageAlt = "", imageInfo = "") {
+  const modal = document.getElementById("image-modal");
+  const modalImg = document.getElementById("image-modal-image");
+  const modalInfo = document.getElementById("image-modal-info");
+
+  if (!modal || !modalImg) {
+    console.error("Image modal elements not found");
+    return;
+  }
+
+  modalImg.src = imageSrc;
+  modalImg.alt = imageAlt;
+  modalInfo.textContent = imageInfo || imageAlt || "Click outside to close";
+
+  modal.classList.add("show");
+  document.body.style.overflow = "hidden"; // Prevent background scrolling
+}
+
+// Close image modal
+function closeImageModal() {
+  const modal = document.getElementById("image-modal");
+  if (modal) {
+    modal.classList.remove("show");
+    document.body.style.overflow = ""; // Restore scrolling
+
+    // Clear the image source after animation
+    setTimeout(() => {
+      const modalImg = document.getElementById("image-modal-image");
+      if (modalImg) {
+        modalImg.src = "";
+      }
+    }, 300);
+  }
+}
+
+// Add click handler to an image element
+function addImageClickHandler(imgElement) {
+  if (!imgElement || imgElement.dataset.clickHandlerAdded) {
+    return; // Already has handler or invalid element
+  }
+
+  imgElement.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const imageSrc = imgElement.src;
+    const imageAlt = imgElement.alt || "Image";
+
+    // Extract additional info if available
+    let imageInfo = imageAlt;
+    if (imgElement.title && imgElement.title !== imageAlt) {
+      imageInfo = imgElement.title;
+    } else {
+      imageInfo = "Click outside or press Escape to close";
+    }
+
+    openImageModal(imageSrc, imageAlt, imageInfo);
+  });
+
+  // Mark as having click handler to avoid duplicates
+  imgElement.dataset.clickHandlerAdded = "true";
+
+  // Add visual indication that image is clickable (redundant with CSS but ensures it's set)
+  imgElement.style.cursor = "pointer";
+}
+
+// Add click handlers to all images in a container
+function addImageClickHandlersToContainer(container) {
+  if (!container) return;
+
+  const images = container.querySelectorAll("img.note-image");
+  images.forEach((img) => {
+    addImageClickHandler(img);
+  });
+}
