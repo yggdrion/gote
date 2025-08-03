@@ -157,3 +157,4 @@ package-lock.json
 bin/
 .DS_Store
 test.exe
+*.exe
