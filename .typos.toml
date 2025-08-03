@@ -1,4 +1,8 @@
 [files]
 extend-exclude = [
     "noteapp/static/vendor/**",
+    "frontend/wailsjs/**",
 ]
+
+[default.extend-words]
+classs = "classs" 
