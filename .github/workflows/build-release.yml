@@ -1,4 +1,4 @@
-name: � Build Wails App - Release
+name: 📦 Build Wails App - Release
 
 on:
   workflow_dispatch:
