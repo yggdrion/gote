@@ -67,15 +67,6 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux builds
-          - os: ubuntu-latest
-            platform: linux/amd64
-            binary_name: gote
-            artifact_name: gote-linux-amd64
-          - os: ubuntu-latest
-            platform: linux/arm64
-            binary_name: gote
-            artifact_name: gote-linux-arm64
           # Windows builds
           - os: windows-latest
             platform: windows/amd64
@@ -113,21 +104,23 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          # Install base dependencies
-          if ! sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.0-dev; then
-            sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
-            # Create symlink for webkit2gtk-4.0 to point to 4.1
-            sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc || true
-            sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-web-extension-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-web-extension-4.0.pc || true
+
+          # Install base dependencies for all Linux builds
+          sudo apt-get install -y build-essential pkg-config
+
+          # Install AMD64 GUI libraries for AMD64 builds
+          if [[ "${{ matrix.platform }}" == "linux/amd64" ]]; then
+            if ! sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev; then
+              sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+              # Create symlink for webkit2gtk-4.0 to point to 4.1
+              sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc || true
+              sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-web-extension-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-web-extension-4.0.pc || true
+            fi
           fi
-          # Install ARM64 cross-compilation tools if building for ARM64
+
+          # Install ARM64 cross-compilation tools for ARM64 builds
           if [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-            sudo apt-get install -y libgtk-3-dev:arm64 libwebkit2gtk-4.0-dev:arm64 || \
-            sudo apt-get install -y libgtk-3-dev:arm64 libwebkit2gtk-4.1-dev:arm64
-            # Add ARM64 architecture
-            sudo dpkg --add-architecture arm64
-            sudo apt-get update
           fi
 
       - name: Install Wails 📦
@@ -144,10 +137,9 @@ jobs:
           if [[ "${{ matrix.platform }}" == "linux/arm64" ]]; then
             export CC=aarch64-linux-gnu-gcc
             export CXX=aarch64-linux-gnu-g++
-            export CGO_ENABLED=1
+            export CGO_ENABLED=0
             export GOOS=linux
             export GOARCH=arm64
-            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
           fi
           wails build -platform ${{ matrix.platform }} -o ${{ matrix.binary_name }}
 
