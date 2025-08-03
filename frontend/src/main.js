@@ -34,6 +34,13 @@ import {
   CreateBackup,
   IsConfigured,
   CompleteInitialSetup,
+  SaveImageFromClipboard,
+  GetImage,
+  DeleteImage,
+  ListImages,
+  GetImageAsDataURL,
+  CleanupOrphanedImages,
+  GetImageStats,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -202,6 +209,9 @@ function initializeDOM() {
   setupMasterPassword = document.getElementById("setup-master-password");
   setupConfirmPassword = document.getElementById("setup-confirm-password");
   completeSetupBtn = document.getElementById("complete-setup-btn");
+
+  // Create image modal for enlarged viewing
+  createImageModal();
 }
 
 function setupEventListeners() {
@@ -258,6 +268,9 @@ function setupEventListeners() {
 
   // Global keyboard shortcuts
   document.addEventListener("keydown", handleGlobalKeyboard);
+
+  // Clipboard handling for images
+  document.addEventListener("paste", handleClipboardPaste);
 }
 
 async function checkAuthState() {
@@ -501,6 +514,9 @@ function renderNotesList() {
       noteCard.appendChild(noteActions);
       noteCard.appendChild(noteContentDiv);
 
+      // Load images after HTML is inserted into DOM
+      loadImagesInDOM(noteContentDiv);
+
       // Add event listeners
       noteCard.querySelector(".edit-btn").addEventListener("click", (e) => {
         e.stopPropagation();
@@ -524,21 +540,29 @@ function renderNotesList() {
 
 function renderMarkdown(content) {
   if (!content || content.trim() === "") {
-    return '<em style="color: #999;">Empty note...</em>';
+    return '<em class="empty-note-text">Empty note...</em>';
   }
 
   try {
+    let html;
     if (markedInstance && typeof markedInstance === "function") {
-      return markedInstance(content);
+      html = markedInstance(content);
     } else if (markedInstance && typeof markedInstance.parse === "function") {
-      return markedInstance.parse(content);
+      html = markedInstance.parse(content);
+    } else {
+      // Simple fallback - just escape HTML and preserve line breaks
+      html = escapeHtml(content).replace(/\n/g, "<br>");
     }
+
+    // Post-process to handle custom image syntax
+    html = processCustomImages(html);
+
+    return html;
   } catch (error) {
     console.error("Error rendering markdown:", error);
+    // Simple fallback - just escape HTML and preserve line breaks
+    return escapeHtml(content).replace(/\n/g, "<br>");
   }
-
-  // Simple fallback - just escape HTML and preserve line breaks
-  return escapeHtml(content).replace(/\n/g, "<br>");
 }
 
 function escapeHtml(text) {
@@ -929,6 +953,156 @@ function stopActivityTracking() {
 window.clearSearch = clearSearch;
 window.createNewNote = createNewNote;
 
+// Image handling functions
+
+// Handle clipboard paste events for images
+async function handleClipboardPaste(event) {
+  // Only handle paste when editing a note
+  if (!currentNote || !noteContent) {
+    return;
+  }
+
+  const items = event.clipboardData?.items;
+  if (!items) return;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    // Check if the item is an image
+    if (item.type.startsWith("image/")) {
+      event.preventDefault(); // Prevent default paste behavior
+
+      try {
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        // Show loading indicator
+        showImageUploadProgress("Uploading image...");
+
+        // Convert file to base64
+        const base64Data = await fileToBase64(file);
+
+        // Save image via backend
+        const image = await SaveImageFromClipboard(base64Data, item.type);
+
+        // Insert image reference into the note content
+        insertImageIntoNote(image.id, image.filename);
+
+        showImageUploadProgress("Image uploaded successfully!", "success");
+        setTimeout(() => hideImageUploadProgress(), 2000);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        showImageUploadProgress("Failed to upload image", "error");
+        setTimeout(() => hideImageUploadProgress(), 3000);
+      }
+      break; // Only handle the first image
+    }
+  }
+}
+
+// Convert file to base64 string
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Remove the data:... prefix to get just the base64 data
+      const base64 = reader.result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Insert image reference into note content at cursor position
+function insertImageIntoNote(imageId, filename) {
+  const imageMarkdown = `![${filename}](image:${imageId})`;
+
+  // Get current cursor position
+  const cursorPos = noteContent.selectionStart;
+  const textBefore = noteContent.value.substring(0, cursorPos);
+  const textAfter = noteContent.value.substring(noteContent.selectionEnd);
+
+  // Insert image markdown at cursor position
+  noteContent.value = textBefore + imageMarkdown + textAfter;
+
+  // Update cursor position
+  const newCursorPos = cursorPos + imageMarkdown.length;
+  noteContent.setSelectionRange(newCursorPos, newCursorPos);
+
+  // Trigger input event to update preview
+  noteContent.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+// Show image upload progress
+function showImageUploadProgress(message, type = "info") {
+  let progressDiv = document.getElementById("image-upload-progress");
+
+  if (!progressDiv) {
+    progressDiv = document.createElement("div");
+    progressDiv.id = "image-upload-progress";
+    progressDiv.className = "image-upload-progress";
+    document.body.appendChild(progressDiv);
+  }
+
+  // Remove previous type classes and add new one
+  progressDiv.classList.remove("info", "success", "error");
+  progressDiv.classList.add(type);
+
+  progressDiv.textContent = message;
+  progressDiv.style.display = "block";
+}
+
+// Hide image upload progress
+function hideImageUploadProgress() {
+  const progressDiv = document.getElementById("image-upload-progress");
+  if (progressDiv) {
+    progressDiv.style.display = "none";
+  }
+}
+
+// Load images in DOM element
+async function loadImagesInDOM(element) {
+  // Find all images with data-image-id attribute within the element
+  const images = element.querySelectorAll("img[data-image-id]");
+
+  for (const img of images) {
+    const imageId = img.getAttribute("data-image-id");
+    try {
+      console.log(`Loading image ${imageId}...`);
+      const dataUrl = await GetImageAsDataURL(imageId);
+      img.src = dataUrl;
+      img.removeAttribute("data-image-id"); // Remove the temporary attribute
+
+      // Add click handler for image enlargement
+      addImageClickHandler(img);
+
+      console.log(`Image ${imageId} loaded successfully`);
+    } catch (error) {
+      console.error(`Failed to load image ${imageId}:`, error);
+      img.src =
+        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDlWN0MxOSA1IDIwIDMgMTggM0g2QzQgMyAzIDUgMyA3VjE3QzMgMTkgNCAyMSA2IDIxSDE4QzIwIDIxIDIxIDE5IDIxIDE3VjE1IiBzdHJva2U9IiNmZjAwMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik0xIDFMMjMgMjMiIHN0cm9rZT0iI2ZmMDAwMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+"; // Error icon
+      img.alt = `Failed to load image: ${img.alt}`;
+      img.title = `Image not found: ${imageId}`;
+    }
+  }
+
+  // Also add click handlers to any existing loaded images in this element
+  addImageClickHandlersToContainer(element);
+}
+
+// Process custom image syntax in rendered HTML
+function processCustomImages(html) {
+  // Replace our custom image syntax with proper img tags
+  // Look for <img src="image:imageId" ...> patterns that marked.js created
+  const imageRegex = /<img([^>]*?)src="image:([^"]+)"([^>]*?)>/g;
+
+  return html.replace(imageRegex, (match, beforeSrc, imageId, afterSrc) => {
+    console.log(`Processing custom image: ${imageId}`);
+    return `<img${beforeSrc}src="data:image/png;base64,loading..." data-image-id="${imageId}" class="note-image"${afterSrc}>`;
+  });
+}
+
 function handleGlobalKeyboard(e) {
   // Check for Ctrl/Cmd key combinations
   const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -981,4 +1155,158 @@ async function saveAndCloseNote() {
     console.error("Error saving note:", error);
     alert("Failed to save note");
   }
+}
+
+// Image management functions for debugging/testing
+window.imageDebug = {
+  async getStats() {
+    try {
+      const stats = await GetImageStats();
+      console.log("Image Statistics:", stats);
+      return stats;
+    } catch (error) {
+      console.error("Failed to get image stats:", error);
+    }
+  },
+
+  async cleanup() {
+    try {
+      const cleaned = await CleanupOrphanedImages();
+      console.log(`Cleaned up ${cleaned} orphaned images`);
+      return cleaned;
+    } catch (error) {
+      console.error("Failed to cleanup images:", error);
+    }
+  },
+
+  async listAll() {
+    try {
+      const images = await ListImages();
+      console.log("All Images:", images);
+      return images;
+    } catch (error) {
+      console.error("Failed to list images:", error);
+    }
+  },
+};
+
+// Image modal functionality
+
+// Create the image modal DOM structure
+function createImageModal() {
+  const modal = document.createElement("div");
+  modal.id = "image-modal";
+  modal.className = "image-modal";
+
+  modal.innerHTML = `
+    <div class="image-modal-content">
+      <button class="image-modal-close" id="image-modal-close">&times;</button>
+      <img class="image-modal-image" id="image-modal-image" alt="Enlarged image">
+      <div class="image-modal-info" id="image-modal-info"></div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Set up event listeners
+  const closeBtn = document.getElementById("image-modal-close");
+  const modalImg = document.getElementById("image-modal-image");
+
+  // Close modal on close button click
+  closeBtn.addEventListener("click", closeImageModal);
+
+  // Close modal on background click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      closeImageModal();
+    }
+  });
+
+  // Close modal on escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("show")) {
+      closeImageModal();
+    }
+  });
+
+  // Prevent click propagation on modal content
+  const modalContent = modal.querySelector(".image-modal-content");
+  modalContent.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+}
+
+// Open image modal with the given image
+function openImageModal(imageSrc, imageAlt = "", imageInfo = "") {
+  const modal = document.getElementById("image-modal");
+  const modalImg = document.getElementById("image-modal-image");
+  const modalInfo = document.getElementById("image-modal-info");
+
+  if (!modal || !modalImg) {
+    console.error("Image modal elements not found");
+    return;
+  }
+
+  modalImg.src = imageSrc;
+  modalImg.alt = imageAlt;
+  modalInfo.textContent = imageInfo || imageAlt || "";
+
+  modal.classList.add("show");
+  document.body.style.overflow = "hidden"; // Prevent background scrolling
+}
+
+// Close image modal
+function closeImageModal() {
+  const modal = document.getElementById("image-modal");
+  if (modal) {
+    modal.classList.remove("show");
+    document.body.style.overflow = ""; // Restore scrolling
+
+    // Clear the image source after animation
+    setTimeout(() => {
+      const modalImg = document.getElementById("image-modal-image");
+      if (modalImg) {
+        modalImg.src = "";
+      }
+    }, 300);
+  }
+}
+
+// Add click handler to an image element
+function addImageClickHandler(imgElement) {
+  if (!imgElement || imgElement.dataset.clickHandlerAdded) {
+    return; // Already has handler or invalid element
+  }
+
+  imgElement.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const imageSrc = imgElement.src;
+    const imageAlt = imgElement.alt || "Image";
+
+    // Extract additional info if available
+    let imageInfo = "";
+    if (imgElement.title && imgElement.title !== imageAlt) {
+      imageInfo = imgElement.title;
+    }
+
+    openImageModal(imageSrc, imageAlt, imageInfo);
+  });
+
+  // Mark as having click handler to avoid duplicates
+  imgElement.dataset.clickHandlerAdded = "true";
+
+  // Add visual indication that image is clickable (redundant with CSS but ensures it's set)
+  imgElement.style.cursor = "pointer";
+}
+
+// Add click handlers to all images in a container
+function addImageClickHandlersToContainer(container) {
+  if (!container) return;
+
+  const images = container.querySelectorAll("img.note-image");
+  images.forEach((img) => {
+    addImageClickHandler(img);
+  });
 }

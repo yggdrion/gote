@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"time"
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
@@ -20,6 +23,7 @@ type App struct {
 	ctx         context.Context
 	authManager *auth.Manager
 	store       *storage.NoteStore
+	imageStore  *storage.ImageStore
 	config      *config.Config
 	currentKey  []byte
 
@@ -54,6 +58,7 @@ func (a *App) startup(ctx context.Context) {
 		// Initialize components
 		a.authManager = auth.NewManager(cfg.PasswordHashPath)
 		a.store = storage.NewNoteStore(cfg.NotesPath)
+		a.imageStore = storage.NewImageStore(cfg.NotesPath)
 		a.config = cfg
 
 		// Initialize services - simplified
@@ -171,6 +176,7 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	// Initialize components with new configuration
 	a.authManager = auth.NewManager(a.config.PasswordHashPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
+	a.imageStore = storage.NewImageStore(a.config.NotesPath)
 
 	// Set the initial password with retry logic
 	err = retryHandler.Execute(func() error {
@@ -198,6 +204,7 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	}
 	a.currentKey = key
 	a.store.LoadNotes(a.currentKey)
+	a.imageStore.SetKey(a.currentKey)
 
 	log.Printf("Initial setup completed:")
 	log.Printf("  Configuration file: %s", config.GetConfigFilePath())
@@ -227,6 +234,7 @@ func (a *App) SetPassword(password string) error {
 	} else {
 		a.store.LoadNotes(a.currentKey)
 	}
+	a.imageStore.SetKey(a.currentKey)
 	return nil
 }
 
@@ -250,6 +258,7 @@ func (a *App) VerifyPassword(password string) bool {
 	} else {
 		a.store.LoadNotes(a.currentKey)
 	}
+	a.imageStore.SetKey(a.currentKey)
 	return true
 }
 
@@ -368,10 +377,47 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 }
 
 func (a *App) DeleteNote(id string) error {
+	// First, get the note content to extract image IDs before deletion
+	var noteContent string
 	if a.noteService != nil {
-		return a.noteService.DeleteNote(id)
+		if note, err := a.noteService.GetNote(id); err == nil && note != nil {
+			noteContent = note.Content
+		}
+	} else {
+		if note, err := a.store.GetNote(id); err == nil && note != nil {
+			noteContent = note.Content
+		}
 	}
-	return a.store.DeleteNote(id)
+
+	// Extract image IDs from the note content
+	imageIDs := a.extractImageIDsFromContent(noteContent)
+
+	// Delete the note
+	var err error
+	if a.noteService != nil {
+		err = a.noteService.DeleteNote(id)
+	} else {
+		err = a.store.DeleteNote(id)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Clean up orphaned images
+	for _, imageID := range imageIDs {
+		if !a.isImageReferencedByOtherNotes(imageID, id) {
+			// Image is not referenced by any other note, safe to delete
+			if deleteErr := a.imageStore.DeleteImage(imageID); deleteErr != nil {
+				log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, deleteErr)
+				// Don't fail the note deletion if image cleanup fails
+			} else {
+				log.Printf("Cleaned up orphaned image: %s", imageID)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (a *App) SearchNotes(query string) []WailsNote {
@@ -438,6 +484,7 @@ func (a *App) UpdateSettings(notesPath, passwordHashPath string) error {
 	// Update components with new paths
 	a.authManager = auth.NewManager(a.config.PasswordHashPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
+	a.imageStore = storage.NewImageStore(a.config.NotesPath)
 
 	log.Printf("Settings updated:")
 	log.Printf("  Notes directory: %s", a.config.NotesPath)
@@ -582,4 +629,224 @@ func (a *App) GetPerformanceStats() map[string]interface{} {
 	}
 
 	return stats
+}
+
+// Image-related methods
+
+// SaveImageFromClipboard saves an image from clipboard data
+func (a *App) SaveImageFromClipboard(imageData string, contentType string) (*models.Image, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	// Decode base64 image data
+	data, err := base64.StdEncoding.DecodeString(imageData)
+	if err != nil {
+		return nil, fmt.Errorf("invalid image data: %v", err)
+	}
+
+	// Generate filename based on timestamp
+	filename := fmt.Sprintf("clipboard_%d", time.Now().Unix())
+	if contentType == "image/png" {
+		filename += ".png"
+	} else if contentType == "image/jpeg" {
+		filename += ".jpg"
+	} else {
+		filename += ".img"
+	}
+
+	return a.imageStore.StoreImage(data, contentType, filename)
+}
+
+// GetImage retrieves an image by ID and returns base64 encoded data
+func (a *App) GetImage(imageID string) (map[string]interface{}, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	imageData, image, err := a.imageStore.GetImage(imageID)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"id":           image.ID,
+		"filename":     image.Filename,
+		"content_type": image.ContentType,
+		"size":         image.Size,
+		"created_at":   image.CreatedAt,
+		"data":         base64.StdEncoding.EncodeToString(imageData),
+	}, nil
+}
+
+// DeleteImage removes an image from storage
+func (a *App) DeleteImage(imageID string) error {
+	if a.currentKey == nil {
+		return fmt.Errorf("not authenticated")
+	}
+
+	return a.imageStore.DeleteImage(imageID)
+}
+
+// ListImages returns a list of all stored images
+func (a *App) ListImages() ([]*models.Image, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	return a.imageStore.ListImages()
+}
+
+// GetImageAsDataURL returns an image as a data URL for embedding in HTML
+func (a *App) GetImageAsDataURL(imageID string) (string, error) {
+	if a.currentKey == nil {
+		return "", fmt.Errorf("not authenticated")
+	}
+
+	imageData, image, err := a.imageStore.GetImage(imageID)
+	if err != nil {
+		return "", err
+	}
+
+	base64Data := base64.StdEncoding.EncodeToString(imageData)
+	return fmt.Sprintf("data:%s;base64,%s", image.ContentType, base64Data), nil
+}
+
+// extractImageIDsFromContent extracts image IDs from note content
+func (a *App) extractImageIDsFromContent(content string) []string {
+	var imageIDs []string
+
+	// Regular expression to match ![alt](image:imageId) pattern
+	re := regexp.MustCompile(`!\[[^\]]*\]\(image:([^)]+)\)`)
+	matches := re.FindAllStringSubmatch(content, -1)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			imageIDs = append(imageIDs, match[1])
+		}
+	}
+
+	return imageIDs
+}
+
+// isImageReferencedByOtherNotes checks if an image is referenced by notes other than the excluded note
+func (a *App) isImageReferencedByOtherNotes(imageID, excludeNoteID string) bool {
+	var allNotes []*models.Note
+
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	for _, note := range allNotes {
+		if note.ID == excludeNoteID {
+			continue // Skip the note being deleted
+		}
+
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		for _, id := range imageIDs {
+			if id == imageID {
+				return true // Image is referenced by another note
+			}
+		}
+	}
+
+	return false
+}
+
+// CleanupOrphanedImages removes images that are not referenced by any notes
+func (a *App) CleanupOrphanedImages() (int, error) {
+	if a.currentKey == nil {
+		return 0, fmt.Errorf("not authenticated")
+	}
+
+	// Get all stored images
+	allImages, err := a.imageStore.ListImages()
+	if err != nil {
+		return 0, fmt.Errorf("failed to list images: %v", err)
+	}
+
+	// Get all notes
+	var allNotes []*models.Note
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	// Create a set of all referenced image IDs
+	referencedImages := make(map[string]bool)
+	for _, note := range allNotes {
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		for _, imageID := range imageIDs {
+			referencedImages[imageID] = true
+		}
+	}
+
+	// Delete orphaned images
+	cleanedUp := 0
+	for _, image := range allImages {
+		if !referencedImages[image.ID] {
+			if err := a.imageStore.DeleteImage(image.ID); err != nil {
+				log.Printf("Warning: Failed to delete orphaned image %s: %v", image.ID, err)
+			} else {
+				log.Printf("Cleaned up orphaned image: %s (%s)", image.ID, image.Filename)
+				cleanedUp++
+			}
+		}
+	}
+
+	return cleanedUp, nil
+}
+
+// GetImageStats returns statistics about image usage
+func (a *App) GetImageStats() (map[string]interface{}, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	// Get all stored images
+	allImages, err := a.imageStore.ListImages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list images: %v", err)
+	}
+
+	// Get all notes
+	var allNotes []*models.Note
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	// Create a set of all referenced image IDs
+	referencedImages := make(map[string]bool)
+	totalReferences := 0
+	for _, note := range allNotes {
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		totalReferences += len(imageIDs)
+		for _, imageID := range imageIDs {
+			referencedImages[imageID] = true
+		}
+	}
+
+	// Calculate total size
+	var totalSize int64
+	orphanedCount := 0
+	for _, image := range allImages {
+		totalSize += image.Size
+		if !referencedImages[image.ID] {
+			orphanedCount++
+		}
+	}
+
+	return map[string]interface{}{
+		"total_images":      len(allImages),
+		"referenced_images": len(referencedImages),
+		"orphaned_images":   orphanedCount,
+		"total_references":  totalReferences,
+		"total_size_bytes":  totalSize,
+		"total_size_mb":     float64(totalSize) / (1024 * 1024),
+	}, nil
 }
