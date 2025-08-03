@@ -401,6 +401,12 @@ header a:hover,
   text-decoration: underline;
 }
 
+/* Empty note styling */
+.empty-note-text {
+  color: #999;
+  font-style: italic;
+}
+
 /* Note Editor Styles */
 .note-editor {
   position: fixed;
@@ -1051,6 +1057,32 @@ header a:hover,
 
 #image-upload-progress {
   animation: slideInRight 0.3s ease;
+}
+
+/* Image upload progress notification */
+.image-upload-progress {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  display: none;
+}
+
+.image-upload-progress.info {
+  background-color: #2196f3;
+}
+
+.image-upload-progress.success {
+  background-color: #4caf50;
+}
+
+.image-upload-progress.error {
+  background-color: #f44336;
 }
 
 @keyframes slideInRight {

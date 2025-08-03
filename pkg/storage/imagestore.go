@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -37,7 +36,9 @@ func NewImageStore(dataDir string) *ImageStore {
 
 	// Create images directory if it doesn't exist
 	if err := os.MkdirAll(imageDir, 0755); err != nil {
-		panic(fmt.Sprintf("Failed to create images directory: %v", err))
+		// Log the error but don't panic - return the store anyway
+		// The error will be caught when actually trying to save images
+		fmt.Printf("Warning: Failed to create images directory %s: %v\n", imageDir, err)
 	}
 
 	return &ImageStore{
@@ -73,8 +74,8 @@ func (is *ImageStore) StoreImage(imageData []byte, contentType, filename string)
 		CreatedAt:   time.Now(),
 	}
 
-	// Encrypt image data
-	encryptedData, err := crypto.Encrypt(base64.StdEncoding.EncodeToString(imageData), is.key)
+	// Encrypt image data directly (no base64 encoding before encryption)
+	encryptedData, err := crypto.EncryptBytes(imageData, is.key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt image: %v", err)
 	}
@@ -91,6 +92,12 @@ func (is *ImageStore) StoreImage(imageData []byte, contentType, filename string)
 
 	// Save encrypted image to disk
 	imagePath := filepath.Join(is.dataDir, fmt.Sprintf("%s.json", imageID))
+
+	// Ensure directory exists before saving
+	if err := os.MkdirAll(is.dataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create images directory: %v", err)
+	}
+
 	if err := is.saveEncryptedImageToDisk(imagePath, encryptedImage); err != nil {
 		return nil, fmt.Errorf("failed to save image: %v", err)
 	}
@@ -115,16 +122,10 @@ func (is *ImageStore) GetImage(imageID string) ([]byte, *models.Image, error) {
 		return nil, nil, fmt.Errorf("failed to load image: %v", err)
 	}
 
-	// Decrypt image data
-	decryptedBase64, err := crypto.Decrypt(encryptedImage.EncryptedData, is.key)
+	// Decrypt image data directly to bytes
+	imageData, err := crypto.DecryptBytes(encryptedImage.EncryptedData, is.key)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to decrypt image: %v", err)
-	}
-
-	// Decode base64 data
-	imageData, err := base64.StdEncoding.DecodeString(decryptedBase64)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to decode image data: %v", err)
 	}
 
 	// Create image metadata

@@ -540,7 +540,7 @@ function renderNotesList() {
 
 function renderMarkdown(content) {
   if (!content || content.trim() === "") {
-    return '<em style="color: #999;">Empty note...</em>';
+    return '<em class="empty-note-text">Empty note...</em>';
   }
 
   try {
@@ -1041,28 +1041,14 @@ function showImageUploadProgress(message, type = "info") {
   if (!progressDiv) {
     progressDiv = document.createElement("div");
     progressDiv.id = "image-upload-progress";
-    progressDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 4px;
-      color: white;
-      font-weight: 500;
-      z-index: 1000;
-      transition: all 0.3s ease;
-    `;
+    progressDiv.className = "image-upload-progress";
     document.body.appendChild(progressDiv);
   }
 
-  // Set background color based on type
-  const colors = {
-    info: "#2196F3",
-    success: "#4CAF50",
-    error: "#f44336",
-  };
+  // Remove previous type classes and add new one
+  progressDiv.classList.remove("info", "success", "error");
+  progressDiv.classList.add(type);
 
-  progressDiv.style.backgroundColor = colors[type] || colors.info;
   progressDiv.textContent = message;
   progressDiv.style.display = "block";
 }
@@ -1113,7 +1099,7 @@ function processCustomImages(html) {
 
   return html.replace(imageRegex, (match, beforeSrc, imageId, afterSrc) => {
     console.log(`Processing custom image: ${imageId}`);
-    return `<img${beforeSrc}src="data:image/png;base64,loading..." data-image-id="${imageId}" class="note-image"${afterSrc} style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">`;
+    return `<img${beforeSrc}src="data:image/png;base64,loading..." data-image-id="${imageId}" class="note-image"${afterSrc}>`;
   });
 }
 
