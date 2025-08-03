@@ -1,5 +1,6 @@
 version: "2"
 
-issues:
-  exclude-dirs:
-    - frontend/dist
+run:
+  # Skip directories that contain non-Go files we don't want to lint
+  skip-dirs:
+    - "frontend/dist"
