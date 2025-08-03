@@ -1,5 +1,5 @@
-import "./app.css";
 import "./style.css";
+import { UI_CONSTANTS, CSS_CLASSES, ELEMENT_IDS, MESSAGES } from "./constants.js";
 
 // Import Wails runtime
 import {
@@ -270,7 +270,7 @@ async function handlePasswordSetup() {
   const password = setupPasswordInput.value;
   const confirm = confirmPasswordInput.value;
 
-  if (!password || password.length < 6) {
+  if (!password || password.length < UI_CONSTANTS.MIN_PASSWORD_LENGTH) {
     alert("Password must be at least 6 characters long");
     return;
   }
@@ -317,7 +317,7 @@ function showLoginError(message) {
   loginError.style.display = "block";
   setTimeout(() => {
     loginError.style.display = "none";
-  }, 3000);
+  }, UI_CONSTANTS.FADE_DURATION_MS * 10); // Show error for longer
 }
 
 async function checkInitialState() {
