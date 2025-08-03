@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/yggdrion/gote/compare/v1.1.1...v1.2.0) (2025-08-03)
+
+### Features
+
+* images ([#18](https://github.com/yggdrion/gote/issues/18)) ([f2c61d3](https://github.com/yggdrion/gote/commit/f2c61d376d87a52a6b54123649073ccfed9ba22e))
+
 ## [1.1.1](https://github.com/yggdrion/gote/compare/v1.1.0...v1.1.1) (2025-08-03)
 
 ### Bug Fixes
