@@ -1,3 +1,6 @@
+build/bin
+node_modules
+frontend/dist
 # Logs
 logs
 *.log
@@ -149,3 +152,4 @@ node_modules/
 package-lock.json
 bin/
 .DS_Store
+test.exe

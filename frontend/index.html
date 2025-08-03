@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Gote - Notes App</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Initial Setup Screen -->
+      <div id="initial-setup-screen" class="auth-screen" style="display: none">
+        <div class="auth-container setup-container">
+          <div class="app-title">
+            <img
+              src="./src/assets/images/appicon_transparent.png"
+              alt="Gote Logo"
+              class="app-logo"
+            />
+            <h1>Welcome to Gote</h1>
+          </div>
+          <div class="setup-content">
+            <h2>Initial Setup</h2>
+            <p>
+              Configure your storage locations and create your master password.
+            </p>
+
+            <div class="setup-section">
+              <h3>Storage Configuration</h3>
+              <div class="setup-field">
+                <label for="setup-notes-path">Notes Directory:</label>
+                <input
+                  type="text"
+                  id="setup-notes-path"
+                  class="setup-input"
+                  placeholder="Leave empty for default location"
+                />
+                <small class="help-text"
+                  >Where your encrypted notes will be stored</small
+                >
+              </div>
+              <div class="setup-field">
+                <label for="setup-password-hash-path"
+                  >Password Hash File:</label
+                >
+                <input
+                  type="text"
+                  id="setup-password-hash-path"
+                  class="setup-input"
+                  placeholder="Leave empty for system default"
+                  readonly
+                />
+                <small class="help-text"
+                  >Where your password hash will be stored (recommended to keep
+                  default)</small
+                >
+              </div>
+            </div>
+
+            <div class="setup-section">
+              <h3>Master Password</h3>
+              <div class="setup-field">
+                <input
+                  type="password"
+                  id="setup-master-password"
+                  class="setup-input"
+                  placeholder="Enter master password (min 6 characters)"
+                />
+              </div>
+              <div class="setup-field">
+                <input
+                  type="password"
+                  id="setup-confirm-password"
+                  class="setup-input"
+                  placeholder="Confirm master password"
+                />
+              </div>
+            </div>
+
+            <button id="complete-setup-btn" class="btn btn-primary btn-large">
+              🚀 Complete Setup
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Setup/Login Screen -->
+      <div id="auth-screen" class="auth-screen" style="display: none">
+        <div class="auth-container">
+          <div class="app-title">
+            <img
+              src="./src/assets/images/appicon_transparent.png"
+              alt="Gote Logo"
+              class="app-logo"
+            />
+          </div>
+          <div id="password-setup" style="display: none">
+            <h2>Set Master Password</h2>
+            <p>Set a master password to secure your notes.</p>
+            <input
+              type="password"
+              id="setup-password"
+              placeholder="Enter master password"
+            />
+            <input
+              type="password"
+              id="confirm-password"
+              placeholder="Confirm password"
+            />
+            <button id="setup-btn" class="btn btn-primary">Set Password</button>
+          </div>
+          <div id="password-login" style="display: none">
+            <input
+              type="password"
+              id="login-password"
+              placeholder="Enter your password"
+            />
+            <button id="login-btn" class="btn btn-primary">Login</button>
+            <div id="login-error" class="error" style="display: none"></div>
+            <div class="reset-password-section">
+              <button id="reset-password-btn" class="btn btn-danger btn-small">
+                Reset Password
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Notes App -->
+      <div id="main-app" style="display: none">
+        <div class="container">
+          <header>
+            <div class="header-actions">
+              <div class="header-left">
+                <button id="new-note-btn" class="btn btn-primary">
+                  New Note
+                </button>
+              </div>
+              <div class="header-center">
+                <div class="search-form">
+                  <div class="search-input-container">
+                    <input
+                      type="text"
+                      id="search-input"
+                      placeholder="Search your notes..."
+                    />
+                    <button
+                      id="clear-search-btn"
+                      class="clear-search-btn"
+                      style="display: none"
+                      title="Clear search"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <button id="search-btn" class="btn btn-secondary">
+                    Search
+                  </button>
+                </div>
+              </div>
+              <div class="header-right">
+                <button
+                  id="sync-btn"
+                  class="btn btn-secondary"
+                  title="Sync from disk"
+                >
+                  🔄
+                </button>
+                <button id="settings-btn" class="btn btn-secondary">⚙️</button>
+              </div>
+            </div>
+          </header>
+
+          <main>
+            <div
+              id="search-results-header"
+              class="search-results-header"
+              style="display: none"
+            >
+              <p id="search-results-text"></p>
+            </div>
+
+            <div id="notes-grid" class="notes-grid">
+              <!-- Notes will be populated here -->
+            </div>
+
+            <div id="empty-state" class="empty-state" style="display: none">
+              <p id="empty-state-text">
+                No notes found.
+                <button class="link-button" id="create-first-note">
+                  Create your first note
+                </button>
+              </p>
+            </div>
+          </main>
+        </div>
+
+        <!-- Note Editor Overlay -->
+        <div id="note-editor" class="note-editor hidden">
+          <div class="editor-header">
+            <div class="editor-actions">
+              <button class="btn btn-primary" id="save-note-btn">Save</button>
+              <button class="btn btn-secondary" id="cancel-editor-btn">
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div class="editor-content">
+            <textarea
+              id="note-content"
+              placeholder="Start writing your note..."
+            ></textarea>
+          </div>
+          <div class="markdown-cheat-sheet">
+            <div class="cheat-sheet-content">
+              <div class="cheat-item">
+                <strong># Header</strong> → <span>Large heading</span>
+              </div>
+              <div class="cheat-item">
+                <strong>## Subheader</strong> → <span>Medium heading</span>
+              </div>
+              <div class="cheat-item">
+                <strong>**bold**</strong> →
+                <span><strong>Bold text</strong></span>
+              </div>
+              <div class="cheat-item">
+                <strong>*italic*</strong> → <span><em>Italic text</em></span>
+              </div>
+              <div class="cheat-item">
+                <strong>- Item</strong> → <span>Bullet list</span>
+              </div>
+              <div class="cheat-item">
+                <strong>1. Item</strong> → <span>Numbered list</span>
+              </div>
+              <div class="cheat-item">
+                <strong>[Link](url)</strong> → <span>Clickable link</span>
+              </div>
+              <div class="cheat-item">
+                <strong>`code`</strong> → <span><code>Inline code</code></span>
+              </div>
+              <div class="cheat-item">
+                <strong>```language</strong> → <span>Code block</span>
+              </div>
+              <div class="cheat-item">
+                <strong>> Quote</strong> → <span>Blockquote</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Screen -->
+      <div id="settings-screen" class="settings-screen" style="display: none">
+        <div class="settings-container">
+          <div class="settings-header">
+            <button id="back-from-settings" class="btn btn-secondary">
+              ← Back to Notes
+            </button>
+            <h1>⚙️ Settings</h1>
+          </div>
+
+          <div class="settings-content">
+            <div class="settings-section">
+              <h3>File Synchronization</h3>
+              <button
+                id="sync-from-settings"
+                class="btn btn-secondary sync-btn"
+              >
+                🔄 Sync from Disk
+              </button>
+              <small class="help-text"
+                >Refresh notes from disk. Use this if files were changed by
+                external tools.</small
+              >
+            </div>
+
+            <div class="settings-section">
+              <h3>Change Password</h3>
+              <div class="password-fields">
+                <input
+                  type="password"
+                  id="current-password"
+                  placeholder="Current password"
+                  autocomplete="current-password"
+                />
+                <input
+                  type="password"
+                  id="new-password"
+                  placeholder="New password"
+                  autocomplete="new-password"
+                />
+                <input
+                  type="password"
+                  id="confirm-new-password"
+                  placeholder="Confirm new password"
+                  autocomplete="new-password"
+                />
+                <button id="change-password-btn" class="btn btn-warning">
+                  Change Password
+                </button>
+              </div>
+              <small class="help-text"
+                >Change your password and re-encrypt all notes. This cannot be
+                undone.</small
+              >
+            </div>
+
+            <div class="settings-section">
+              <h3>Storage Configuration</h3>
+              <div class="settings-warning">
+                <strong>⚠️ Important:</strong> Changing storage paths will log
+                you out for security reasons. You'll need to log in again to
+                access notes from the new location.
+              </div>
+              <div class="settings-field">
+                <label for="notes-path-input">Notes Directory:</label>
+                <input
+                  type="text"
+                  id="notes-path-input"
+                  class="settings-input"
+                  placeholder="e.g., ./data/notes or C:\MyNotes"
+                />
+                <small class="help-text"
+                  >Path where your notes are stored. Leave empty for default
+                  location.</small
+                >
+              </div>
+              <div class="settings-field">
+                <label for="password-hash-path-input"
+                  >Password Hash File:</label
+                >
+                <input
+                  type="text"
+                  id="password-hash-path-input"
+                  class="settings-input"
+                  placeholder="e.g., ./data/password_hash or custom path"
+                />
+                <small class="help-text"
+                  >Path where the password hash is stored. Leave empty for
+                  system default.</small
+                >
+              </div>
+              <button id="save-settings-btn" class="btn btn-primary">
+                💾 Save Settings
+              </button>
+            </div>
+
+            <div class="settings-section">
+              <h3>Manual Backup</h3>
+              <button id="create-backup-btn" class="btn btn-primary">
+                🗄️ Create Backup
+              </button>
+              <small class="help-text"
+                >Create a backup of all your notes. Useful before making major
+                changes.</small
+              >
+            </div>
+
+            <div class="settings-section">
+              <h3>Session</h3>
+              <button id="logout-btn" class="btn btn-danger">🚪 Logout</button>
+              <small class="help-text"
+                >Close the session and return to the login screen. Your notes
+                remain encrypted and safe.</small
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./src/main.js" type="module"></script>
+  </body>
+</html>

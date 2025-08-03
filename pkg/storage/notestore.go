@@ -20,21 +20,23 @@ import (
 
 // NoteStore manages note storage and file system operations
 type NoteStore struct {
-	dataDir      string
-	notes        map[string]*models.Note
-	mutex        sync.RWMutex
-	watcher      *fsnotify.Watcher
-	key          []byte
-	lastSync     time.Time
-	fileModTimes map[string]time.Time
+	dataDir          string
+	notes            map[string]*models.Note
+	mutex            sync.RWMutex
+	watcher          *fsnotify.Watcher
+	key              []byte
+	lastSync         time.Time
+	fileModTimes     map[string]time.Time
+	pendingDeletions map[string]bool // Track app-initiated deletions
 }
 
 // NewNoteStore creates a new note store instance
 func NewNoteStore(dataDir string) *NoteStore {
 	store := &NoteStore{
-		dataDir:      dataDir,
-		notes:        make(map[string]*models.Note),
-		fileModTimes: make(map[string]time.Time),
+		dataDir:          dataDir,
+		notes:            make(map[string]*models.Note),
+		fileModTimes:     make(map[string]time.Time),
+		pendingDeletions: make(map[string]bool),
 	}
 
 	// Create data directory if it doesn't exist
@@ -207,11 +209,18 @@ func (s *NoteStore) handleFileRemove(filePath string) {
 	noteID := strings.TrimSuffix(filename, ".json")
 
 	s.mutex.Lock()
+	// Check if this was an app-initiated deletion
+	wasAppDeleted := s.pendingDeletions[noteID]
+	delete(s.pendingDeletions, noteID) // Clean up the tracking
 	delete(s.notes, noteID)
 	delete(s.fileModTimes, filePath)
 	s.mutex.Unlock()
 
-	log.Printf("Removed note %s due to external file deletion", noteID)
+	if wasAppDeleted {
+		log.Printf("Note %s deleted successfully", noteID)
+	} else {
+		log.Printf("Removed note %s due to external file deletion", noteID)
+	}
 }
 
 // syncFromDisk performs a full sync from disk
@@ -357,6 +366,8 @@ func (s *NoteStore) deleteNote(id string) error {
 	filename := filepath.Join(s.dataDir, fmt.Sprintf("%s.json", id))
 
 	s.mutex.Lock()
+	// Mark this deletion as app-initiated
+	s.pendingDeletions[id] = true
 	delete(s.notes, id)
 	delete(s.fileModTimes, filename)
 	s.mutex.Unlock()
@@ -498,5 +509,29 @@ func (s *NoteStore) MoveNoteToCorrupted(noteID string) error {
 	delete(s.notes, noteID)
 	delete(s.fileModTimes, oldPath)
 	s.mutex.Unlock()
+	return nil
+}
+
+// ClearAllNotes removes all notes from storage and file system
+func (s *NoteStore) ClearAllNotes() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Remove all files from data directory
+	files, err := filepath.Glob(filepath.Join(s.dataDir, "*.json"))
+	if err != nil {
+		return fmt.Errorf("failed to list note files: %v", err)
+	}
+
+	for _, file := range files {
+		if err := os.Remove(file); err != nil {
+			log.Printf("Failed to remove file %s: %v", file, err)
+		}
+	}
+
+	// Clear in-memory storage
+	s.notes = make(map[string]*models.Note)
+	s.fileModTimes = make(map[string]time.Time)
+
 	return nil
 }

@@ -1,31 +1,34 @@
 version: 2
 updates:
-  # Enable version updates for npm dependencies
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "frontend/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 5
     commit-message:
-      prefix: "vendor"
-      include: "scope"
-    labels:
-      - "dependencies"
-      - "vendor-update"
+      prefix: "chore"
+    groups:
+      actions:
+        patterns:
+          - "*"
 
-  # Enable version updates for Go modules
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 5
     commit-message:
-      prefix: "deps"
-      include: "scope"
-    labels:
-      - "dependencies"
-      - "go-modules"
+      prefix: "chore"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    groups:
+      actions:
+        patterns:
+          - "*"

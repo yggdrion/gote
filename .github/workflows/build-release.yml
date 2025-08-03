@@ -1,0 +1,203 @@
+name: � Build Wails App - Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      should_build: ${{ steps.check_commit.outputs.should_build }}
+    steps:
+      - name: Checkout code 🌿
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 🟢
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+
+      - name: Install semantic-release and plugins 📦
+        run: |
+          npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github conventional-changelog-conventionalcommits semantic-release-export-data
+
+      - name: Get next version from semantic-release 🏷️
+        id: get_version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx semantic-release --dry-run || true
+          VERSION=$(npx semantic-release --dry-run 2>&1 | grep -oP 'Skip v\K[0-9]+\.[0-9]+\.[0-9]+')
+          echo "Detected version: $VERSION"
+          if [ -z "$VERSION" ]; then
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Abort if not latest commit on main ❌
+        id: check_commit
+        run: |
+          REMOTE_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+          echo "Current SHA: $GITHUB_SHA"
+          echo "Remote SHA:  $REMOTE_SHA"
+          if [ "$GITHUB_SHA" != "$REMOTE_SHA" ]; then
+            echo "This workflow is not running on the latest commit of main. Exiting early."
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Build Wails applications for multiple platforms
+  build:
+    needs: setup
+    if: needs.setup.outputs.should_build == 'true'
+    strategy:
+      matrix:
+        include:
+          # Linux builds
+          - os: ubuntu-latest
+            platform: linux/amd64
+            binary_name: gote
+            artifact_name: gote-linux-amd64
+          - os: ubuntu-latest
+            platform: linux/arm64
+            binary_name: gote
+            artifact_name: gote-linux-arm64
+          # Windows builds
+          - os: windows-latest
+            platform: windows/amd64
+            binary_name: gote.exe
+            artifact_name: gote-windows-amd64.exe
+          - os: windows-latest
+            platform: windows/arm64
+            binary_name: gote.exe
+            artifact_name: gote-windows-arm64.exe
+          # macOS builds
+          - os: macos-latest
+            platform: darwin/amd64
+            binary_name: gote.app
+            artifact_name: gote-macos-amd64.app
+          - os: macos-latest
+            platform: darwin/arm64
+            binary_name: gote.app
+            artifact_name: gote-macos-arm64.app
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code 🌿
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up Go 🐹
+        uses: actions/setup-go@39e5c4a1c7f3ff93d1b0a2b5b3e9c57eb22e2ce6
+        with:
+          go-version: "1.24"
+
+      - name: Set up Node.js 📦
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Install Wails 📦
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install frontend dependencies 📦
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build Wails app 🔨
+        run: |
+          wails build -platform ${{ matrix.platform }} -o ${{ matrix.binary_name }}
+
+      - name: Package macOS app (macOS only) 📦
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd build/bin
+          zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.binary_name }}
+          mv ${{ matrix.artifact_name }}.zip ../
+
+      - name: Upload build artifacts 📤
+        uses: actions/upload-artifact@396b56b8e14b7b97e80a6b3b39b5b23e07b95c73
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            build/bin/${{ matrix.binary_name }}
+            build/${{ matrix.artifact_name }}.zip
+          if-no-files-found: ignore
+
+  # Release job
+  release:
+    needs: [setup, build]
+    if: needs.setup.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code 🌿
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 🟢
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+
+      - name: Install semantic-release and plugins 📦
+        run: |
+          npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github conventional-changelog-conventionalcommits semantic-release-export-data
+
+      - name: Download build artifacts 📥
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          path: ./artifacts
+
+      - name: Prepare release assets 📦
+        run: |
+          mkdir -p release-assets
+
+          # Copy Linux binaries
+          if [ -f artifacts/gote-linux-amd64/gote ]; then
+            cp artifacts/gote-linux-amd64/gote release-assets/gote-linux-amd64
+          fi
+          if [ -f artifacts/gote-linux-arm64/gote ]; then
+            cp artifacts/gote-linux-arm64/gote release-assets/gote-linux-arm64
+          fi
+
+          # Copy Windows binaries
+          if [ -f artifacts/gote-windows-amd64.exe/gote.exe ]; then
+            cp artifacts/gote-windows-amd64.exe/gote.exe release-assets/gote-windows-amd64.exe
+          fi
+          if [ -f artifacts/gote-windows-arm64.exe/gote.exe ]; then
+            cp artifacts/gote-windows-arm64.exe/gote.exe release-assets/gote-windows-arm64.exe
+          fi
+
+          # Copy macOS apps
+          for arch in amd64 arm64; do
+            if [ -f artifacts/gote-macos-${arch}.app/gote-macos-${arch}.app.zip ]; then
+              cp artifacts/gote-macos-${arch}.app/gote-macos-${arch}.app.zip release-assets/
+            elif [ -d artifacts/gote-macos-${arch}.app/gote.app ]; then
+              cd artifacts/gote-macos-${arch}.app
+              zip -r ../../release-assets/gote-macos-${arch}.app.zip gote.app
+              cd ../..
+            fi
+          done
+
+          # List what we have
+          ls -la release-assets/
+
+      - name: Run semantic-release 🚀
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          semantic-release
