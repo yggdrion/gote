@@ -1,3 +1,9 @@
+## [1.0.4](https://github.com/yggdrion/gote/compare/v1.0.3...v1.0.4) (2025-08-03)
+
+### Bug Fixes
+
+* release ([415fac1](https://github.com/yggdrion/gote/commit/415fac100dfbe505365ea27a64f92e16d6a34492))
+
 ## [1.0.3](https://github.com/yggdrion/gote/compare/v1.0.2...v1.0.3) (2025-08-03)
 
 ### Bug Fixes
