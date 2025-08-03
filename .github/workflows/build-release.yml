@@ -85,11 +85,11 @@ jobs:
           # macOS builds
           - os: macos-latest
             platform: darwin/amd64
-            binary_name: gote.app
+            binary_name: gote
             artifact_name: gote-macos-amd64.app
           - os: macos-latest
             platform: darwin/arm64
-            binary_name: gote.app
+            binary_name: gote
             artifact_name: gote-macos-arm64.app
     runs-on: ${{ matrix.os }}
     steps:
@@ -122,7 +122,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           cd build/bin
-          zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.binary_name }}
+          zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.binary_name }}.app
           mv ${{ matrix.artifact_name }}.zip ../
 
       - name: Upload build artifacts 📤
@@ -130,7 +130,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            build/bin/${{ matrix.binary_name }}
+            build/bin/${{ matrix.binary_name }}${{ matrix.os == 'macos-latest' && '.app' || '' }}
             build/${{ matrix.artifact_name }}.zip
           if-no-files-found: ignore
 
