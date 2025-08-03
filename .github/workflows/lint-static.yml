@@ -7,41 +7,41 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout code 🌿
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 🟢
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install linters
+      - name: Install linters 📦
         run: |
           npm install -g htmlhint stylelint stylelint-config-standard eslint
 
-      - name: install dependencies
+      - name: Install dependencies 📦
         run: |
           npm install
 
-      - name: Lint HTML
+      - name: Lint HTML ✅
         id: lint_html
         continue-on-error: true
         run: |
           npx htmlhint 'static/**/*.html'
 
-      - name: Lint CSS
+      - name: Lint CSS ✅
         id: lint_css
         continue-on-error: true
         run: |
           npx stylelint 'static/**/*.css' --config .stylelintrc.json
 
-      - name: Lint JavaScript
+      - name: Lint JavaScript ✅
         id: lint_js
         continue-on-error: true
         run: |
           npx eslint 'static/**/*.js'
 
-      - name: Fail if any linter failed
+      - name: Fail if any linter failed ❌
         if: steps.lint_html.outcome == 'failure' || steps.lint_css.outcome == 'failure' || steps.lint_js.outcome == 'failure'
         run: |
           echo "One or more linters failed."
