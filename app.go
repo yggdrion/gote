@@ -211,13 +211,13 @@ func (a *App) SetPassword(password string) error {
 	if err != nil {
 		return fmt.Errorf("failed to store password: %v", err)
 	}
-	
+
 	// Derive encryption key
 	key, err := a.authManager.DeriveEncryptionKey(password)
 	if err != nil {
 		return fmt.Errorf("failed to derive encryption key: %v", err)
 	}
-	
+
 	a.currentKey = key
 	// Load existing notes with the new key
 	if a.noteService != nil {
@@ -233,14 +233,14 @@ func (a *App) VerifyPassword(password string) bool {
 	if !a.authManager.VerifyPassword(password) {
 		return false
 	}
-	
+
 	// Derive encryption key
 	key, err := a.authManager.DeriveEncryptionKey(password)
 	if err != nil {
 		log.Printf("Failed to derive encryption key: %v", err)
 		return false
 	}
-	
+
 	a.currentKey = key
 	// Load notes with the key
 	if a.noteService != nil {

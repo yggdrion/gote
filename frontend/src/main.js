@@ -29,7 +29,6 @@ import {
   SyncFromDisk,
   GetSettings,
   UpdateSettings,
-  ChangePassword,
   ResetApplication,
   Logout,
   CreateBackup,
@@ -140,12 +139,8 @@ let newNoteBtn, searchInput, searchBtn, clearSearchBtn;
 let syncBtn, settingsBtn, notesGrid, noteEditor;
 let noteContent, searchResultsHeader, emptyState;
 let saveNoteBtn, cancelEditorBtn, createFirstNoteBtn;
-let backFromSettings,
-  syncFromSettings,
-  currentPassword,
-  newPassword,
-  confirmNewPassword;
-let changePasswordBtn, createBackupBtn, logoutBtn;
+let backFromSettings, syncFromSettings;
+let createBackupBtn, logoutBtn;
 let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 
 // Setup screen elements
@@ -192,10 +187,6 @@ function initializeDOM() {
   createFirstNoteBtn = document.getElementById("create-first-note");
   backFromSettings = document.getElementById("back-from-settings");
   syncFromSettings = document.getElementById("sync-from-settings");
-  currentPassword = document.getElementById("current-password");
-  newPassword = document.getElementById("new-password");
-  confirmNewPassword = document.getElementById("confirm-new-password");
-  changePasswordBtn = document.getElementById("change-password-btn");
   createBackupBtn = document.getElementById("create-backup-btn");
   logoutBtn = document.getElementById("logout-btn");
 
@@ -261,7 +252,6 @@ function setupEventListeners() {
   // Settings listeners
   backFromSettings.addEventListener("click", closeSettings);
   syncFromSettings.addEventListener("click", handleSync);
-  changePasswordBtn.addEventListener("click", handleChangePassword);
   createBackupBtn.addEventListener("click", handleCreateBackup);
   saveSettingsBtn.addEventListener("click", handleSaveSettings);
   logoutBtn.addEventListener("click", handleLogout);
@@ -370,13 +360,18 @@ function showInitialSetup() {
   // Show setup screen
   initialSetupScreen.style.display = "flex";
 
-  // Pre-populate the password hash path with default (read-only)
+  // Pre-populate the paths with defaults
   GetSettings()
     .then((settings) => {
       setupPasswordHashPath.value = settings.passwordHashPath || "";
+      // Pre-fill the notes path with default location
+      setupNotesPath.value = settings.notesPath || "";
+      setupNotesPath.placeholder =
+        "Default: " + (settings.notesPath || "Documents/Gote/Notes");
     })
     .catch((err) => {
       console.error("Error loading default settings:", err);
+      setupNotesPath.placeholder = "Default: Documents/Gote/Notes";
     });
 
   // Focus on the first input
@@ -740,11 +735,6 @@ function closeSettings() {
 
   // Reset activity timer when returning to main app
   resetInactivityTimer();
-
-  // Clear password fields
-  currentPassword.value = "";
-  newPassword.value = "";
-  confirmNewPassword.value = "";
 }
 
 async function handleSaveSettings() {
@@ -793,40 +783,6 @@ async function handleSaveSettings() {
   }
 }
 
-async function handleChangePassword() {
-  const current = currentPassword.value;
-  const newPass = newPassword.value;
-  const confirm = confirmNewPassword.value;
-
-  if (!current || !newPass || !confirm) {
-    alert("Please fill in all password fields");
-    return;
-  }
-
-  if (newPass.length < 6) {
-    alert("New password must be at least 6 characters long");
-    return;
-  }
-
-  if (newPass !== confirm) {
-    alert("New passwords do not match");
-    return;
-  }
-
-  try {
-    await ChangePassword(current, newPass);
-    alert(
-      "Password changed successfully. You will be logged out and need to log in with your new password."
-    );
-
-    // Password change clears the session, so perform logout cleanup
-    await performLogoutCleanup();
-  } catch (error) {
-    console.error("Error changing password:", error);
-    alert("Failed to change password: " + error.message);
-  }
-}
-
 async function handleCreateBackup() {
   try {
     // Show loading state
@@ -866,9 +822,6 @@ async function performLogoutCleanup() {
   loginPasswordInput.value = "";
   setupPasswordInput.value = "";
   confirmPasswordInput.value = "";
-  currentPassword.value = "";
-  newPassword.value = "";
-  confirmNewPassword.value = "";
 
   // Clear any displayed errors
   loginError.style.display = "none";

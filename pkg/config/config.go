@@ -16,7 +16,28 @@ type Config struct {
 
 // GetDefaultDataPath returns the default path for storing notes
 func GetDefaultDataPath() string {
-	return "./data"
+	currentUser, err := user.Current()
+	if err != nil {
+		return "./data"
+	}
+
+	var documentsDir string
+	if runtime.GOOS == "windows" {
+		documentsDir = filepath.Join(currentUser.HomeDir, "Documents")
+	} else {
+		documentsDir = filepath.Join(currentUser.HomeDir, "Documents")
+	}
+
+	// Create the default gote notes directory in Documents
+	defaultPath := filepath.Join(documentsDir, "Gote", "Notes")
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(defaultPath, 0755); err != nil {
+		// Fall back to relative path if we can't create in Documents
+		return "./data"
+	}
+
+	return defaultPath
 }
 
 // GetDefaultPasswordHashPath returns the default path for password hash storage
