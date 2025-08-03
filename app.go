@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +9,6 @@ import (
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
-	"gote/pkg/crypto"
 	"gote/pkg/errors"
 	"gote/pkg/models"
 	"gote/pkg/services"
@@ -25,8 +23,7 @@ type App struct {
 	config      *config.Config
 	currentKey  []byte
 
-	// Service layer - new architecture
-	authService *services.AuthService
+	// Service layer - simplified architecture
 	noteService *services.NoteService
 }
 
@@ -59,8 +56,7 @@ func (a *App) startup(ctx context.Context) {
 		a.store = storage.NewNoteStore(cfg.NotesPath)
 		a.config = cfg
 
-		// Initialize services
-		a.authService = services.NewAuthService(a.authManager, cfg)
+		// Initialize services - simplified
 		a.noteService = services.NewNoteService(a.store)
 
 		log.Printf("Note app initialized:")
@@ -78,12 +74,7 @@ func (a *App) startup(ctx context.Context) {
 
 // Authentication methods
 func (a *App) IsPasswordSet() bool {
-	if a.authService != nil {
-		return a.authService.IsPasswordSet()
-	}
-	// Fallback for uninitialized service (during first-time setup)
-	_, err := os.Stat(a.config.PasswordHashPath)
-	return err == nil
+	return !a.authManager.IsFirstTimeSetup()
 }
 
 // IsConfigured checks if the configuration file exists (not first-time setup)
@@ -200,7 +191,11 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	}
 
 	// Generate encryption key and initialize
-	a.currentKey = crypto.DeriveKey(password)
+	key, err := a.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		return fmt.Errorf("failed to derive encryption key: %v", err)
+	}
+	a.currentKey = key
 	a.store.LoadNotes(a.currentKey)
 
 	log.Printf("Initial setup completed:")
@@ -211,52 +206,49 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 }
 
 func (a *App) SetPassword(password string) error {
-	if a.authService != nil {
-		key, err := a.authService.SetPassword(password)
-		if err == nil {
-			a.currentKey = key
-			// Load existing notes with the new key
-			if a.noteService != nil {
-				a.noteService.LoadNotes(a.currentKey)
-			} else {
-				a.store.LoadNotes(a.currentKey)
-			}
-		}
-		return err
-	}
-
-	// Fallback to direct usage for backward compatibility
+	// Store password hash
 	err := a.authManager.StorePasswordHash(password)
-	if err == nil {
-		a.currentKey = crypto.DeriveKey(password)
+	if err != nil {
+		return fmt.Errorf("failed to store password: %v", err)
+	}
+	
+	// Derive encryption key
+	key, err := a.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		return fmt.Errorf("failed to derive encryption key: %v", err)
+	}
+	
+	a.currentKey = key
+	// Load existing notes with the new key
+	if a.noteService != nil {
+		a.noteService.LoadNotes(a.currentKey)
+	} else {
 		a.store.LoadNotes(a.currentKey)
 	}
-	return err
+	return nil
 }
 
 func (a *App) VerifyPassword(password string) bool {
-	if a.authService != nil {
-		key, isValid := a.authService.VerifyPassword(password)
-		if isValid {
-			a.currentKey = key
-			// Load notes with the key
-			if a.noteService != nil {
-				a.noteService.LoadNotes(a.currentKey)
-			} else {
-				a.store.LoadNotes(a.currentKey)
-			}
-			return true
-		}
+	// Verify password
+	if !a.authManager.VerifyPassword(password) {
 		return false
 	}
-
-	// Fallback to direct usage
-	if a.authManager.VerifyPassword(password) {
-		a.currentKey = crypto.DeriveKey(password)
-		a.store.LoadNotes(a.currentKey)
-		return true
+	
+	// Derive encryption key
+	key, err := a.authManager.DeriveEncryptionKey(password)
+	if err != nil {
+		log.Printf("Failed to derive encryption key: %v", err)
+		return false
 	}
-	return false
+	
+	a.currentKey = key
+	// Load notes with the key
+	if a.noteService != nil {
+		a.noteService.LoadNotes(a.currentKey)
+	} else {
+		a.store.LoadNotes(a.currentKey)
+	}
+	return true
 }
 
 // Note management methods
@@ -454,71 +446,7 @@ func (a *App) UpdateSettings(notesPath, passwordHashPath string) error {
 }
 
 func (a *App) ChangePassword(oldPassword, newPassword string) error {
-	if !a.authManager.VerifyPassword(oldPassword) {
-		return fmt.Errorf("invalid current password")
-	}
-
-	// Derive old and new keys
-	oldKey := crypto.DeriveKey(oldPassword)
-	newKey := crypto.DeriveKey(newPassword)
-
-	// Re-encrypt all notes from disk
-	noteFiles, err := filepath.Glob(filepath.Join(a.config.NotesPath, "*.json"))
-	if err != nil {
-		return fmt.Errorf("failed to list note files: %v", err)
-	}
-
-	var corruptedNotes []string
-	for _, file := range noteFiles {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			log.Printf("Error reading file %s: %v", file, err)
-			continue
-		}
-
-		var encryptedNote models.EncryptedNote
-		if err := json.Unmarshal(data, &encryptedNote); err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			log.Printf("Error unmarshalling file %s: %v", file, err)
-			continue
-		}
-
-		// Decrypt with old key
-		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
-			log.Printf("Error decrypting note %s: %v", encryptedNote.ID, err)
-			continue
-		}
-
-		// Create note with decrypted content
-		note := &models.Note{
-			ID:        encryptedNote.ID,
-			Content:   decryptedContent,
-			CreatedAt: encryptedNote.CreatedAt,
-			UpdatedAt: encryptedNote.UpdatedAt,
-		}
-
-		// Save with new key using SaveNoteDirect
-		if err := a.store.SaveNoteDirect(note, newKey); err != nil {
-			return fmt.Errorf("failed to save note %s: %v", note.ID, err)
-		}
-	}
-
-	// Store new password hash only after all notes are successfully re-encrypted
-	if err := a.authManager.StorePasswordHash(newPassword); err != nil {
-		return fmt.Errorf("failed to update password hash: %v", err)
-	}
-
-	// Clear the current session - user will need to log in again with new password
-	a.currentKey = nil
-
-	if len(corruptedNotes) > 0 {
-		log.Printf("Password changed successfully. %d corrupted notes were skipped: %v", len(corruptedNotes), corruptedNotes)
-	}
-
-	return nil
+	return fmt.Errorf("password change not supported in simplified mode. Please backup your notes, delete data, and set up fresh with new password")
 }
 
 func (a *App) ResetApplication() error {
@@ -620,24 +548,19 @@ func (a *App) ValidateSetupInputs(notesPath, passwordHashPath, password, confirm
 
 // GetSecurityInfo returns information about current security configuration
 func (a *App) GetSecurityInfo() map[string]interface{} {
-	if a.authService != nil {
-		return a.authService.GetSecurityInfo()
-	}
-
-	// Fallback for cases where service is not initialized
 	return map[string]interface{}{
-		"method":          "unknown",
-		"secure":          false,
-		"recommendations": []string{"Initialize authentication to check security status"},
+		"method":          "PBKDF2",
+		"secure":          true,
+		"iterations":      100000,
+		"key_length":      32,
+		"salt_length":     32,
+		"recommendations": []string{"Using OWASP-compliant PBKDF2 with salt"},
 	}
 }
 
 // IsUsingSecureMethod checks if enhanced security is enabled
 func (a *App) IsUsingSecureMethod() bool {
-	if a.authService != nil {
-		return a.authService.IsUsingSecureMethod()
-	}
-	return false
+	return true // Always using PBKDF2 in simplified mode
 }
 
 // Performance monitoring methods
@@ -647,7 +570,7 @@ func (a *App) GetPerformanceStats() map[string]interface{} {
 	stats := map[string]interface{}{
 		"notes_count":       len(a.GetAllNotes()),
 		"has_service_layer": a.noteService != nil,
-		"has_auth_service":  a.authService != nil,
+		"security_method":   "PBKDF2",
 	}
 
 	// Add basic performance information

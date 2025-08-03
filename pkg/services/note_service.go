@@ -1,16 +1,12 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
 	"gote/pkg/auth"
-	"gote/pkg/crypto"
 	"gote/pkg/errors"
 	"gote/pkg/models"
 	"gote/pkg/storage"
 	"log"
-	"os"
-	"path/filepath"
 )
 
 // NoteService handles note business logic
@@ -178,68 +174,7 @@ func (s *NoteService) SyncFromDisk() error {
 	return s.store.RefreshFromDisk()
 }
 
-// ReencryptAllNotes re-encrypts all notes with a new password
+// ReencryptAllNotes - disabled in simplified mode
 func (s *NoteService) ReencryptAllNotes(oldPassword, newPassword, notesPath string, authManager *auth.Manager) error {
-	configPath := filepath.Join(s.store.GetDataDir(), ".keyconfig.json")
-
-	oldKey, err := crypto.DeriveKeyEnhanced(oldPassword, configPath)
-	if err != nil {
-		return fmt.Errorf("failed to derive old key: %v", err)
-	}
-
-	newKey, err := crypto.DeriveKeyEnhanced(newPassword, configPath)
-	if err != nil {
-		return fmt.Errorf("failed to derive new key: %v", err)
-	}
-
-	noteFiles, err := filepath.Glob(filepath.Join(notesPath, "*.json"))
-	if err != nil {
-		return fmt.Errorf("failed to list note files: %v", err)
-	}
-
-	var corruptedNotes []string
-	for _, file := range noteFiles {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			continue
-		}
-
-		var encryptedNote models.EncryptedNote
-		if err := json.Unmarshal(data, &encryptedNote); err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			continue
-		}
-
-		// Decrypt with old key
-		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
-			continue
-		}
-
-		// Create note with decrypted content
-		note := &models.Note{
-			ID:        encryptedNote.ID,
-			Content:   decryptedContent,
-			CreatedAt: encryptedNote.CreatedAt,
-			UpdatedAt: encryptedNote.UpdatedAt,
-		}
-
-		// Save with new key
-		if err := s.store.SaveNoteDirect(note, newKey); err != nil {
-			return fmt.Errorf("failed to save note %s: %v", note.ID, err)
-		}
-	}
-
-	// Store new password hash only after all notes are successfully re-encrypted
-	if err := authManager.StorePasswordHash(newPassword); err != nil {
-		return fmt.Errorf("failed to update password hash: %v", err)
-	}
-
-	if len(corruptedNotes) > 0 {
-		return fmt.Errorf("password changed successfully, but %d corrupted notes were skipped: %v", len(corruptedNotes), corruptedNotes)
-	}
-
-	return nil
+	return fmt.Errorf("password change not supported in simplified mode")
 }

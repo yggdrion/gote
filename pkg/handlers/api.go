@@ -6,12 +6,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"gote/pkg/config"
-	"gote/pkg/crypto"
 	"gote/pkg/models"
 	"gote/pkg/storage"
 )
@@ -260,120 +258,9 @@ func (h *APIHandlers) SyncHandler(w http.ResponseWriter, r *http.Request) {
 
 // ChangePasswordHandler changes the user's password and re-encrypts all notes
 func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
-	// Authenticate user session
-	session := h.authManager.IsAuthenticated(r)
-	if session == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	var req struct {
-		OldPassword string `json:"old_password"`
-		NewPassword string `json:"new_password"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	// Verify old password
-	verified := h.authManager.VerifyPassword(req.OldPassword)
-	if !verified {
-		http.Error(w, "Old password is incorrect", http.StatusUnauthorized)
-		return
-	}
-
-	// Derive old and new keys using enhanced method
-	configPath := filepath.Join(h.store.GetDataDir(), ".keyconfig.json")
-	oldKey, err := crypto.DeriveKeyEnhanced(req.OldPassword, configPath)
-	if err != nil {
-		http.Error(w, "Failed to derive old key: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	newKey, err := crypto.DeriveKeyEnhanced(req.NewPassword, configPath)
-	if err != nil {
-		http.Error(w, "Failed to derive new key: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Backup notes before changing password
-	// backupPath, err := storage.BackupNotes(h.config.NotesPath, "")
-	// if err != nil {
-	// 	http.Error(w, "Failed to create backup: "+err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// Re-encrypt all notes from disk
-	noteFiles, err := filepath.Glob(filepath.Join(h.config.NotesPath, "*.json"))
-	if err != nil {
-		http.Error(w, "Failed to list note files", http.StatusInternalServerError)
-		return
-	}
-	var corruptedNotes []string
-	for _, file := range noteFiles {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			if err2 := h.store.MoveNoteToCorrupted(strings.TrimSuffix(filepath.Base(file), ".json")); err2 != nil {
-				fmt.Printf("[ERROR] moving note to corrupted: %v\n", err2)
-			}
-			fmt.Printf("[ERROR] moving note to corrupted: %v\n", err)
-			continue
-		}
-		var encryptedNote models.EncryptedNote
-		if err := json.Unmarshal(data, &encryptedNote); err != nil {
-			corruptedNotes = append(corruptedNotes, filepath.Base(file))
-			if err2 := h.store.MoveNoteToCorrupted(strings.TrimSuffix(filepath.Base(file), ".json")); err2 != nil {
-				fmt.Printf("[ERROR] moving note to corrupted: %v\n", err2)
-			}
-			fmt.Printf("[ERROR] moving note to corrupted: %v\n", err)
-			continue
-		}
-		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, oldKey)
-		if err != nil {
-			corruptedNotes = append(corruptedNotes, encryptedNote.ID)
-			if err2 := h.store.MoveNoteToCorrupted(encryptedNote.ID); err2 != nil {
-				fmt.Printf("[ERROR] moving note to corrupted: %v\n", err2)
-			}
-			fmt.Printf("[ERROR] moving note to corrupted: %v\n", err)
-			continue
-		}
-		note := &models.Note{
-			ID:        encryptedNote.ID,
-			Content:   decryptedContent, // <-- use plaintext here
-			CreatedAt: encryptedNote.CreatedAt,
-			UpdatedAt: encryptedNote.UpdatedAt,
-		}
-		if err := h.store.SaveNoteDirect(note, newKey); err != nil {
-			http.Error(w, "Failed to save note: "+note.ID, http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Store new password hash
-	if err := h.authManager.StorePasswordHash(req.NewPassword); err != nil {
-		http.Error(w, "Failed to update password hash", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if len(corruptedNotes) > 0 {
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"success":         true,
-			"message":         fmt.Sprintf("Password changed and notes re-encrypted successfully. %d corrupted note(s) were moved to the 'corrupted' folder.", len(corruptedNotes)),
-			"corrupted_notes": corruptedNotes,
-		}); err != nil {
-			fmt.Printf("[ERROR] encoding password change response: %v\n", err)
-		}
-	} else {
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": true,
-			"message": "Password changed and notes re-encrypted successfully.",
-		}); err != nil {
-			fmt.Printf("[ERROR] encoding password change response: %v\n", err)
-		}
-	}
+	// Password change functionality disabled in simplified mode
+	// To change password, user should backup notes, delete all data, and set up again
+	http.Error(w, "Password change not supported. To change password, backup your notes, delete all data, and set up again with a new password.", http.StatusNotImplemented)
 }
 
 // BackupHandler triggers a manual backup of notes
