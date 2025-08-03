@@ -1,4 +1,4 @@
-# Gote - Wails Notes App
+# gote - Wails Notes App
 
 This Wails application has been transformed from a basic template into a full-featured note-taking application by integrating the functionality from the `noteapp` directory.
 
