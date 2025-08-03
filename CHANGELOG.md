@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/yggdrion/gote/compare/v1.0.1...v1.0.2) (2025-08-03)
+
+### Bug Fixes
+
+* windows release ([c95e93f](https://github.com/yggdrion/gote/commit/c95e93fb6a0309492fdf6e5eb4f44bfa3e3d05c0))
+
 ## [1.0.1](https://github.com/yggdrion/gote/compare/v1.0.0...v1.0.1) (2025-08-03)
 
 ### Bug Fixes
