@@ -1,9 +1,12 @@
+version: "2"
+
 run:
+  # Skip directories during analysis
   skip-dirs:
     - frontend/dist
 
 issues:
   exclude-rules:
-    - path: frontend/dist/
+    - path: frontend/dist/.*
       linters:
-        - ".*"
+        - "*"
