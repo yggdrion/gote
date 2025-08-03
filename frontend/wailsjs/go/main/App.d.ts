@@ -5,6 +5,8 @@ import {models} from '../models';
 
 export function ChangePassword(arg1:string,arg2:string):Promise<void>;
 
+export function CleanupOrphanedImages():Promise<number>;
+
 export function CompleteInitialSetup(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function CreateBackup():Promise<string>;
@@ -20,6 +22,8 @@ export function GetAllNotes():Promise<Array<main.WailsNote>>;
 export function GetImage(arg1:string):Promise<Record<string, any>>;
 
 export function GetImageAsDataURL(arg1:string):Promise<string>;
+
+export function GetImageStats():Promise<Record<string, any>>;
 
 export function GetNote(arg1:string):Promise<main.WailsNote>;
 

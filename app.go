@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"gote/pkg/auth"
@@ -376,10 +377,47 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 }
 
 func (a *App) DeleteNote(id string) error {
+	// First, get the note content to extract image IDs before deletion
+	var noteContent string
 	if a.noteService != nil {
-		return a.noteService.DeleteNote(id)
+		if note, err := a.noteService.GetNote(id); err == nil && note != nil {
+			noteContent = note.Content
+		}
+	} else {
+		if note, err := a.store.GetNote(id); err == nil && note != nil {
+			noteContent = note.Content
+		}
 	}
-	return a.store.DeleteNote(id)
+
+	// Extract image IDs from the note content
+	imageIDs := a.extractImageIDsFromContent(noteContent)
+
+	// Delete the note
+	var err error
+	if a.noteService != nil {
+		err = a.noteService.DeleteNote(id)
+	} else {
+		err = a.store.DeleteNote(id)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Clean up orphaned images
+	for _, imageID := range imageIDs {
+		if !a.isImageReferencedByOtherNotes(imageID, id) {
+			// Image is not referenced by any other note, safe to delete
+			if deleteErr := a.imageStore.DeleteImage(imageID); deleteErr != nil {
+				log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, deleteErr)
+				// Don't fail the note deletion if image cleanup fails
+			} else {
+				log.Printf("Cleaned up orphaned image: %s", imageID)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (a *App) SearchNotes(query string) []WailsNote {
@@ -672,4 +710,143 @@ func (a *App) GetImageAsDataURL(imageID string) (string, error) {
 
 	base64Data := base64.StdEncoding.EncodeToString(imageData)
 	return fmt.Sprintf("data:%s;base64,%s", image.ContentType, base64Data), nil
+}
+
+// extractImageIDsFromContent extracts image IDs from note content
+func (a *App) extractImageIDsFromContent(content string) []string {
+	var imageIDs []string
+
+	// Regular expression to match ![alt](image:imageId) pattern
+	re := regexp.MustCompile(`!\[[^\]]*\]\(image:([^)]+)\)`)
+	matches := re.FindAllStringSubmatch(content, -1)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			imageIDs = append(imageIDs, match[1])
+		}
+	}
+
+	return imageIDs
+}
+
+// isImageReferencedByOtherNotes checks if an image is referenced by notes other than the excluded note
+func (a *App) isImageReferencedByOtherNotes(imageID, excludeNoteID string) bool {
+	var allNotes []*models.Note
+
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	for _, note := range allNotes {
+		if note.ID == excludeNoteID {
+			continue // Skip the note being deleted
+		}
+
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		for _, id := range imageIDs {
+			if id == imageID {
+				return true // Image is referenced by another note
+			}
+		}
+	}
+
+	return false
+}
+
+// CleanupOrphanedImages removes images that are not referenced by any notes
+func (a *App) CleanupOrphanedImages() (int, error) {
+	if a.currentKey == nil {
+		return 0, fmt.Errorf("not authenticated")
+	}
+
+	// Get all stored images
+	allImages, err := a.imageStore.ListImages()
+	if err != nil {
+		return 0, fmt.Errorf("failed to list images: %v", err)
+	}
+
+	// Get all notes
+	var allNotes []*models.Note
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	// Create a set of all referenced image IDs
+	referencedImages := make(map[string]bool)
+	for _, note := range allNotes {
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		for _, imageID := range imageIDs {
+			referencedImages[imageID] = true
+		}
+	}
+
+	// Delete orphaned images
+	cleanedUp := 0
+	for _, image := range allImages {
+		if !referencedImages[image.ID] {
+			if err := a.imageStore.DeleteImage(image.ID); err != nil {
+				log.Printf("Warning: Failed to delete orphaned image %s: %v", image.ID, err)
+			} else {
+				log.Printf("Cleaned up orphaned image: %s (%s)", image.ID, image.Filename)
+				cleanedUp++
+			}
+		}
+	}
+
+	return cleanedUp, nil
+}
+
+// GetImageStats returns statistics about image usage
+func (a *App) GetImageStats() (map[string]interface{}, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	// Get all stored images
+	allImages, err := a.imageStore.ListImages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list images: %v", err)
+	}
+
+	// Get all notes
+	var allNotes []*models.Note
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	// Create a set of all referenced image IDs
+	referencedImages := make(map[string]bool)
+	totalReferences := 0
+	for _, note := range allNotes {
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		totalReferences += len(imageIDs)
+		for _, imageID := range imageIDs {
+			referencedImages[imageID] = true
+		}
+	}
+
+	// Calculate total size
+	var totalSize int64
+	orphanedCount := 0
+	for _, image := range allImages {
+		totalSize += image.Size
+		if !referencedImages[image.ID] {
+			orphanedCount++
+		}
+	}
+
+	return map[string]interface{}{
+		"total_images":      len(allImages),
+		"referenced_images": len(referencedImages),
+		"orphaned_images":   orphanedCount,
+		"total_references":  totalReferences,
+		"total_size_bytes":  totalSize,
+		"total_size_mb":     float64(totalSize) / (1024 * 1024),
+	}, nil
 }

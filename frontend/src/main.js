@@ -39,6 +39,8 @@ import {
   DeleteImage,
   ListImages,
   GetImageAsDataURL,
+  CleanupOrphanedImages,
+  GetImageStats,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -1158,3 +1160,36 @@ async function saveAndCloseNote() {
     alert("Failed to save note");
   }
 }
+
+// Image management functions for debugging/testing
+window.imageDebug = {
+  async getStats() {
+    try {
+      const stats = await GetImageStats();
+      console.log("Image Statistics:", stats);
+      return stats;
+    } catch (error) {
+      console.error("Failed to get image stats:", error);
+    }
+  },
+
+  async cleanup() {
+    try {
+      const cleaned = await CleanupOrphanedImages();
+      console.log(`Cleaned up ${cleaned} orphaned images`);
+      return cleaned;
+    } catch (error) {
+      console.error("Failed to cleanup images:", error);
+    }
+  },
+
+  async listAll() {
+    try {
+      const images = await ListImages();
+      console.log("All Images:", images);
+      return images;
+    } catch (error) {
+      console.error("Failed to list images:", error);
+    }
+  },
+};
