@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/yggdrion/gote/compare/v1.1.0...v1.1.1) (2025-08-03)
+
+### Bug Fixes
+
+* emojis ([682c7e1](https://github.com/yggdrion/gote/commit/682c7e1a899cf132c3689526ec87c6ee660bed79))
+
 ## [1.1.0](https://github.com/yggdrion/gote/compare/v1.0.5...v1.1.0) (2025-08-03)
 
 ### Features
