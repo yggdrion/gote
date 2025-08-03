@@ -1,6 +1,5 @@
 version: "2"
 
-linters:
-  exclusions:
-    paths:
-      - "frontend/dist/.*"
+issues:
+  exclude-dirs:
+    - frontend/dist
