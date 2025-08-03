@@ -1,5 +1,10 @@
 import "./style.css";
-import { UI_CONSTANTS, CSS_CLASSES, ELEMENT_IDS, MESSAGES } from "./constants.js";
+import {
+  UI_CONSTANTS,
+  CSS_CLASSES,
+  ELEMENT_IDS,
+  MESSAGES,
+} from "./constants.js";
 
 // Import Wails runtime
 import {
