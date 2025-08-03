@@ -16,6 +16,8 @@ export function GetAllNotes():Promise<Array<main.WailsNote>>;
 
 export function GetNote(arg1:string):Promise<main.WailsNote>;
 
+export function GetPerformanceStats():Promise<Record<string, any>>;
+
 export function GetSecurityInfo():Promise<Record<string, any>>;
 
 export function GetSettings():Promise<Record<string, any>>;

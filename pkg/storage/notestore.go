@@ -60,6 +60,11 @@ func NewNoteStore(dataDir string) *NoteStore {
 	return store
 }
 
+// GetDataDir returns the data directory path
+func (s *NoteStore) GetDataDir() string {
+	return s.dataDir
+}
+
 // LoadNotes loads notes from disk with the provided encryption key
 func (s *NoteStore) LoadNotes(key []byte) error {
 	s.mutex.Lock()

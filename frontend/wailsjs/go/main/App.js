@@ -30,6 +30,10 @@ export function GetNote(arg1) {
   return window['go']['main']['App']['GetNote'](arg1);
 }
 
+export function GetPerformanceStats() {
+  return window['go']['main']['App']['GetPerformanceStats']();
+}
+
 export function GetSecurityInfo() {
   return window['go']['main']['App']['GetSecurityInfo']();
 }

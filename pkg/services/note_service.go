@@ -180,8 +180,17 @@ func (s *NoteService) SyncFromDisk() error {
 
 // ReencryptAllNotes re-encrypts all notes with a new password
 func (s *NoteService) ReencryptAllNotes(oldPassword, newPassword, notesPath string, authManager *auth.Manager) error {
-	oldKey := crypto.DeriveKey(oldPassword)
-	newKey := crypto.DeriveKey(newPassword)
+	configPath := filepath.Join(s.store.GetDataDir(), ".keyconfig.json")
+
+	oldKey, err := crypto.DeriveKeyEnhanced(oldPassword, configPath)
+	if err != nil {
+		return fmt.Errorf("failed to derive old key: %v", err)
+	}
+
+	newKey, err := crypto.DeriveKeyEnhanced(newPassword, configPath)
+	if err != nil {
+		return fmt.Errorf("failed to derive new key: %v", err)
+	}
 
 	noteFiles, err := filepath.Glob(filepath.Join(notesPath, "*.json"))
 	if err != nil {

@@ -283,9 +283,19 @@ func (h *APIHandlers) ChangePasswordHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Derive old and new keys
-	oldKey := crypto.DeriveKey(req.OldPassword)
-	newKey := crypto.DeriveKey(req.NewPassword)
+	// Derive old and new keys using enhanced method
+	configPath := filepath.Join(h.store.GetDataDir(), ".keyconfig.json")
+	oldKey, err := crypto.DeriveKeyEnhanced(req.OldPassword, configPath)
+	if err != nil {
+		http.Error(w, "Failed to derive old key: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	newKey, err := crypto.DeriveKeyEnhanced(req.NewPassword, configPath)
+	if err != nil {
+		http.Error(w, "Failed to derive new key: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Backup notes before changing password
 	// backupPath, err := storage.BackupNotes(h.config.NotesPath, "")

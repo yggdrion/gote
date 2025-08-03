@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"gote/pkg/crypto"
 )
@@ -27,6 +28,7 @@ type AuthManagerFull interface {
 // NoteStore interface for note operations
 type NoteStore interface {
 	LoadNotes(key []byte) error
+	GetDataDir() string
 }
 
 // NewAuthHandlers creates new auth handlers
@@ -101,7 +103,14 @@ func (h *AuthHandlers) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	key := crypto.DeriveKey(password)
+	// Use enhanced key derivation that supports both legacy and PBKDF2 methods
+	configPath := filepath.Join(h.store.GetDataDir(), ".keyconfig.json")
+	key, err := crypto.DeriveKeyEnhanced(password, configPath)
+	if err != nil {
+		log.Printf("Error deriving key: %v", err)
+		http.Redirect(w, r, "/login?error=Authentication failed", http.StatusSeeOther)
+		return
+	}
 
 	// Try to load notes with this password
 	if err := h.store.LoadNotes(key); err != nil {
