@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/yggdrion/gote/compare/v1.0.5...v1.1.0) (2025-08-03)
+
+### Features
+
+* complete refactor ([#17](https://github.com/yggdrion/gote/issues/17)) ([dc4aff4](https://github.com/yggdrion/gote/commit/dc4aff4d03fb4ffdcf754f129b9717b87d80a864))
+
 ## [1.0.5](https://github.com/yggdrion/gote/compare/v1.0.4...v1.0.5) (2025-08-03)
 
 ## [1.0.4](https://github.com/yggdrion/gote/compare/v1.0.3...v1.0.4) (2025-08-03)
