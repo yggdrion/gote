@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/yggdrion/gote/compare/v1.2.0...v1.2.1) (2025-08-03)
+
+### Bug Fixes
+
+* open links in browser ([0a9144d](https://github.com/yggdrion/gote/commit/0a9144d36378e8102a1057523f1c0c3367a973ac))
+
 ## [1.2.0](https://github.com/yggdrion/gote/compare/v1.1.1...v1.2.0) (2025-08-03)
 
 ### Features
