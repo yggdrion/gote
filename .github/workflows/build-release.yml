@@ -72,10 +72,6 @@ jobs:
             platform: windows/amd64
             binary_name: gote.exe
             artifact_name: gote-windows-amd64.exe
-          - os: windows-latest
-            platform: windows/arm64
-            binary_name: gote.exe
-            artifact_name: gote-windows-arm64.exe
           # macOS builds
           - os: macos-latest
             platform: darwin/amd64
