@@ -18,12 +18,24 @@ export function CreateNote(arg1) {
   return window['go']['main']['App']['CreateNote'](arg1);
 }
 
+export function DeleteImage(arg1) {
+  return window['go']['main']['App']['DeleteImage'](arg1);
+}
+
 export function DeleteNote(arg1) {
   return window['go']['main']['App']['DeleteNote'](arg1);
 }
 
 export function GetAllNotes() {
   return window['go']['main']['App']['GetAllNotes']();
+}
+
+export function GetImage(arg1) {
+  return window['go']['main']['App']['GetImage'](arg1);
+}
+
+export function GetImageAsDataURL(arg1) {
+  return window['go']['main']['App']['GetImageAsDataURL'](arg1);
 }
 
 export function GetNote(arg1) {
@@ -62,12 +74,20 @@ export function IsUsingSecureMethod() {
   return window['go']['main']['App']['IsUsingSecureMethod']();
 }
 
+export function ListImages() {
+  return window['go']['main']['App']['ListImages']();
+}
+
 export function Logout() {
   return window['go']['main']['App']['Logout']();
 }
 
 export function ResetApplication() {
   return window['go']['main']['App']['ResetApplication']();
+}
+
+export function SaveImageFromClipboard(arg1, arg2) {
+  return window['go']['main']['App']['SaveImageFromClipboard'](arg1, arg2);
 }
 
 export function SearchNotes(arg1) {

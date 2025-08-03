@@ -34,6 +34,11 @@ import {
   CreateBackup,
   IsConfigured,
   CompleteInitialSetup,
+  SaveImageFromClipboard,
+  GetImage,
+  DeleteImage,
+  ListImages,
+  GetImageAsDataURL,
 } from "../wailsjs/go/main/App.js";
 
 // State management
@@ -258,6 +263,9 @@ function setupEventListeners() {
 
   // Global keyboard shortcuts
   document.addEventListener("keydown", handleGlobalKeyboard);
+
+  // Clipboard handling for images
+  document.addEventListener("paste", handleClipboardPaste);
 }
 
 async function checkAuthState() {
@@ -501,6 +509,9 @@ function renderNotesList() {
       noteCard.appendChild(noteActions);
       noteCard.appendChild(noteContentDiv);
 
+      // Load images after HTML is inserted into DOM
+      loadImagesInDOM(noteContentDiv);
+
       // Add event listeners
       noteCard.querySelector(".edit-btn").addEventListener("click", (e) => {
         e.stopPropagation();
@@ -528,17 +539,25 @@ function renderMarkdown(content) {
   }
 
   try {
+    let html;
     if (markedInstance && typeof markedInstance === "function") {
-      return markedInstance(content);
+      html = markedInstance(content);
     } else if (markedInstance && typeof markedInstance.parse === "function") {
-      return markedInstance.parse(content);
+      html = markedInstance.parse(content);
+    } else {
+      // Simple fallback - just escape HTML and preserve line breaks
+      html = escapeHtml(content).replace(/\n/g, "<br>");
     }
+
+    // Post-process to handle custom image syntax
+    html = processCustomImages(html);
+
+    return html;
   } catch (error) {
     console.error("Error rendering markdown:", error);
+    // Simple fallback - just escape HTML and preserve line breaks
+    return escapeHtml(content).replace(/\n/g, "<br>");
   }
-
-  // Simple fallback - just escape HTML and preserve line breaks
-  return escapeHtml(content).replace(/\n/g, "<br>");
 }
 
 function escapeHtml(text) {
@@ -928,6 +947,163 @@ function stopActivityTracking() {
 // Make some functions globally available for inline event handlers
 window.clearSearch = clearSearch;
 window.createNewNote = createNewNote;
+
+// Image handling functions
+
+// Handle clipboard paste events for images
+async function handleClipboardPaste(event) {
+  // Only handle paste when editing a note
+  if (!currentNote || !noteContent) {
+    return;
+  }
+
+  const items = event.clipboardData?.items;
+  if (!items) return;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    // Check if the item is an image
+    if (item.type.startsWith("image/")) {
+      event.preventDefault(); // Prevent default paste behavior
+
+      try {
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        // Show loading indicator
+        showImageUploadProgress("Uploading image...");
+
+        // Convert file to base64
+        const base64Data = await fileToBase64(file);
+
+        // Save image via backend
+        const image = await SaveImageFromClipboard(base64Data, item.type);
+
+        // Insert image reference into the note content
+        insertImageIntoNote(image.id, image.filename);
+
+        showImageUploadProgress("Image uploaded successfully!", "success");
+        setTimeout(() => hideImageUploadProgress(), 2000);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        showImageUploadProgress("Failed to upload image", "error");
+        setTimeout(() => hideImageUploadProgress(), 3000);
+      }
+      break; // Only handle the first image
+    }
+  }
+}
+
+// Convert file to base64 string
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Remove the data:... prefix to get just the base64 data
+      const base64 = reader.result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Insert image reference into note content at cursor position
+function insertImageIntoNote(imageId, filename) {
+  const imageMarkdown = `![${filename}](image:${imageId})`;
+
+  // Get current cursor position
+  const cursorPos = noteContent.selectionStart;
+  const textBefore = noteContent.value.substring(0, cursorPos);
+  const textAfter = noteContent.value.substring(noteContent.selectionEnd);
+
+  // Insert image markdown at cursor position
+  noteContent.value = textBefore + imageMarkdown + textAfter;
+
+  // Update cursor position
+  const newCursorPos = cursorPos + imageMarkdown.length;
+  noteContent.setSelectionRange(newCursorPos, newCursorPos);
+
+  // Trigger input event to update preview
+  noteContent.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+// Show image upload progress
+function showImageUploadProgress(message, type = "info") {
+  let progressDiv = document.getElementById("image-upload-progress");
+
+  if (!progressDiv) {
+    progressDiv = document.createElement("div");
+    progressDiv.id = "image-upload-progress";
+    progressDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 4px;
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    `;
+    document.body.appendChild(progressDiv);
+  }
+
+  // Set background color based on type
+  const colors = {
+    info: "#2196F3",
+    success: "#4CAF50",
+    error: "#f44336",
+  };
+
+  progressDiv.style.backgroundColor = colors[type] || colors.info;
+  progressDiv.textContent = message;
+  progressDiv.style.display = "block";
+}
+
+// Hide image upload progress
+function hideImageUploadProgress() {
+  const progressDiv = document.getElementById("image-upload-progress");
+  if (progressDiv) {
+    progressDiv.style.display = "none";
+  }
+}
+
+// Load images in DOM element
+async function loadImagesInDOM(element) {
+  // Find all images with data-image-id attribute within the element
+  const images = element.querySelectorAll("img[data-image-id]");
+
+  for (const img of images) {
+    const imageId = img.getAttribute("data-image-id");
+    try {
+      console.log(`Loading image ${imageId}...`);
+      const dataUrl = await GetImageAsDataURL(imageId);
+      img.src = dataUrl;
+      img.removeAttribute("data-image-id"); // Remove the temporary attribute
+      console.log(`Image ${imageId} loaded successfully`);
+    } catch (error) {
+      console.error(`Failed to load image ${imageId}:`, error);
+      img.src =
+        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDlWN0MxOSA1IDIwIDMgMTggM0g2QzQgMyAzIDUgMyA3VjE3QzMgMTkgNCAyMSA2IDIxSDE4QzIwIDIxIDIxIDE5IDIxIDE3VjE1IiBzdHJva2U9IiNmZjAwMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik0xIDFMMjMgMjMiIHN0cm9rZT0iI2ZmMDAwMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+"; // Error icon
+      img.alt = `Failed to load image: ${img.alt}`;
+      img.title = `Image not found: ${imageId}`;
+    }
+  }
+}
+
+// Process custom image syntax in rendered HTML
+function processCustomImages(html) {
+  // Replace our custom image syntax with proper img tags
+  // Look for <img src="image:imageId" ...> patterns that marked.js created
+  const imageRegex = /<img([^>]*?)src="image:([^"]+)"([^>]*?)>/g;
+
+  return html.replace(imageRegex, (match, beforeSrc, imageId, afterSrc) => {
+    console.log(`Processing custom image: ${imageId}`);
+    return `<img${beforeSrc}src="data:image/png;base64,loading..." data-image-id="${imageId}" class="note-image"${afterSrc} style="max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0;">`;
+  });
+}
 
 function handleGlobalKeyboard(e) {
   // Check for Ctrl/Cmd key combinations

@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gote/pkg/auth"
 	"gote/pkg/config"
@@ -20,6 +22,7 @@ type App struct {
 	ctx         context.Context
 	authManager *auth.Manager
 	store       *storage.NoteStore
+	imageStore  *storage.ImageStore
 	config      *config.Config
 	currentKey  []byte
 
@@ -54,6 +57,7 @@ func (a *App) startup(ctx context.Context) {
 		// Initialize components
 		a.authManager = auth.NewManager(cfg.PasswordHashPath)
 		a.store = storage.NewNoteStore(cfg.NotesPath)
+		a.imageStore = storage.NewImageStore(cfg.NotesPath)
 		a.config = cfg
 
 		// Initialize services - simplified
@@ -171,6 +175,7 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	// Initialize components with new configuration
 	a.authManager = auth.NewManager(a.config.PasswordHashPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
+	a.imageStore = storage.NewImageStore(a.config.NotesPath)
 
 	// Set the initial password with retry logic
 	err = retryHandler.Execute(func() error {
@@ -198,6 +203,7 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	}
 	a.currentKey = key
 	a.store.LoadNotes(a.currentKey)
+	a.imageStore.SetKey(a.currentKey)
 
 	log.Printf("Initial setup completed:")
 	log.Printf("  Configuration file: %s", config.GetConfigFilePath())
@@ -227,6 +233,7 @@ func (a *App) SetPassword(password string) error {
 	} else {
 		a.store.LoadNotes(a.currentKey)
 	}
+	a.imageStore.SetKey(a.currentKey)
 	return nil
 }
 
@@ -250,6 +257,7 @@ func (a *App) VerifyPassword(password string) bool {
 	} else {
 		a.store.LoadNotes(a.currentKey)
 	}
+	a.imageStore.SetKey(a.currentKey)
 	return true
 }
 
@@ -438,6 +446,7 @@ func (a *App) UpdateSettings(notesPath, passwordHashPath string) error {
 	// Update components with new paths
 	a.authManager = auth.NewManager(a.config.PasswordHashPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
+	a.imageStore = storage.NewImageStore(a.config.NotesPath)
 
 	log.Printf("Settings updated:")
 	log.Printf("  Notes directory: %s", a.config.NotesPath)
@@ -582,4 +591,85 @@ func (a *App) GetPerformanceStats() map[string]interface{} {
 	}
 
 	return stats
+}
+
+// Image-related methods
+
+// SaveImageFromClipboard saves an image from clipboard data
+func (a *App) SaveImageFromClipboard(imageData string, contentType string) (*models.Image, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	// Decode base64 image data
+	data, err := base64.StdEncoding.DecodeString(imageData)
+	if err != nil {
+		return nil, fmt.Errorf("invalid image data: %v", err)
+	}
+
+	// Generate filename based on timestamp
+	filename := fmt.Sprintf("clipboard_%d", time.Now().Unix())
+	if contentType == "image/png" {
+		filename += ".png"
+	} else if contentType == "image/jpeg" {
+		filename += ".jpg"
+	} else {
+		filename += ".img"
+	}
+
+	return a.imageStore.StoreImage(data, contentType, filename)
+}
+
+// GetImage retrieves an image by ID and returns base64 encoded data
+func (a *App) GetImage(imageID string) (map[string]interface{}, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	imageData, image, err := a.imageStore.GetImage(imageID)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"id":           image.ID,
+		"filename":     image.Filename,
+		"content_type": image.ContentType,
+		"size":         image.Size,
+		"created_at":   image.CreatedAt,
+		"data":         base64.StdEncoding.EncodeToString(imageData),
+	}, nil
+}
+
+// DeleteImage removes an image from storage
+func (a *App) DeleteImage(imageID string) error {
+	if a.currentKey == nil {
+		return fmt.Errorf("not authenticated")
+	}
+
+	return a.imageStore.DeleteImage(imageID)
+}
+
+// ListImages returns a list of all stored images
+func (a *App) ListImages() ([]*models.Image, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("not authenticated")
+	}
+
+	return a.imageStore.ListImages()
+}
+
+// GetImageAsDataURL returns an image as a data URL for embedding in HTML
+func (a *App) GetImageAsDataURL(imageID string) (string, error) {
+	if a.currentKey == nil {
+		return "", fmt.Errorf("not authenticated")
+	}
+
+	imageData, image, err := a.imageStore.GetImage(imageID)
+	if err != nil {
+		return "", err
+	}
+
+	base64Data := base64.StdEncoding.EncodeToString(imageData)
+	return fmt.Sprintf("data:%s;base64,%s", image.ContentType, base64Data), nil
 }
