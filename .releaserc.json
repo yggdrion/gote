@@ -53,6 +53,8 @@
         [
             "@semantic-release/github",
             {
+                "addReleases": "bottom",
+                "releasedLabels": false,
                 "assets": [
                     {
                         "path": "release-assets/gote-linux-amd64",
