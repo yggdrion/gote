@@ -1,0 +1,9 @@
+run:
+  skip-dirs:
+    - frontend/dist
+
+issues:
+  exclude-rules:
+    - path: frontend/dist/
+      linters:
+        - ".*"
