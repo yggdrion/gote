@@ -16,6 +16,7 @@ import (
 	"gote/pkg/models"
 	"gote/pkg/services"
 	"gote/pkg/storage"
+	"gote/pkg/types"
 )
 
 // App struct
@@ -277,17 +278,17 @@ func (a *App) VerifyPassword(password string) bool {
 }
 
 // Note management methods
-func (a *App) GetAllNotes() []WailsNote {
+func (a *App) GetAllNotes() []types.WailsNote {
 	var notes []*models.Note
 	if a.noteService != nil {
 		notes = a.noteService.GetAllNotes()
 	} else {
 		notes = a.store.GetAllNotes()
 	}
-	return ConvertToWailsNotes(notes)
+	return types.ConvertToWailsNotes(notes)
 }
 
-func (a *App) GetNote(id string) (WailsNote, error) {
+func (a *App) GetNote(id string) (types.WailsNote, error) {
 	var note *models.Note
 	var err error
 
@@ -298,16 +299,16 @@ func (a *App) GetNote(id string) (WailsNote, error) {
 	}
 
 	if err != nil {
-		return WailsNote{}, err
+		return types.WailsNote{}, err
 	}
-	return ConvertToWailsNote(note), nil
+	return types.ConvertToWailsNote(note), nil
 }
 
-func (a *App) CreateNote(content string) (WailsNote, error) {
+func (a *App) CreateNote(content string) (types.WailsNote, error) {
 	if a.currentKey == nil {
 		err := errors.ErrNotAuthenticated
 		err.Log()
-		return WailsNote{}, err
+		return types.WailsNote{}, err
 	}
 
 	var note *models.Note
@@ -321,7 +322,7 @@ func (a *App) CreateNote(content string) (WailsNote, error) {
 		if result := validator.ValidateNoteContent(content); !result.IsValid {
 			appErr := result.GetFirstError()
 			appErr.Log()
-			return WailsNote{}, appErr
+			return types.WailsNote{}, appErr
 		}
 
 		note, err = a.store.CreateNote(content, a.currentKey)
@@ -330,21 +331,21 @@ func (a *App) CreateNote(content string) (WailsNote, error) {
 				"failed to create note").
 				WithUserMessage("Unable to save the note. Please try again")
 			appErr.Log()
-			return WailsNote{}, appErr
+			return types.WailsNote{}, appErr
 		}
 	}
 
 	if err != nil {
-		return WailsNote{}, err
+		return types.WailsNote{}, err
 	}
-	return ConvertToWailsNote(note), nil
+	return types.ConvertToWailsNote(note), nil
 }
 
-func (a *App) UpdateNote(id, content string) (WailsNote, error) {
+func (a *App) UpdateNote(id, content string) (types.WailsNote, error) {
 	if a.currentKey == nil {
 		err := errors.ErrNotAuthenticated
 		err.Log()
-		return WailsNote{}, err
+		return types.WailsNote{}, err
 	}
 
 	var note *models.Note
@@ -358,13 +359,13 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 		if result := validator.ValidateNoteID(id); !result.IsValid {
 			appErr := result.GetFirstError()
 			appErr.Log()
-			return WailsNote{}, appErr
+			return types.WailsNote{}, appErr
 		}
 
 		if result := validator.ValidateNoteContent(content); !result.IsValid {
 			appErr := result.GetFirstError()
 			appErr.Log()
-			return WailsNote{}, appErr
+			return types.WailsNote{}, appErr
 		}
 
 		note, err = a.store.UpdateNote(id, content, a.currentKey)
@@ -372,7 +373,7 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 			if err.Error() == "note not found" {
 				appErr := errors.ErrNoteNotFound.WithContext("noteId", id)
 				appErr.Log()
-				return WailsNote{}, appErr
+				return types.WailsNote{}, appErr
 			}
 
 			appErr := errors.Wrap(err, errors.ErrTypeFileSystem, "NOTE_UPDATE_FAILED",
@@ -380,14 +381,14 @@ func (a *App) UpdateNote(id, content string) (WailsNote, error) {
 				WithUserMessage("Unable to save changes. Please try again").
 				WithContext("noteId", id)
 			appErr.Log()
-			return WailsNote{}, appErr
+			return types.WailsNote{}, appErr
 		}
 	}
 
 	if err != nil {
-		return WailsNote{}, err
+		return types.WailsNote{}, err
 	}
-	return ConvertToWailsNote(note), nil
+	return types.ConvertToWailsNote(note), nil
 }
 
 func (a *App) DeleteNote(id string) error {
@@ -434,14 +435,14 @@ func (a *App) DeleteNote(id string) error {
 	return nil
 }
 
-func (a *App) SearchNotes(query string) []WailsNote {
+func (a *App) SearchNotes(query string) []types.WailsNote {
 	var notes []*models.Note
 	if a.noteService != nil {
 		notes = a.noteService.SearchNotes(query)
 	} else {
 		notes = a.store.SearchNotes(query)
 	}
-	return ConvertToWailsNotes(notes)
+	return types.ConvertToWailsNotes(notes)
 }
 
 func (a *App) SyncFromDisk() error {
