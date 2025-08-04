@@ -1,3 +1,9 @@
+## [1.2.9](https://github.com/yggdrion/gote/compare/v1.2.8...v1.2.9) (2025-08-04)
+
+### Bug Fixes
+
+* escape hotkey editor dialog ([57398f1](https://github.com/yggdrion/gote/commit/57398f14a8f472840f5821d100f241e76133545a))
+
 ## [1.2.8](https://github.com/yggdrion/gote/compare/v1.2.7...v1.2.8) (2025-08-04)
 
 ### Bug Fixes
