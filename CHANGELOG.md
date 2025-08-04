@@ -1,3 +1,9 @@
+## [1.2.3](https://github.com/yggdrion/gote/compare/v1.2.2...v1.2.3) (2025-08-04)
+
+### Bug Fixes
+
+* salt ([6d4993c](https://github.com/yggdrion/gote/commit/6d4993cef656cc401dda19613f3782a077f88688))
+
 ## [1.2.2](https://github.com/yggdrion/gote/compare/v1.2.1...v1.2.2) (2025-08-03)
 
 ### Bug Fixes
