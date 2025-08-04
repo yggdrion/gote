@@ -1,3 +1,9 @@
+## [1.2.4](https://github.com/yggdrion/gote/compare/v1.2.3...v1.2.4) (2025-08-04)
+
+### Bug Fixes
+
+* cross platform ([#19](https://github.com/yggdrion/gote/issues/19)) ([b68d2d3](https://github.com/yggdrion/gote/commit/b68d2d38f6eedb3b415f463445a9897958555fd9))
+
 ## [1.2.3](https://github.com/yggdrion/gote/compare/v1.2.2...v1.2.3) (2025-08-04)
 
 ### Bug Fixes
