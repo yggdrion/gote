@@ -23,12 +23,20 @@ type PasswordData struct {
 	Salt string `json:"salt"`
 }
 
+// CrossPlatformConfig stores the salt in the synced notes directory for cross-platform compatibility
+type CrossPlatformConfig struct {
+	Salt      string `json:"salt"`
+	CreatedAt string `json:"createdAt"`
+	Version   string `json:"version"`
+}
+
 // Manager handles authentication and session management
 type Manager struct {
 	sessions         map[string]*models.Session
 	sessionsMutex    sync.RWMutex
 	passwordHashPath string
 	currentSalt      []byte // Store the current salt for key derivation
+	notesDir         string // Store notes directory for cross-platform config
 }
 
 // NewManager creates a new authentication manager
@@ -36,6 +44,15 @@ func NewManager(passwordHashPath string) *Manager {
 	return &Manager{
 		sessions:         make(map[string]*models.Session),
 		passwordHashPath: passwordHashPath,
+	}
+}
+
+// NewManagerWithNotesDir creates a new authentication manager with notes directory for cross-platform support
+func NewManagerWithNotesDir(passwordHashPath, notesDir string) *Manager {
+	return &Manager{
+		sessions:         make(map[string]*models.Session),
+		passwordHashPath: passwordHashPath,
+		notesDir:         notesDir,
 	}
 }
 
@@ -75,7 +92,20 @@ func (m *Manager) StorePasswordHash(password string) error {
 		return fmt.Errorf("failed to marshal password data: %v", err)
 	}
 
-	return os.WriteFile(m.passwordHashPath, data, 0600)
+	// Save local password hash
+	if err := os.WriteFile(m.passwordHashPath, data, 0600); err != nil {
+		return err
+	}
+
+	// Save cross-platform config if notes directory is set
+	if m.notesDir != "" {
+		if err := m.saveCrossPlatformSalt(salt); err != nil {
+			// Log warning but don't fail - local storage still works
+			fmt.Printf("Warning: Could not save cross-platform config: %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 // VerifyPassword verifies the provided password against the stored hash
@@ -177,7 +207,17 @@ func (m *Manager) RemovePasswordHash() error {
 // DeriveEncryptionKey derives the encryption key from password using the stored salt
 func (m *Manager) DeriveEncryptionKey(password string) ([]byte, error) {
 	if m.currentSalt == nil {
-		// Load salt from password file if not in memory
+		// Try loading salt from cross-platform config first (for multi-device support)
+		if m.notesDir != "" {
+			salt, err := m.loadCrossPlatformSalt()
+			if err == nil {
+				m.currentSalt = salt
+				return crypto.DeriveKey(password, m.currentSalt), nil
+			}
+			// If cross-platform config fails, fall back to local config
+		}
+
+		// Load salt from local password file
 		if m.IsFirstTimeSetup() {
 			return nil, fmt.Errorf("no password set up")
 		}
@@ -198,7 +238,63 @@ func (m *Manager) DeriveEncryptionKey(password string) ([]byte, error) {
 		}
 
 		m.currentSalt = salt
+
+		// Create cross-platform config if it doesn't exist and notes directory is set
+		if m.notesDir != "" {
+			configPath := filepath.Join(m.notesDir, ".gote_config.json")
+			if _, err := os.Stat(configPath); os.IsNotExist(err) {
+				if err := m.saveCrossPlatformSalt(salt); err != nil {
+					fmt.Printf("Warning: Could not create cross-platform config: %v\n", err)
+				}
+			}
+		}
 	}
 
 	return crypto.DeriveKey(password, m.currentSalt), nil
+}
+
+// loadCrossPlatformSalt loads salt from the notes directory for cross-platform compatibility
+func (m *Manager) loadCrossPlatformSalt() ([]byte, error) {
+	if m.notesDir == "" {
+		return nil, fmt.Errorf("notes directory not set")
+	}
+
+	configPath := filepath.Join(m.notesDir, ".gote_config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("cross-platform config not found: %v", err)
+	}
+
+	var config CrossPlatformConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse cross-platform config: %v", err)
+	}
+
+	salt, err := base64.StdEncoding.DecodeString(config.Salt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode salt: %v", err)
+	}
+
+	return salt, nil
+}
+
+// saveCrossPlatformSalt saves salt to the notes directory for cross-platform compatibility
+func (m *Manager) saveCrossPlatformSalt(salt []byte) error {
+	if m.notesDir == "" {
+		return fmt.Errorf("notes directory not set")
+	}
+
+	config := CrossPlatformConfig{
+		Salt:      base64.StdEncoding.EncodeToString(salt),
+		CreatedAt: time.Now().Format(time.RFC3339),
+		Version:   "1.0",
+	}
+
+	configPath := filepath.Join(m.notesDir, ".gote_config.json")
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %v", err)
+	}
+
+	return os.WriteFile(configPath, data, 0600)
 }

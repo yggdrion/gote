@@ -56,7 +56,7 @@ func (a *App) startup(ctx context.Context) {
 		}
 
 		// Initialize components
-		a.authManager = auth.NewManager(cfg.PasswordHashPath)
+		a.authManager = auth.NewManagerWithNotesDir(cfg.PasswordHashPath, cfg.NotesPath)
 		a.store = storage.NewNoteStore(cfg.NotesPath)
 		a.imageStore = storage.NewImageStore(cfg.NotesPath)
 		a.config = cfg
@@ -174,7 +174,7 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	}
 
 	// Initialize components with new configuration
-	a.authManager = auth.NewManager(a.config.PasswordHashPath)
+	a.authManager = auth.NewManagerWithNotesDir(a.config.PasswordHashPath, a.config.NotesPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
 	a.imageStore = storage.NewImageStore(a.config.NotesPath)
 
@@ -482,7 +482,7 @@ func (a *App) UpdateSettings(notesPath, passwordHashPath string) error {
 	a.currentKey = nil
 
 	// Update components with new paths
-	a.authManager = auth.NewManager(a.config.PasswordHashPath)
+	a.authManager = auth.NewManagerWithNotesDir(a.config.PasswordHashPath, a.config.NotesPath)
 	a.store = storage.NewNoteStore(a.config.NotesPath)
 	a.imageStore = storage.NewImageStore(a.config.NotesPath)
 
