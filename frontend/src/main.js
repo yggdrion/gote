@@ -10,7 +10,6 @@ import {
 import {
   Debouncer,
   Throttler,
-  SearchOptimizer,
   DOMOptimizer,
   PerformanceMonitor,
 } from "./performance.js";
@@ -57,7 +56,6 @@ let searchQuery = "";
 // Performance optimization instances
 let searchDebouncer = new Debouncer(300); // 300ms debounce for search
 let syncThrottler = new Throttler(2000); // Max 1 sync every 2 seconds
-let searchOptimizer = new SearchOptimizer();
 let domOptimizer = new DOMOptimizer();
 let performanceMonitor = new PerformanceMonitor();
 
@@ -486,9 +484,6 @@ async function loadNotes() {
     allNotes = (await GetAllNotes()) || [];
     filteredNotes = [...allNotes];
 
-    // Build search index for better performance
-    searchOptimizer.buildIndex(allNotes);
-
     renderNotesList();
 
     const loadTime = performanceMonitor.endTiming("loadNotes");
@@ -626,9 +621,6 @@ async function createNewNote() {
     allNotes.push(newNote);
     filteredNotes = searchQuery ? filteredNotes : [...allNotes];
 
-    // Rebuild search index to include the new note
-    searchOptimizer.buildIndex(allNotes);
-
     renderNotesList();
     editNote(newNote.id);
   } catch (error) {
@@ -681,9 +673,6 @@ async function saveCurrentNote() {
       filteredNotes = searchQuery
         ? filteredNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n))
         : [...allNotes];
-
-      // Rebuild search index to include updated content
-      searchOptimizer.buildIndex(allNotes);
 
       renderNotesList();
     }
@@ -739,9 +728,6 @@ async function confirmDeleteNote() {
     // Remove from arrays
     allNotes = allNotes.filter((n) => n.id !== noteToDelete);
     filteredNotes = filteredNotes.filter((n) => n.id !== noteToDelete);
-
-    // Rebuild search index after deletion
-    searchOptimizer.buildIndex(allNotes);
 
     renderNotesList();
 
@@ -808,8 +794,8 @@ async function handleSearch() {
   try {
     searchQuery = query;
 
-    // Use optimized search with caching and indexing
-    filteredNotes = searchOptimizer.search(query, allNotes);
+    // Use backend search - it's simpler and already works with code blocks
+    filteredNotes = await SearchNotes(query);
 
     renderNotesList();
     clearSearchBtn.style.display = "block";
