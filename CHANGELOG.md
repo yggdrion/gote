@@ -1,3 +1,10 @@
+## [1.2.11](https://github.com/yggdrion/gote/compare/v1.2.10...v1.2.11) (2025-08-04)
+
+### Bug Fixes
+
+* search ([ebc628f](https://github.com/yggdrion/gote/commit/ebc628f42082a58cbc9f96493641bc77e0756257))
+* search easy ([894a09a](https://github.com/yggdrion/gote/commit/894a09a19ead0e6e7feb8ec390c16c352f3eea05))
+
 ## [1.2.10](https://github.com/yggdrion/gote/compare/v1.2.9...v1.2.10) (2025-08-04)
 
 ### Bug Fixes
