@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/yggdrion/gote/compare/v1.2.4...v1.2.5) (2025-08-04)
+
+### Bug Fixes
+
+* cleanup debug ([#21](https://github.com/yggdrion/gote/issues/21)) ([9744082](https://github.com/yggdrion/gote/commit/9744082b0713c2e923f97591b75e3e3e6d5ce6ca))
+* dependabot vite ([7346030](https://github.com/yggdrion/gote/commit/73460305585887672ec5178274e652bbb2956841))
+
 ## [1.2.4](https://github.com/yggdrion/gote/compare/v1.2.3...v1.2.4) (2025-08-04)
 
 ### Bug Fixes
