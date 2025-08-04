@@ -158,3 +158,6 @@ bin/
 .DS_Store
 test.exe
 *.exe
+
+frontend/wailsjs/go
+frontend/wailsjs/go/main/App.d.ts
