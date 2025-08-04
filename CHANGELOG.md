@@ -1,3 +1,9 @@
+## [1.2.14](https://github.com/yggdrion/gote/compare/v1.2.13...v1.2.14) (2025-08-04)
+
+### Bug Fixes
+
+* search escape hotkey ([eb3716f](https://github.com/yggdrion/gote/commit/eb3716fa9f4a0b1a9d1c1b71ec287ee62a05fd7c))
+
 ## [1.2.13](https://github.com/yggdrion/gote/compare/v1.2.12...v1.2.13) (2025-08-04)
 
 ### Bug Fixes
