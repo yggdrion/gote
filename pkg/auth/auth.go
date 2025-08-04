@@ -95,11 +95,63 @@ func (m *Manager) IsFirstTimeSetup() bool {
 	return true
 } // StorePasswordHash stores a hash of the password with salt for verification
 func (m *Manager) StorePasswordHash(password string) error {
+	fmt.Printf("[DEBUG] StorePasswordHash: Starting password hash storage\n")
+	fmt.Printf("[DEBUG] Notes directory: %s\n", m.notesDir)
+
+	// Check if cross-platform config already exists
+	if m.notesDir != "" {
+		configPath := filepath.Join(m.notesDir, ".gote_config.json")
+		if _, err := os.Stat(configPath); err == nil {
+			fmt.Printf("[DEBUG] StorePasswordHash: Cross-platform config exists, loading existing salt\n")
+			if salt, err := m.loadCrossPlatformSalt(); err == nil {
+				fmt.Printf("[DEBUG] StorePasswordHash: Using existing cross-platform salt instead of generating new one\n")
+				fmt.Printf("[DEBUG] Cross-platform salt: %s\n", base64.StdEncoding.EncodeToString(salt)[:20]+"...")
+
+				// Use the existing cross-platform salt
+				m.currentSalt = salt
+
+				// Create verification hash using the existing salt
+				verificationKey := crypto.DeriveKey(password+"verification", salt)
+
+				passwordData := PasswordData{
+					Hash: base64.StdEncoding.EncodeToString(verificationKey),
+					Salt: base64.StdEncoding.EncodeToString(salt),
+				}
+
+				// Ensure password hash directory exists
+				hashDir := filepath.Dir(m.passwordHashPath)
+				if err := os.MkdirAll(hashDir, 0755); err != nil {
+					return err
+				}
+
+				data, err := json.Marshal(passwordData)
+				if err != nil {
+					return fmt.Errorf("failed to marshal password data: %v", err)
+				}
+
+				// Save local password hash with existing salt
+				if err := os.WriteFile(m.passwordHashPath, data, 0600); err != nil {
+					return err
+				}
+
+				fmt.Printf("[DEBUG] StorePasswordHash: Local password hash created with cross-platform salt\n")
+				return nil
+			} else {
+				fmt.Printf("[DEBUG] StorePasswordHash: Failed to load cross-platform salt: %v\n", err)
+			}
+		} else {
+			fmt.Printf("[DEBUG] StorePasswordHash: No cross-platform config found, will generate new salt\n")
+		}
+	}
+
+	fmt.Printf("[DEBUG] StorePasswordHash: Generating new salt\n")
 	// Generate salt for password verification
 	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		return fmt.Errorf("failed to generate salt: %v", err)
 	}
+
+	fmt.Printf("[DEBUG] StorePasswordHash: New salt generated: %s\n", base64.StdEncoding.EncodeToString(salt)[:20]+"...")
 
 	// Store the salt for key derivation
 	m.currentSalt = salt
@@ -133,6 +185,8 @@ func (m *Manager) StorePasswordHash(password string) error {
 		if err := m.saveCrossPlatformSalt(salt); err != nil {
 			// Log warning but don't fail - local storage still works
 			fmt.Printf("Warning: Could not save cross-platform config: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] StorePasswordHash: Cross-platform config saved\n")
 		}
 	}
 
