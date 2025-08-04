@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -219,45 +218,11 @@ func (m *Manager) CreateSession(key []byte) string {
 	return sessionID
 }
 
-// GetSession retrieves and validates a session
-func (m *Manager) GetSession(r *http.Request) *models.Session {
-	cookie, err := r.Cookie("session")
-	if err != nil {
-		return nil
-	}
-
-	m.sessionsMutex.RLock()
-	session, exists := m.sessions[cookie.Value]
-	m.sessionsMutex.RUnlock()
-
-	if !exists || time.Now().After(session.ExpiresAt) {
-		// Clean up expired session
-		if exists {
-			m.sessionsMutex.Lock()
-			delete(m.sessions, cookie.Value)
-			m.sessionsMutex.Unlock()
-		}
-		return nil
-	}
-
-	// Extend session
-	m.sessionsMutex.Lock()
-	session.ExpiresAt = time.Now().Add(SessionTimeout)
-	m.sessionsMutex.Unlock()
-
-	return session
-}
-
 // DeleteSession removes a session (logout)
 func (m *Manager) DeleteSession(sessionID string) {
 	m.sessionsMutex.Lock()
 	delete(m.sessions, sessionID)
 	m.sessionsMutex.Unlock()
-}
-
-// IsAuthenticated checks if the request has a valid session
-func (m *Manager) IsAuthenticated(r *http.Request) *models.Session {
-	return m.GetSession(r)
 }
 
 // RemovePasswordHash deletes the password hash file
