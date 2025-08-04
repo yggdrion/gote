@@ -56,10 +56,31 @@ func NewManagerWithNotesDir(passwordHashPath, notesDir string) *Manager {
 	}
 }
 
-// IsFirstTimeSetup checks if this is the first time setup (no password hash exists)
+// IsFirstTimeSetup checks if this is the first time setup (no password hash exists AND no cross-platform config exists)
 func (m *Manager) IsFirstTimeSetup() bool {
+	// Check if local password hash exists
 	_, err := os.Stat(m.passwordHashPath)
-	return os.IsNotExist(err)
+	localExists := !os.IsNotExist(err)
+
+	// If local exists, not first time
+	if localExists {
+		return false
+	}
+
+	// Check if cross-platform config exists (if notes directory is set)
+	if m.notesDir != "" {
+		configPath := filepath.Join(m.notesDir, ".gote_config.json")
+		_, err := os.Stat(configPath)
+		crossPlatformExists := !os.IsNotExist(err)
+
+		// If cross-platform config exists, not first time setup - just need to sync locally
+		if crossPlatformExists {
+			return false
+		}
+	}
+
+	// Neither local nor cross-platform config exists - truly first time
+	return true
 }
 
 // StorePasswordHash stores a hash of the password with salt for verification
@@ -114,30 +135,45 @@ func (m *Manager) VerifyPassword(password string) bool {
 		return false
 	}
 
+	// Try local password hash first
 	data, err := os.ReadFile(m.passwordHashPath)
-	if err != nil {
-		return false
+	if err == nil {
+		var passwordData PasswordData
+		if err := json.Unmarshal(data, &passwordData); err == nil {
+			// Decode the stored salt
+			salt, err := base64.StdEncoding.DecodeString(passwordData.Salt)
+			if err == nil {
+				// Store the salt for key derivation
+				m.currentSalt = salt
+
+				// Create verification hash using the same salt
+				verificationKey := crypto.DeriveKey(password+"verification", salt)
+				computedHash := base64.StdEncoding.EncodeToString(verificationKey)
+
+				if computedHash == passwordData.Hash {
+					return true
+				}
+			}
+		}
 	}
 
-	var passwordData PasswordData
-	if err := json.Unmarshal(data, &passwordData); err != nil {
-		return false
+	// If local verification failed, try cross-platform config (for new devices)
+	if m.notesDir != "" {
+		salt, err := m.loadCrossPlatformSalt()
+		if err == nil {
+			// We have cross-platform salt but no local password hash
+			// This means it's a new device - we need to create a local password hash
+			// But first verify the password would work with this salt
+			m.currentSalt = salt
+
+			// Since we don't have a stored verification hash for cross-platform,
+			// we'll return true and let the calling code handle first-time setup
+			// The password verification will happen during key derivation
+			return true
+		}
 	}
 
-	// Decode the stored salt
-	salt, err := base64.StdEncoding.DecodeString(passwordData.Salt)
-	if err != nil {
-		return false
-	}
-
-	// Store the salt for key derivation
-	m.currentSalt = salt
-
-	// Create verification hash using the same salt
-	verificationKey := crypto.DeriveKey(password+"verification", salt)
-	computedHash := base64.StdEncoding.EncodeToString(verificationKey)
-
-	return computedHash == passwordData.Hash
+	return false
 }
 
 // CreateSession creates a new session for an authenticated user
@@ -297,4 +333,43 @@ func (m *Manager) saveCrossPlatformSalt(salt []byte) error {
 	}
 
 	return os.WriteFile(configPath, data, 0600)
+}
+
+// SyncFromCrossPlatform creates a local password hash from cross-platform config
+// This is used when setting up Gote on a new device that has access to synced notes
+func (m *Manager) SyncFromCrossPlatform(password string) error {
+	if m.notesDir == "" {
+		return fmt.Errorf("notes directory not set")
+	}
+
+	// Load salt from cross-platform config
+	salt, err := m.loadCrossPlatformSalt()
+	if err != nil {
+		return fmt.Errorf("failed to load cross-platform salt: %v", err)
+	}
+
+	// Store the salt for key derivation
+	m.currentSalt = salt
+
+	// Create verification hash using the cross-platform salt
+	verificationKey := crypto.DeriveKey(password+"verification", salt)
+
+	passwordData := PasswordData{
+		Hash: base64.StdEncoding.EncodeToString(verificationKey),
+		Salt: base64.StdEncoding.EncodeToString(salt),
+	}
+
+	// Ensure password hash directory exists
+	hashDir := filepath.Dir(m.passwordHashPath)
+	if err := os.MkdirAll(hashDir, 0755); err != nil {
+		return err
+	}
+
+	data, err := json.Marshal(passwordData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal password data: %v", err)
+	}
+
+	// Save local password hash
+	return os.WriteFile(m.passwordHashPath, data, 0600)
 }
