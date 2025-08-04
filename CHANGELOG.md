@@ -1,3 +1,9 @@
+## [1.2.16](https://github.com/yggdrion/gote/compare/v1.2.15...v1.2.16) (2025-08-04)
+
+### Bug Fixes
+
+* cleanup http stuff ([8ca661c](https://github.com/yggdrion/gote/commit/8ca661ca7ecf1a518656e984221f0e5531892d60))
+
 ## [1.2.15](https://github.com/yggdrion/gote/compare/v1.2.14...v1.2.15) (2025-08-04)
 
 ### Bug Fixes
