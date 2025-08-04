@@ -1,3 +1,9 @@
+## [1.2.12](https://github.com/yggdrion/gote/compare/v1.2.11...v1.2.12) (2025-08-04)
+
+### Bug Fixes
+
+* simplify ([6ca34b4](https://github.com/yggdrion/gote/commit/6ca34b4e1ee2bbf25b389fdaf4d2b8f0c665817a))
+
 ## [1.2.11](https://github.com/yggdrion/gote/compare/v1.2.10...v1.2.11) (2025-08-04)
 
 ### Bug Fixes
