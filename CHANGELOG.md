@@ -1,3 +1,9 @@
+## [1.2.6](https://github.com/yggdrion/gote/compare/v1.2.5...v1.2.6) (2025-08-04)
+
+### Bug Fixes
+
+* cleanup ([c5614a8](https://github.com/yggdrion/gote/commit/c5614a88dd84c5d6ac0bc81e00bfc9e4d8befcfe))
+
 ## [1.2.5](https://github.com/yggdrion/gote/compare/v1.2.4...v1.2.5) (2025-08-04)
 
 ### Bug Fixes
