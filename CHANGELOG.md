@@ -1,3 +1,9 @@
+## [1.2.13](https://github.com/yggdrion/gote/compare/v1.2.12...v1.2.13) (2025-08-04)
+
+### Bug Fixes
+
+* pin vite ([27d7c53](https://github.com/yggdrion/gote/commit/27d7c5337f38d0cfffc3e006c9e76c3a84afef0f))
+
 ## [1.2.12](https://github.com/yggdrion/gote/compare/v1.2.11...v1.2.12) (2025-08-04)
 
 ### Bug Fixes
