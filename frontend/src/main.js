@@ -49,6 +49,7 @@ import { BrowserOpenURL } from "../wailsjs/runtime/runtime.js";
 // State management
 let currentUser = null;
 let currentNote = null;
+let originalNoteContent = ""; // Track original content to detect changes
 let allNotes = [];
 let filteredNotes = [];
 let searchQuery = "";
@@ -159,6 +160,7 @@ let setupMasterPassword, setupConfirmPassword, completeSetupBtn;
 
 // Delete confirmation modal elements
 let deleteModal, confirmDeleteBtn, cancelDeleteBtn;
+let closeEditorModal, saveAndCloseBtn, discardChangesBtn, cancelCloseBtn;
 let noteToDelete = null;
 
 // Initialize app when DOM is loaded
@@ -222,6 +224,12 @@ function initializeDOM() {
   confirmDeleteBtn = document.getElementById("confirm-delete-btn");
   cancelDeleteBtn = document.getElementById("cancel-delete-btn");
 
+  // Close editor confirmation modal elements
+  closeEditorModal = document.getElementById("close-editor-modal");
+  saveAndCloseBtn = document.getElementById("save-and-close-btn");
+  discardChangesBtn = document.getElementById("discard-changes-btn");
+  cancelCloseBtn = document.getElementById("cancel-close-btn");
+
   // Create image modal for enlarged viewing
   createImageModal();
 }
@@ -269,7 +277,7 @@ function setupEventListeners() {
 
   // Editor listeners
   saveNoteBtn.addEventListener("click", saveCurrentNote);
-  cancelEditorBtn.addEventListener("click", closeEditor);
+  cancelEditorBtn.addEventListener("click", attemptCloseEditor);
 
   // Settings listeners
   backFromSettings.addEventListener("click", closeSettings);
@@ -282,10 +290,25 @@ function setupEventListeners() {
   confirmDeleteBtn.addEventListener("click", confirmDeleteNote);
   cancelDeleteBtn.addEventListener("click", cancelDeleteNote);
 
+  // Close editor confirmation modal listeners
+  saveAndCloseBtn.addEventListener("click", handleSaveAndCloseEditor);
+  discardChangesBtn.addEventListener(
+    "click",
+    handleDiscardChangesAndCloseEditor
+  );
+  cancelCloseBtn.addEventListener("click", hideCloseEditorModal);
+
   // Close modal when clicking outside
   deleteModal.addEventListener("click", (e) => {
     if (e.target === deleteModal) {
       cancelDeleteNote();
+    }
+  });
+
+  // Close editor modal when clicking outside
+  closeEditorModal.addEventListener("click", (e) => {
+    if (e.target === closeEditorModal) {
+      hideCloseEditorModal();
     }
   });
 
@@ -620,6 +643,7 @@ async function editNote(noteId) {
 
     currentNote = note;
     noteContent.value = note.content;
+    originalNoteContent = note.content; // Track original content for change detection
     showEditor();
   } catch (error) {
     console.error("Error loading note:", error);
@@ -636,6 +660,7 @@ function closeEditor() {
   noteEditor.classList.add("hidden");
   currentNote = null;
   noteContent.value = "";
+  originalNoteContent = ""; // Reset original content tracking
 }
 
 async function saveCurrentNote() {
@@ -719,6 +744,44 @@ async function confirmDeleteNote() {
     console.error("Error deleting note:", error);
     alert("Failed to delete note");
     hideDeleteModal();
+  }
+}
+
+// Check if there are unsaved changes in the editor
+function hasUnsavedChanges() {
+  return currentNote && noteContent.value !== originalNoteContent;
+}
+
+// Show the close editor confirmation modal
+function showCloseEditorModal() {
+  closeEditorModal.style.display = "flex";
+  // Focus the cancel button for better accessibility
+  cancelCloseBtn.focus();
+}
+
+// Hide the close editor confirmation modal
+function hideCloseEditorModal() {
+  closeEditorModal.style.display = "none";
+}
+
+// Handle save and close from the modal
+async function handleSaveAndCloseEditor() {
+  hideCloseEditorModal();
+  await saveAndCloseNote();
+}
+
+// Handle discard changes and close from the modal
+function handleDiscardChangesAndCloseEditor() {
+  hideCloseEditorModal();
+  closeEditor();
+}
+
+// Attempt to close the editor with confirmation if needed
+function attemptCloseEditor() {
+  if (hasUnsavedChanges()) {
+    showCloseEditorModal();
+  } else {
+    closeEditor();
   }
 }
 
@@ -1157,6 +1220,20 @@ function processCustomImages(html) {
 }
 
 function handleGlobalKeyboard(e) {
+  // Handle close editor modal keyboard shortcuts
+  if (closeEditorModal.style.display === "flex") {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      hideCloseEditorModal();
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSaveAndCloseEditor();
+      return;
+    }
+  }
+
   // Handle delete modal keyboard shortcuts
   if (deleteModal.style.display === "flex") {
     if (e.key === "Escape") {
@@ -1169,6 +1246,17 @@ function handleGlobalKeyboard(e) {
       confirmDeleteNote();
       return;
     }
+  }
+
+  // Handle Escape key in editor
+  if (
+    e.key === "Escape" &&
+    currentNote &&
+    !noteEditor.classList.contains("hidden")
+  ) {
+    e.preventDefault();
+    attemptCloseEditor();
+    return;
   }
 
   // Check for Ctrl/Cmd key combinations
