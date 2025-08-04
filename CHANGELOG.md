@@ -1,3 +1,9 @@
+## [1.2.8](https://github.com/yggdrion/gote/compare/v1.2.7...v1.2.8) (2025-08-04)
+
+### Bug Fixes
+
+* delete dialog ([4122dd4](https://github.com/yggdrion/gote/commit/4122dd42af03b7c92bba069c26f1caf84f84d74b))
+
 ## [1.2.7](https://github.com/yggdrion/gote/compare/v1.2.6...v1.2.7) (2025-08-04)
 
 ### Bug Fixes
