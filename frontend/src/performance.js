@@ -156,14 +156,43 @@ class SearchOptimizer {
         this.searchIndex.get(word).add(note.id);
       });
     });
+
+    console.log(
+      `Search index built with ${this.searchIndex.size} unique terms`
+    );
   }
 
   extractWords(content) {
-    return content
-      .toLowerCase()
-      .replace(/[^\w\s]/g, " ")
+    // First, extract code blocks and preserve their content
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    const inlineCodeRegex = /`[^`\n]+`/g;
+
+    let processedContent = content.toLowerCase();
+
+    // Extract content from code blocks and inline code for indexing
+    const codeBlocks = content.match(codeBlockRegex) || [];
+    const inlineCodes = content.match(inlineCodeRegex) || [];
+
+    // Add code block content to indexing (without the backticks)
+    codeBlocks.forEach((block) => {
+      const codeContent = block
+        .replace(/```[^\n]*\n?/g, "")
+        .replace(/```/g, "");
+      processedContent += " " + codeContent.toLowerCase();
+    });
+
+    // Add inline code content to indexing (without the backticks)
+    inlineCodes.forEach((code) => {
+      const codeContent = code.replace(/`/g, "");
+      processedContent += " " + codeContent.toLowerCase();
+    });
+
+    // Now extract words, preserving some punctuation that might be important
+    return processedContent
+      .replace(/[^\w\s.-]/g, " ") // Keep dots and hyphens which are common in code
       .split(/\s+/)
-      .filter((word) => word.length > 2); // Only index words longer than 2 characters
+      .filter((word) => word.length > 1) // Lower threshold for code-related terms
+      .filter((word) => !/^[.-]+$/.test(word)); // Remove words that are only punctuation
   }
 
   search(query, notes) {
@@ -232,9 +261,41 @@ class SearchOptimizer {
 
   linearSearch(query, notes) {
     const lowerQuery = query.toLowerCase();
-    return notes.filter((note) =>
-      note.content.toLowerCase().includes(lowerQuery)
-    );
+    return notes.filter((note) => {
+      const content = note.content.toLowerCase();
+
+      // Direct content search
+      if (content.includes(lowerQuery)) {
+        return true;
+      }
+
+      // Also search within code blocks specifically
+      const codeBlockRegex = /```[\s\S]*?```/g;
+      const inlineCodeRegex = /`[^`\n]+`/g;
+
+      const codeBlocks = note.content.match(codeBlockRegex) || [];
+      const inlineCodes = note.content.match(inlineCodeRegex) || [];
+
+      // Check code blocks
+      for (const block of codeBlocks) {
+        const codeContent = block
+          .replace(/```[^\n]*\n?/g, "")
+          .replace(/```/g, "");
+        if (codeContent.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+      }
+
+      // Check inline code
+      for (const code of inlineCodes) {
+        const codeContent = code.replace(/`/g, "");
+        if (codeContent.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+      }
+
+      return false;
+    });
   }
 
   clearCache() {

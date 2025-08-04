@@ -625,6 +625,10 @@ async function createNewNote() {
     const newNote = await CreateNote("");
     allNotes.push(newNote);
     filteredNotes = searchQuery ? filteredNotes : [...allNotes];
+
+    // Rebuild search index to include the new note
+    searchOptimizer.buildIndex(allNotes);
+
     renderNotesList();
     editNote(newNote.id);
   } catch (error) {
@@ -677,6 +681,10 @@ async function saveCurrentNote() {
       filteredNotes = searchQuery
         ? filteredNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n))
         : [...allNotes];
+
+      // Rebuild search index to include updated content
+      searchOptimizer.buildIndex(allNotes);
+
       renderNotesList();
     }
 
@@ -731,6 +739,9 @@ async function confirmDeleteNote() {
     // Remove from arrays
     allNotes = allNotes.filter((n) => n.id !== noteToDelete);
     filteredNotes = filteredNotes.filter((n) => n.id !== noteToDelete);
+
+    // Rebuild search index after deletion
+    searchOptimizer.buildIndex(allNotes);
 
     renderNotesList();
 
