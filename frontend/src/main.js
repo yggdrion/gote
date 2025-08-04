@@ -157,6 +157,10 @@ let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 let initialSetupScreen, setupNotesPath, setupPasswordHashPath;
 let setupMasterPassword, setupConfirmPassword, completeSetupBtn;
 
+// Delete confirmation modal elements
+let deleteModal, confirmDeleteBtn, cancelDeleteBtn;
+let noteToDelete = null;
+
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("DOM loaded, initializing markdown...");
@@ -213,6 +217,11 @@ function initializeDOM() {
   setupConfirmPassword = document.getElementById("setup-confirm-password");
   completeSetupBtn = document.getElementById("complete-setup-btn");
 
+  // Delete confirmation modal elements
+  deleteModal = document.getElementById("delete-confirmation-modal");
+  confirmDeleteBtn = document.getElementById("confirm-delete-btn");
+  cancelDeleteBtn = document.getElementById("cancel-delete-btn");
+
   // Create image modal for enlarged viewing
   createImageModal();
 }
@@ -268,6 +277,17 @@ function setupEventListeners() {
   createBackupBtn.addEventListener("click", handleCreateBackup);
   saveSettingsBtn.addEventListener("click", handleSaveSettings);
   logoutBtn.addEventListener("click", handleLogout);
+
+  // Delete confirmation modal listeners
+  confirmDeleteBtn.addEventListener("click", confirmDeleteNote);
+  cancelDeleteBtn.addEventListener("click", cancelDeleteNote);
+
+  // Close modal when clicking outside
+  deleteModal.addEventListener("click", (e) => {
+    if (e.target === deleteModal) {
+      cancelDeleteNote();
+    }
+  });
 
   // Global keyboard shortcuts
   document.addEventListener("keydown", handleGlobalKeyboard);
@@ -652,26 +672,53 @@ async function saveCurrentNote() {
 }
 
 async function deleteNote(noteId) {
-  if (!confirm("Are you sure you want to delete this note?")) {
+  // Store the note ID for the confirmation
+  noteToDelete = noteId;
+
+  // Show the custom delete confirmation modal
+  showDeleteModal();
+}
+
+function showDeleteModal() {
+  deleteModal.style.display = "flex";
+  // Focus the cancel button for better accessibility
+  cancelDeleteBtn.focus();
+}
+
+function hideDeleteModal() {
+  deleteModal.style.display = "none";
+  noteToDelete = null;
+}
+
+function cancelDeleteNote() {
+  hideDeleteModal();
+}
+
+async function confirmDeleteNote() {
+  if (!noteToDelete) {
+    hideDeleteModal();
     return;
   }
 
   try {
-    await DeleteNote(noteId);
+    await DeleteNote(noteToDelete);
 
     // Remove from arrays
-    allNotes = allNotes.filter((n) => n.id !== noteId);
-    filteredNotes = filteredNotes.filter((n) => n.id !== noteId);
+    allNotes = allNotes.filter((n) => n.id !== noteToDelete);
+    filteredNotes = filteredNotes.filter((n) => n.id !== noteToDelete);
 
     renderNotesList();
 
     // Close editor if this note was being edited
-    if (currentNote && currentNote.id === noteId) {
+    if (currentNote && currentNote.id === noteToDelete) {
       closeEditor();
     }
+
+    hideDeleteModal();
   } catch (error) {
     console.error("Error deleting note:", error);
     alert("Failed to delete note");
+    hideDeleteModal();
   }
 }
 
@@ -1110,6 +1157,20 @@ function processCustomImages(html) {
 }
 
 function handleGlobalKeyboard(e) {
+  // Handle delete modal keyboard shortcuts
+  if (deleteModal.style.display === "flex") {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cancelDeleteNote();
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmDeleteNote();
+      return;
+    }
+  }
+
   // Check for Ctrl/Cmd key combinations
   const isCtrlOrCmd = e.ctrlKey || e.metaKey;
 
