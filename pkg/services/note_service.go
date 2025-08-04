@@ -44,10 +44,7 @@ func (s *NoteService) CreateNote(content string, key []byte) (*models.Note, erro
 		return nil, fmt.Errorf("authentication required")
 	}
 
-	if strings.TrimSpace(content) == "" {
-		return nil, fmt.Errorf("note content cannot be empty")
-	}
-
+	// Allow empty content for new notes - users can fill them in later
 	return s.store.CreateNote(content, key)
 }
 

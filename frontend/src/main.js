@@ -1251,6 +1251,20 @@ function handleGlobalKeyboard(e) {
     }
     return;
   }
+
+  if (isCtrlOrCmd && e.key === "n") {
+    // Ctrl+N / Cmd+N: Create new note
+    e.preventDefault();
+    // Only if we're in the main app (not auth or settings screen)
+    if (
+      mainApp.style.display !== "none" &&
+      authScreen.style.display === "none" &&
+      settingsScreen.style.display === "none"
+    ) {
+      createNewNote();
+    }
+    return;
+  }
 }
 
 async function saveAndCloseNote() {
