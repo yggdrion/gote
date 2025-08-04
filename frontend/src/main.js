@@ -256,6 +256,13 @@ function setupEventListeners() {
   searchInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") handleSearch();
   });
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      clearSearch();
+      searchInput.blur(); // Remove focus from search input
+    }
+  });
   searchInput.addEventListener("input", (e) => {
     if (e.target.value === "") {
       clearSearch();
