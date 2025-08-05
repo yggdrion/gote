@@ -180,9 +180,32 @@ func (s *NoteStore) handleFileWrite(filePath string) {
 
 	note := &models.Note{
 		ID:        encryptedNote.ID,
-		Content:   decryptedContent,
 		CreatedAt: encryptedNote.CreatedAt,
 		UpdatedAt: encryptedNote.UpdatedAt,
+	}
+
+	// Try to parse as new JSON format first
+	var noteData struct {
+		Content  string              `json:"content"`
+		Category models.NoteCategory `json:"category"`
+		Images   []models.Image      `json:"images,omitempty"`
+	}
+
+	if err := json.Unmarshal([]byte(decryptedContent), &noteData); err == nil {
+		// New format - use parsed data
+		note.Content = noteData.Content
+		note.Category = noteData.Category
+		note.Images = noteData.Images
+
+		// Ensure category is set (handle empty category in new format)
+		if note.Category == "" {
+			note.Category = models.CategoryPrivate
+		}
+	} else {
+		// Legacy format - content is just a string
+		note.Content = decryptedContent
+		note.Category = models.CategoryPrivate
+		note.Images = nil
 	}
 
 	s.mutex.Lock()
@@ -280,9 +303,32 @@ func (s *NoteStore) syncFromDisk() error {
 
 		note := &models.Note{
 			ID:        encryptedNote.ID,
-			Content:   decryptedContent,
 			CreatedAt: encryptedNote.CreatedAt,
 			UpdatedAt: encryptedNote.UpdatedAt,
+		}
+
+		// Try to parse as new JSON format first
+		var noteData struct {
+			Content  string              `json:"content"`
+			Category models.NoteCategory `json:"category"`
+			Images   []models.Image      `json:"images,omitempty"`
+		}
+
+		if err := json.Unmarshal([]byte(decryptedContent), &noteData); err == nil {
+			// New format - use parsed data
+			note.Content = noteData.Content
+			note.Category = noteData.Category
+			note.Images = noteData.Images
+
+			// Ensure category is set (handle empty category in new format)
+			if note.Category == "" {
+				note.Category = models.CategoryPrivate
+			}
+		} else {
+			// Legacy format - content is just a string
+			note.Content = decryptedContent
+			note.Category = models.CategoryPrivate
+			note.Images = nil
 		}
 
 		diskNotes[note.ID] = true
@@ -308,8 +354,25 @@ func (s *NoteStore) syncFromDisk() error {
 
 // saveNote saves a note to disk
 func (s *NoteStore) saveNote(note *models.Note, key []byte) error {
-	// Encrypt the note content
-	encryptedContent, err := crypto.Encrypt(note.Content, key)
+	// Create a structure to encrypt that includes all note data
+	noteData := struct {
+		Content  string              `json:"content"`
+		Category models.NoteCategory `json:"category"`
+		Images   []models.Image      `json:"images,omitempty"`
+	}{
+		Content:  note.Content,
+		Category: note.Category,
+		Images:   note.Images,
+	}
+
+	// Marshal the note data to JSON
+	noteJSON, err := json.Marshal(noteData)
+	if err != nil {
+		return err
+	}
+
+	// Encrypt the JSON content
+	encryptedContent, err := crypto.Encrypt(string(noteJSON), key)
 	if err != nil {
 		return err
 	}
@@ -344,8 +407,25 @@ func (s *NoteStore) saveNote(note *models.Note, key []byte) error {
 
 // SaveNoteDirect saves a note to disk, bypassing in-memory update (for password change)
 func (s *NoteStore) SaveNoteDirect(note *models.Note, key []byte) error {
-	// Encrypt the note content
-	encryptedContent, err := crypto.Encrypt(note.Content, key)
+	// Create a structure to encrypt that includes all note data
+	noteData := struct {
+		Content  string              `json:"content"`
+		Category models.NoteCategory `json:"category"`
+		Images   []models.Image      `json:"images,omitempty"`
+	}{
+		Content:  note.Content,
+		Category: note.Category,
+		Images:   note.Images,
+	}
+
+	// Marshal the note data to JSON
+	noteJSON, err := json.Marshal(noteData)
+	if err != nil {
+		return err
+	}
+
+	// Encrypt the JSON content
+	encryptedContent, err := crypto.Encrypt(string(noteJSON), key)
 	if err != nil {
 		return err
 	}
@@ -380,11 +460,17 @@ func (s *NoteStore) deleteNote(id string) error {
 	return os.Remove(filename)
 }
 
-// CreateNote creates a new note
+// CreateNote creates a new note with default category (private)
 func (s *NoteStore) CreateNote(content string, key []byte) (*models.Note, error) {
+	return s.CreateNoteWithCategory(content, models.CategoryPrivate, key)
+}
+
+// CreateNoteWithCategory creates a new note with specified category
+func (s *NoteStore) CreateNoteWithCategory(content string, category models.NoteCategory, key []byte) (*models.Note, error) {
 	note := &models.Note{
 		ID:        utils.GenerateShortUUID(),
 		Content:   content,
+		Category:  category,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -413,6 +499,26 @@ func (s *NoteStore) UpdateNote(id string, content string, key []byte) (*models.N
 	}
 
 	note.Content = content
+	note.UpdatedAt = time.Now()
+	s.mutex.Unlock()
+
+	if err := s.saveNote(note, key); err != nil {
+		return nil, err
+	}
+
+	return note, nil
+}
+
+// UpdateNoteCategory updates the category of an existing note
+func (s *NoteStore) UpdateNoteCategory(id string, category models.NoteCategory, key []byte) (*models.Note, error) {
+	s.mutex.Lock()
+	note, exists := s.notes[id]
+	if !exists {
+		s.mutex.Unlock()
+		return nil, fmt.Errorf("note not found")
+	}
+
+	note.Category = category
 	note.UpdatedAt = time.Now()
 	s.mutex.Unlock()
 
@@ -452,6 +558,25 @@ func (s *NoteStore) GetAllNotes() []*models.Note {
 	return notes
 }
 
+// GetNotesByCategory returns all notes in a specific category
+func (s *NoteStore) GetNotesByCategory(category models.NoteCategory) []*models.Note {
+	s.mutex.RLock()
+	notes := make([]*models.Note, 0)
+	for _, note := range s.notes {
+		if note.Category == category {
+			notes = append(notes, note)
+		}
+	}
+	s.mutex.RUnlock()
+
+	// Sort by update time (newest first)
+	sort.Slice(notes, func(i, j int) bool {
+		return notes[i].UpdatedAt.After(notes[j].UpdatedAt)
+	})
+
+	return notes
+}
+
 // SearchNotes searches for notes containing the query string
 func (s *NoteStore) SearchNotes(query string) []*models.Note {
 	var results []*models.Note
@@ -471,6 +596,43 @@ func (s *NoteStore) SearchNotes(query string) []*models.Note {
 	})
 
 	return results
+}
+
+// MoveToTrash moves a note to trash category
+func (s *NoteStore) MoveToTrash(id string, key []byte) (*models.Note, error) {
+	return s.UpdateNoteCategory(id, models.CategoryTrash, key)
+}
+
+// PermanentlyDeleteNote permanently deletes a note (only for trash items)
+func (s *NoteStore) PermanentlyDeleteNote(id string) error {
+	s.mutex.Lock()
+	note, exists := s.notes[id]
+	if !exists {
+		s.mutex.Unlock()
+		return fmt.Errorf("note not found")
+	}
+
+	// Only allow permanent deletion of trash items
+	if note.Category != models.CategoryTrash {
+		s.mutex.Unlock()
+		return fmt.Errorf("note must be in trash to be permanently deleted")
+	}
+
+	delete(s.notes, id)
+	s.mutex.Unlock()
+
+	// Delete the file
+	filename := filepath.Join(s.dataDir, id+".json")
+	return s.deleteFile(filename)
+}
+
+// deleteFile removes a file from the file system
+func (s *NoteStore) deleteFile(filePath string) error {
+	s.mutex.Lock()
+	delete(s.fileModTimes, filePath)
+	s.mutex.Unlock()
+
+	return os.Remove(filePath)
 }
 
 // DeleteNote deletes a note by ID

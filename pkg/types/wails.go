@@ -9,6 +9,7 @@ import (
 type WailsNote struct {
 	ID        string `json:"id"`
 	Content   string `json:"content"`
+	Category  string `json:"category"`
 	CreatedAt string `json:"created_at"` // Use string representation for better Wails compatibility
 	UpdatedAt string `json:"updated_at"` // Use string representation for better Wails compatibility
 }
@@ -22,6 +23,7 @@ func ConvertToWailsNote(note *models.Note) WailsNote {
 	return WailsNote{
 		ID:        note.ID,
 		Content:   note.Content,
+		Category:  string(note.Category),
 		CreatedAt: note.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: note.UpdatedAt.Format(time.RFC3339),
 	}
