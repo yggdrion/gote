@@ -85,7 +85,17 @@ header a:hover,
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+}
+
+/* Header button overrides for more compact spacing */
+.header-right .btn {
+  min-width: 44px;
+  padding: 10px 12px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-form {
@@ -407,6 +417,43 @@ header a:hover,
   border-color: rgba(255, 107, 107, 0.3);
 }
 
+/* Trash-specific note action styles - matching regular button design */
+.note-actions .restore-btn {
+  color: #667eea;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.note-actions .restore-btn:hover {
+  background: rgba(102, 126, 234, 0.2);
+  color: #667eea;
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.note-actions .delete-permanent-btn {
+  color: #ff6b6b;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.note-actions .delete-permanent-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ee5a52;
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -461,6 +508,11 @@ header a:hover,
   padding: 20px 30px;
   border-bottom: 1px solid #eee;
   background: #f8f9fa;
+}
+
+.editor-category {
+  display: flex;
+  align-items: center;
 }
 
 .editor-actions {
@@ -1359,4 +1411,64 @@ header a:hover,
     width: 100%;
     min-width: auto;
   }
+}
+
+/* Category Filter Styles */
+.category-filter {
+  display: flex;
+  margin-left: 15px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.category-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border-radius: 6px;
+  margin: 0;
+}
+
+.category-btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.category-btn:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.category-btn:hover {
+  background: rgba(102, 126, 234, 0.15);
+  color: #764ba2;
+}
+
+.category-btn.active {
+  background: #667eea;
+  color: white;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.category-btn.active:hover {
+  background: #764ba2;
+  color: white;
+}
+
+/* Trash button active state */
+#trash-btn.active {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+}
+
+#trash-btn.active:hover {
+  background: linear-gradient(135deg, #ee5a52 0%, #e53e3e 100%);
 }

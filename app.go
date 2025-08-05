@@ -243,12 +243,64 @@ func (a *App) CreateNote(content string) (types.WailsNote, error) {
 	return types.ConvertToWailsNote(note), nil
 }
 
+// CreateNoteWithCategory creates a new note with a specific category
+func (a *App) CreateNoteWithCategory(content string, category string) (types.WailsNote, error) {
+	if a.currentKey == nil {
+		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	}
+
+	// Convert string to NoteCategory
+	var noteCategory models.NoteCategory
+	switch category {
+	case "private":
+		noteCategory = models.CategoryPrivate
+	case "work":
+		noteCategory = models.CategoryWork
+	case "trash":
+		noteCategory = models.CategoryTrash
+	default:
+		noteCategory = models.CategoryPrivate
+	}
+
+	note, err := a.noteService.CreateNoteWithCategory(content, noteCategory, a.currentKey)
+	if err != nil {
+		return types.WailsNote{}, err
+	}
+	return types.ConvertToWailsNote(note), nil
+}
+
 func (a *App) UpdateNote(id, content string) (types.WailsNote, error) {
 	if a.currentKey == nil {
 		return types.WailsNote{}, fmt.Errorf("authentication required")
 	}
 
 	note, err := a.noteService.UpdateNote(id, content, a.currentKey)
+	if err != nil {
+		return types.WailsNote{}, err
+	}
+	return types.ConvertToWailsNote(note), nil
+}
+
+// UpdateNoteCategory updates the category of a note
+func (a *App) UpdateNoteCategory(id string, category string) (types.WailsNote, error) {
+	if a.currentKey == nil {
+		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	}
+
+	// Convert string to NoteCategory
+	var noteCategory models.NoteCategory
+	switch category {
+	case "private":
+		noteCategory = models.CategoryPrivate
+	case "work":
+		noteCategory = models.CategoryWork
+	case "trash":
+		noteCategory = models.CategoryTrash
+	default:
+		return types.WailsNote{}, fmt.Errorf("invalid category: %s", category)
+	}
+
+	note, err := a.noteService.UpdateNoteCategory(id, noteCategory, a.currentKey)
 	if err != nil {
 		return types.WailsNote{}, err
 	}
@@ -265,21 +317,25 @@ func (a *App) DeleteNote(id string) error {
 	// Extract image IDs from the note content
 	imageIDs := a.extractImageIDsFromContent(noteContent)
 
-	// Delete the note
-	err := a.noteService.DeleteNote(id)
+	// Delete the note (this will move to trash or permanently delete)
+	err := a.noteService.DeleteNote(id, a.currentKey)
 	if err != nil {
 		return err
 	}
 
-	// Clean up orphaned images
-	for _, imageID := range imageIDs {
-		if !a.isImageReferencedByOtherNotes(imageID, id) {
-			// Image is not referenced by any other note, safe to delete
-			if deleteErr := a.imageStore.DeleteImage(imageID); deleteErr != nil {
-				log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, deleteErr)
-				// Don't fail the note deletion if image cleanup fails
-			} else {
-				log.Printf("Cleaned up orphaned image: %s", imageID)
+	// If the note was permanently deleted (from trash), clean up orphaned images
+	// Check if note still exists - if not, it was permanently deleted
+	if _, err := a.noteService.GetNote(id); err != nil {
+		// Note was permanently deleted, clean up images
+		for _, imageID := range imageIDs {
+			if !a.isImageReferencedByOtherNotes(imageID, id) {
+				// Image is not referenced by any other note, safe to delete
+				if deleteErr := a.imageStore.DeleteImage(imageID); deleteErr != nil {
+					log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, deleteErr)
+					// Don't fail the note deletion if image cleanup fails
+				} else {
+					log.Printf("Cleaned up orphaned image: %s", imageID)
+				}
 			}
 		}
 	}
@@ -703,4 +759,58 @@ func (a *App) GetImageStats() (map[string]interface{}, error) {
 		"total_size_bytes":  totalSize,
 		"total_size_mb":     float64(totalSize) / (1024 * 1024),
 	}, nil
+}
+
+// GetNotesByCategory returns notes filtered by category
+func (a *App) GetNotesByCategory(category string) []types.WailsNote {
+	if a.noteService == nil {
+		return []types.WailsNote{}
+	}
+
+	// Convert string to NoteCategory
+	var noteCategory models.NoteCategory
+	switch category {
+	case "private":
+		noteCategory = models.CategoryPrivate
+	case "work":
+		noteCategory = models.CategoryWork
+	case "trash":
+		noteCategory = models.CategoryTrash
+	default:
+		return []types.WailsNote{}
+	}
+
+	notes := a.noteService.GetNotesByCategory(noteCategory)
+	return types.ConvertToWailsNotes(notes)
+}
+
+// MoveToTrash moves a note to trash category
+func (a *App) MoveToTrash(id string) (types.WailsNote, error) {
+	if a.currentKey == nil {
+		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	}
+
+	note, err := a.noteService.MoveToTrash(id, a.currentKey)
+	if err != nil {
+		return types.WailsNote{}, err
+	}
+	return types.ConvertToWailsNote(note), nil
+}
+
+// PermanentlyDeleteNote permanently deletes a note (only works for trash items)
+func (a *App) PermanentlyDeleteNote(id string) error {
+	return a.noteService.PermanentlyDeleteNote(id)
+}
+
+// RestoreFromTrash restores a note from trash to its original category
+func (a *App) RestoreFromTrash(id string) (types.WailsNote, error) {
+	if a.currentKey == nil {
+		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	}
+
+	note, err := a.noteService.RestoreFromTrash(id, a.currentKey)
+	if err != nil {
+		return types.WailsNote{}, err
+	}
+	return types.ConvertToWailsNote(note), nil
 }

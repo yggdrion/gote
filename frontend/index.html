@@ -143,6 +143,22 @@
                 >
                   📋
                 </button>
+                <div class="category-filter">
+                  <button
+                    id="filter-private"
+                    class="category-btn active"
+                    data-category="private"
+                  >
+                    Private
+                  </button>
+                  <button
+                    id="filter-work"
+                    class="category-btn"
+                    data-category="work"
+                  >
+                    Work
+                  </button>
+                </div>
               </div>
               <div class="header-center">
                 <div class="search-form">
@@ -150,7 +166,7 @@
                     <input
                       type="text"
                       id="search-input"
-                      placeholder="Search your notes..."
+                      placeholder="search notes..."
                     />
                     <button
                       id="clear-search-btn"
@@ -167,6 +183,13 @@
                 </div>
               </div>
               <div class="header-right">
+                <button
+                  id="trash-btn"
+                  class="btn btn-secondary"
+                  title="View trash"
+                >
+                  🗑️
+                </button>
                 <button
                   id="sync-btn"
                   class="btn btn-secondary"
@@ -206,6 +229,24 @@
         <!-- Note Editor Overlay -->
         <div id="note-editor" class="note-editor hidden">
           <div class="editor-header">
+            <div class="editor-category">
+              <div class="category-filter">
+                <button
+                  id="editor-filter-private"
+                  class="category-btn active"
+                  data-category="private"
+                >
+                  Private
+                </button>
+                <button
+                  id="editor-filter-work"
+                  class="category-btn"
+                  data-category="work"
+                >
+                  Work
+                </button>
+              </div>
+            </div>
             <div class="editor-actions">
               <button class="btn btn-primary" id="save-note-btn">Save</button>
               <button class="btn btn-secondary" id="cancel-editor-btn">
