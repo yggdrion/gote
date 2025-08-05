@@ -407,35 +407,41 @@ header a:hover,
   border-color: rgba(255, 107, 107, 0.3);
 }
 
-/* Trash-specific note action styles */
+/* Trash-specific note action styles - matching regular button design */
 .note-actions .restore-btn {
-  background: #28a745 !important;
-  color: white !important;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
+  color: #667eea;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.2s ease;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .note-actions .restore-btn:hover {
-  background: #218838 !important;
+  background: rgba(102, 126, 234, 0.2);
+  color: #667eea;
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 .note-actions .delete-permanent-btn {
-  background: #dc3545 !important;
-  color: white !important;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
+  color: #ff6b6b;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.2s ease;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .note-actions .delete-permanent-btn:hover {
-  background: #c82333 !important;
+  background: rgba(255, 107, 107, 0.2);
+  color: #ee5a52;
+  border-color: rgba(255, 107, 107, 0.3);
 }
 
 .empty-state {
