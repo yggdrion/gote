@@ -540,3 +540,162 @@ func (s *NoteStore) ClearAllNotes() error {
 
 	return nil
 }
+
+// MoveNoteToTrash moves a note file to the trash folder
+func (s *NoteStore) MoveNoteToTrash(noteID string) error {
+	trashDir := filepath.Join(s.dataDir, "trash")
+	if err := os.MkdirAll(trashDir, 0755); err != nil {
+		return err
+	}
+	oldPath := filepath.Join(s.dataDir, noteID+".json")
+	newPath := filepath.Join(trashDir, noteID+".json")
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return err
+	}
+	// Remove from in-memory store
+	s.mutex.Lock()
+	delete(s.notes, noteID)
+	delete(s.fileModTimes, oldPath)
+	s.mutex.Unlock()
+	return nil
+}
+
+// RestoreNoteFromTrash restores a note from the trash folder
+func (s *NoteStore) RestoreNoteFromTrash(noteID string, key []byte) error {
+	trashDir := filepath.Join(s.dataDir, "trash")
+	oldPath := filepath.Join(trashDir, noteID+".json")
+	newPath := filepath.Join(s.dataDir, noteID+".json")
+
+	// Check if file exists in trash
+	if _, err := os.Stat(oldPath); os.IsNotExist(err) {
+		return fmt.Errorf("note not found in trash")
+	}
+
+	// Move file back to main directory
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return err
+	}
+
+	// Load the note back into memory
+	data, err := os.ReadFile(newPath)
+	if err != nil {
+		return err
+	}
+
+	var encryptedNote models.EncryptedNote
+	if err := json.Unmarshal(data, &encryptedNote); err != nil {
+		return err
+	}
+
+	// Decrypt the note content
+	decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, key)
+	if err != nil {
+		return err
+	}
+
+	note := &models.Note{
+		ID:        encryptedNote.ID,
+		Content:   decryptedContent,
+		CreatedAt: encryptedNote.CreatedAt,
+		UpdatedAt: encryptedNote.UpdatedAt,
+	}
+
+	// Add back to in-memory store
+	s.mutex.Lock()
+	s.notes[noteID] = note
+	if fileInfo, err := os.Stat(newPath); err == nil {
+		s.fileModTimes[newPath] = fileInfo.ModTime()
+	}
+	s.mutex.Unlock()
+
+	return nil
+}
+
+// GetTrashedNotes returns all notes in the trash folder
+func (s *NoteStore) GetTrashedNotes(key []byte) ([]*models.Note, error) {
+	trashDir := filepath.Join(s.dataDir, "trash")
+
+	// Check if trash directory exists
+	if _, err := os.Stat(trashDir); os.IsNotExist(err) {
+		return []*models.Note{}, nil // Return empty slice if no trash folder
+	}
+
+	files, err := filepath.Glob(filepath.Join(trashDir, "*.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list trash files: %v", err)
+	}
+
+	var trashedNotes []*models.Note
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			log.Printf("Error reading trash file %s: %v", file, err)
+			continue
+		}
+
+		var encryptedNote models.EncryptedNote
+		if err := json.Unmarshal(data, &encryptedNote); err != nil {
+			log.Printf("Error unmarshalling trash file %s: %v", file, err)
+			continue
+		}
+
+		// Decrypt the note content
+		decryptedContent, err := crypto.Decrypt(encryptedNote.EncryptedData, key)
+		if err != nil {
+			log.Printf("Error decrypting trash file %s: %v", file, err)
+			continue
+		}
+
+		note := &models.Note{
+			ID:        encryptedNote.ID,
+			Content:   decryptedContent,
+			CreatedAt: encryptedNote.CreatedAt,
+			UpdatedAt: encryptedNote.UpdatedAt,
+		}
+
+		trashedNotes = append(trashedNotes, note)
+	}
+
+	// Sort by update time (most recent first)
+	sort.Slice(trashedNotes, func(i, j int) bool {
+		return trashedNotes[i].UpdatedAt.After(trashedNotes[j].UpdatedAt)
+	})
+
+	return trashedNotes, nil
+}
+
+// PermanentlyDeleteNote permanently deletes a note from the trash folder
+func (s *NoteStore) PermanentlyDeleteNote(noteID string) error {
+	trashDir := filepath.Join(s.dataDir, "trash")
+	filePath := filepath.Join(trashDir, noteID+".json")
+
+	// Check if file exists in trash
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("note not found in trash")
+	}
+
+	return os.Remove(filePath)
+}
+
+// EmptyTrash permanently deletes all notes in the trash folder
+func (s *NoteStore) EmptyTrash() error {
+	trashDir := filepath.Join(s.dataDir, "trash")
+
+	// Check if trash directory exists
+	if _, err := os.Stat(trashDir); os.IsNotExist(err) {
+		return nil // Nothing to empty
+	}
+
+	files, err := filepath.Glob(filepath.Join(trashDir, "*.json"))
+	if err != nil {
+		return fmt.Errorf("failed to list trash files: %v", err)
+	}
+
+	for _, file := range files {
+		if err := os.Remove(file); err != nil {
+			log.Printf("Failed to remove trash file %s: %v", file, err)
+		}
+	}
+
+	return nil
+}

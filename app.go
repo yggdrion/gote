@@ -287,6 +287,129 @@ func (a *App) DeleteNote(id string) error {
 	return nil
 }
 
+// MoveNoteToTrash moves a note to the trash folder instead of permanently deleting it
+func (a *App) MoveNoteToTrash(id string) error {
+	if a.currentKey == nil {
+		return fmt.Errorf("authentication required")
+	}
+
+	return a.noteService.MoveNoteToTrash(id)
+}
+
+// RestoreNoteFromTrash restores a note from the trash folder
+func (a *App) RestoreNoteFromTrash(id string) error {
+	if a.currentKey == nil {
+		return fmt.Errorf("authentication required")
+	}
+
+	return a.noteService.RestoreNoteFromTrash(id, a.currentKey)
+}
+
+// GetTrashedNotes returns all notes in the trash folder
+func (a *App) GetTrashedNotes() ([]types.WailsNote, error) {
+	if a.currentKey == nil {
+		return nil, fmt.Errorf("authentication required")
+	}
+
+	notes, err := a.noteService.GetTrashedNotes(a.currentKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var wailsNotes []types.WailsNote
+	for _, note := range notes {
+		wailsNotes = append(wailsNotes, types.ConvertToWailsNote(note))
+	}
+	return wailsNotes, nil
+}
+
+// PermanentlyDeleteNote permanently deletes a note from the trash folder
+func (a *App) PermanentlyDeleteNote(id string) error {
+	if a.currentKey == nil {
+		return fmt.Errorf("authentication required")
+	}
+
+	// First, get the note content to extract image IDs before deletion
+	// Check if note is in trash
+	trashedNotes, err := a.noteService.GetTrashedNotes(a.currentKey)
+	if err != nil {
+		return err
+	}
+
+	var noteContent string
+	for _, note := range trashedNotes {
+		if note.ID == id {
+			noteContent = note.Content
+			break
+		}
+	}
+
+	// Extract image IDs from the note content
+	imageIDs := a.extractImageIDsFromContent(noteContent)
+
+	// Permanently delete the note
+	err = a.noteService.PermanentlyDeleteNote(id)
+	if err != nil {
+		return err
+	}
+
+	// Clean up orphaned images (check against both active and trashed notes)
+	for _, imageID := range imageIDs {
+		if !a.isImageReferencedByAnyNotes(imageID, id) {
+			// Image is not referenced by any note (active or trashed), safe to delete
+			if deleteErr := a.imageStore.DeleteImage(imageID); deleteErr != nil {
+				log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, deleteErr)
+				// Don't fail the note deletion if image cleanup fails
+			} else {
+				log.Printf("Cleaned up orphaned image: %s", imageID)
+			}
+		}
+	}
+
+	return nil
+}
+
+// EmptyTrash permanently deletes all notes in the trash folder
+func (a *App) EmptyTrash() error {
+	if a.currentKey == nil {
+		return fmt.Errorf("authentication required")
+	}
+
+	// Get all trashed notes to extract image IDs before deletion
+	trashedNotes, err := a.noteService.GetTrashedNotes(a.currentKey)
+	if err != nil {
+		return err
+	}
+
+	// Collect all image IDs from trashed notes
+	var allImageIDs []string
+	for _, note := range trashedNotes {
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		allImageIDs = append(allImageIDs, imageIDs...)
+	}
+
+	// Empty the trash
+	err = a.noteService.EmptyTrash()
+	if err != nil {
+		return err
+	}
+
+	// Clean up orphaned images (check against remaining active notes)
+	for _, imageID := range allImageIDs {
+		if !a.isImageReferencedByActiveNotes(imageID) {
+			// Image is not referenced by any active note, safe to delete
+			if deleteErr := a.imageStore.DeleteImage(imageID); deleteErr != nil {
+				log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, deleteErr)
+				// Don't fail the trash emptying if image cleanup fails
+			} else {
+				log.Printf("Cleaned up orphaned image: %s", imageID)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (a *App) SearchNotes(query string) []types.WailsNote {
 	var notes []*models.Note
 	if a.noteService != nil {
@@ -602,6 +725,72 @@ func (a *App) isImageReferencedByOtherNotes(imageID, excludeNoteID string) bool 
 		for _, id := range imageIDs {
 			if id == imageID {
 				return true // Image is referenced by another note
+			}
+		}
+	}
+
+	return false
+}
+
+// isImageReferencedByAnyNotes checks if an image is referenced by any note (both active and trashed)
+func (a *App) isImageReferencedByAnyNotes(imageID, excludeNoteID string) bool {
+	// Check active notes
+	var allNotes []*models.Note
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	for _, note := range allNotes {
+		if note.ID == excludeNoteID {
+			continue // Skip the note being deleted
+		}
+
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		for _, id := range imageIDs {
+			if id == imageID {
+				return true // Image is referenced by an active note
+			}
+		}
+	}
+
+	// Check trashed notes
+	if a.currentKey != nil {
+		trashedNotes, err := a.noteService.GetTrashedNotes(a.currentKey)
+		if err == nil {
+			for _, note := range trashedNotes {
+				if note.ID == excludeNoteID {
+					continue // Skip the note being deleted
+				}
+
+				imageIDs := a.extractImageIDsFromContent(note.Content)
+				for _, id := range imageIDs {
+					if id == imageID {
+						return true // Image is referenced by a trashed note
+					}
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// isImageReferencedByActiveNotes checks if an image is referenced by any active note
+func (a *App) isImageReferencedByActiveNotes(imageID string) bool {
+	var allNotes []*models.Note
+	if a.noteService != nil {
+		allNotes = a.noteService.GetAllNotes()
+	} else {
+		allNotes = a.store.GetAllNotes()
+	}
+
+	for _, note := range allNotes {
+		imageIDs := a.extractImageIDsFromContent(note.Content)
+		for _, id := range imageIDs {
+			if id == imageID {
+				return true // Image is referenced by an active note
 			}
 		}
 	}

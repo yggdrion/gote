@@ -74,6 +74,51 @@ func (s *NoteService) DeleteNote(id string) error {
 	return s.store.DeleteNote(id)
 }
 
+// MoveNoteToTrash moves a note to the trash folder
+func (s *NoteService) MoveNoteToTrash(id string) error {
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("note ID cannot be empty")
+	}
+
+	return s.store.MoveNoteToTrash(id)
+}
+
+// RestoreNoteFromTrash restores a note from the trash folder
+func (s *NoteService) RestoreNoteFromTrash(id string, key []byte) error {
+	if key == nil {
+		return fmt.Errorf("authentication required")
+	}
+
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("note ID cannot be empty")
+	}
+
+	return s.store.RestoreNoteFromTrash(id, key)
+}
+
+// GetTrashedNotes returns all notes in the trash folder
+func (s *NoteService) GetTrashedNotes(key []byte) ([]*models.Note, error) {
+	if key == nil {
+		return nil, fmt.Errorf("authentication required")
+	}
+
+	return s.store.GetTrashedNotes(key)
+}
+
+// PermanentlyDeleteNote permanently deletes a note from the trash folder
+func (s *NoteService) PermanentlyDeleteNote(id string) error {
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("note ID cannot be empty")
+	}
+
+	return s.store.PermanentlyDeleteNote(id)
+}
+
+// EmptyTrash permanently deletes all notes in the trash folder
+func (s *NoteService) EmptyTrash() error {
+	return s.store.EmptyTrash()
+}
+
 // SearchNotes searches for notes containing the query
 func (s *NoteService) SearchNotes(query string) []*models.Note {
 	return s.store.SearchNotes(query)
