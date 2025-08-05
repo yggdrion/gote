@@ -1403,15 +1403,12 @@ header a:hover,
   display: flex;
   gap: 4px;
   margin-left: 15px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
-  padding: 2px;
 }
 
 .category-btn {
   padding: 6px 12px;
   border: none;
-  background: transparent;
+  background: rgba(102, 126, 234, 0.1);
   color: #667eea;
   border-radius: 6px;
   cursor: pointer;
@@ -1419,6 +1416,13 @@ header a:hover,
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
+
+/* Add visual separation before trash button */
+.category-btn[data-category="trash"] {
+  margin-left: 8px;
+  border-left: 1px solid rgba(102, 126, 234, 0.2);
+  padding-left: 16px;
 }
 
 .category-btn:hover {
