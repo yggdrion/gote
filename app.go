@@ -181,23 +181,9 @@ func (a *App) SetPassword(password string) error {
 }
 
 func (a *App) VerifyPassword(password string) bool {
-	// Check if this is a new device with cross-platform config
-	hasLocalPassword := !a.authManager.IsFirstTimeSetup()
-
-	// Verify password
+	// Verify password - this will automatically handle cross-platform setup if needed
 	if !a.authManager.VerifyPassword(password) {
 		return false
-	}
-
-	// If no local password hash exists but cross-platform config does,
-	// sync the cross-platform config to local storage
-	if !hasLocalPassword {
-		if err := a.authManager.SyncFromCrossPlatform(password); err != nil {
-			log.Printf("Warning: Could not sync from cross-platform config: %v", err)
-			// Continue anyway - the verification already passed
-		} else {
-			log.Printf("Successfully synced authentication from cross-platform config")
-		}
 	}
 
 	// Derive encryption key

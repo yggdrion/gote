@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -187,19 +188,24 @@ func (m *Manager) VerifyPassword(password string) bool {
 		}
 	}
 
-	// If local verification failed, try cross-platform config (for new devices)
+	// If local verification failed, try cross-platform setup
+	// There's only one password for all notes across devices
 	if m.notesDir != "" {
 		salt, err := m.loadCrossPlatformSalt()
 		if err == nil {
-			// We have cross-platform salt but no local password hash
-			// This means it's a new device - we need to create a local password hash
-			// But first verify the password would work with this salt
+			// We have cross-platform salt - verify password with this salt
+			// and create local password hash if verification succeeds
 			m.currentSalt = salt
 
-			// Since we don't have a stored verification hash for cross-platform,
-			// we'll return true and let the calling code handle first-time setup
-			// The password verification will happen during key derivation
-			return true
+			// Verify the password can decrypt existing notes (if any exist)
+			if m.verifyPasswordWithCrossPlatformData(password, salt) {
+				// Password is correct - create local password hash for faster future logins
+				if err := m.createLocalPasswordHashFromCrossPlatform(password, salt); err != nil {
+					// Log warning but don't fail - cross-platform verification already passed
+					fmt.Printf("Warning: Could not create local password hash: %v\n", err)
+				}
+				return true
+			}
 		}
 	}
 
@@ -345,6 +351,79 @@ func (m *Manager) SyncFromCrossPlatform(password string) error {
 	// Store the salt for key derivation
 	m.currentSalt = salt
 
+	// Create local password hash using the shared salt
+	return m.createLocalPasswordHashFromCrossPlatform(password, salt)
+}
+
+// verifyPasswordWithCrossPlatformData verifies a password by testing if it can decrypt existing notes
+func (m *Manager) verifyPasswordWithCrossPlatformData(password string, salt []byte) bool {
+	if m.notesDir == "" {
+		return false
+	}
+
+	// Derive encryption key from password and salt
+	key := crypto.DeriveKey(password, salt)
+
+	// Look for encrypted note files in the notes directory
+	files, err := os.ReadDir(m.notesDir)
+	if err != nil {
+		return false
+	}
+
+	// Try to decrypt at least one .json file to verify the password
+	jsonFilesFound := 0
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") && file.Name() != ".gote_config.json" {
+			jsonFilesFound++
+			filePath := filepath.Join(m.notesDir, file.Name())
+
+			// Try to read and decrypt the file
+			data, err := os.ReadFile(filePath)
+			if err != nil {
+				continue
+			}
+
+			// Try to parse as encrypted note
+			var encryptedNote struct {
+				EncryptedData string `json:"encryptedData"`
+			}
+
+			if err := json.Unmarshal(data, &encryptedNote); err != nil {
+				continue
+			}
+
+			// Attempt to decrypt - if this succeeds, the password is correct
+			_, err = crypto.Decrypt(encryptedNote.EncryptedData, key)
+			if err == nil {
+				// Successfully decrypted at least one note - password is valid
+				return true
+			}
+		}
+	}
+
+	// No files could be decrypted - this means either:
+	// 1. Wrong password (most likely)
+	// 2. No encrypted notes exist yet (unlikely in cross-platform setup)
+	// For security, we should NEVER allow a password that can't decrypt existing data
+	// if such data exists. Only allow if there are truly NO encrypted note files.
+	if jsonFilesFound > 0 {
+		// Found encrypted notes but none could be decrypted - definitely wrong password
+		return false
+	}
+
+	// Only if there are truly no encrypted notes, check if this might be a fresh setup
+	configPath := filepath.Join(m.notesDir, ".gote_config.json")
+	if _, err := os.Stat(configPath); err == nil {
+		// Cross-platform config exists but no encrypted notes - this might be a fresh setup
+		// We'll allow the password in this specific case only
+		return true
+	}
+
+	return false
+}
+
+// createLocalPasswordHashFromCrossPlatform creates a local password hash using the cross-platform salt
+func (m *Manager) createLocalPasswordHashFromCrossPlatform(password string, salt []byte) error {
 	// Create verification hash using the cross-platform salt
 	verificationKey := crypto.DeriveKey(password+"verification", salt)
 
