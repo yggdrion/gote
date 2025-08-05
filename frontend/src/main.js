@@ -147,7 +147,7 @@ let authScreen, mainApp, settingsScreen, passwordSetup, passwordLogin;
 let setupPasswordInput, confirmPasswordInput, setupBtn;
 let loginPasswordInput, loginBtn, loginError, resetPasswordBtn;
 let newNoteBtn, newNoteFromClipboardBtn, searchInput, searchBtn, clearSearchBtn;
-let syncBtn, settingsBtn, notesGrid, noteEditor;
+let syncBtn, settingsBtn, trashBtn, notesGrid, noteEditor;
 let noteContent, searchResultsHeader, emptyState;
 let saveNoteBtn, cancelEditorBtn, createFirstNoteBtn;
 let backFromSettings, syncFromSettings;
@@ -155,7 +155,7 @@ let createBackupBtn, logoutBtn;
 let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 
 // Category filter elements
-let filterPrivateBtn, filterWorkBtn, filterTrashBtn;
+let filterPrivateBtn, filterWorkBtn;
 
 // Setup screen elements
 let initialSetupScreen, setupNotesPath, setupPasswordHashPath;
@@ -198,6 +198,7 @@ function initializeDOM() {
   searchBtn = document.getElementById("search-btn");
   clearSearchBtn = document.getElementById("clear-search-btn");
   syncBtn = document.getElementById("sync-btn");
+  trashBtn = document.getElementById("trash-btn");
   settingsBtn = document.getElementById("settings-btn");
   notesGrid = document.getElementById("notes-grid");
   noteEditor = document.getElementById("note-editor");
@@ -215,7 +216,6 @@ function initializeDOM() {
   // Category filter elements
   filterPrivateBtn = document.getElementById("filter-private");
   filterWorkBtn = document.getElementById("filter-work");
-  filterTrashBtn = document.getElementById("filter-trash");
 
   // Settings input elements
   notesPathInput = document.getElementById("notes-path-input");
@@ -272,13 +272,13 @@ function setupEventListeners() {
   searchBtn.addEventListener("click", handleSearch);
   clearSearchBtn.addEventListener("click", clearSearch);
   syncBtn.addEventListener("click", handleSync);
+  trashBtn.addEventListener("click", () => switchCategory("trash"));
   settingsBtn.addEventListener("click", openSettings);
   createFirstNoteBtn.addEventListener("click", createNewNote);
 
   // Category filter listeners
   filterPrivateBtn.addEventListener("click", () => switchCategory("private"));
   filterWorkBtn.addEventListener("click", () => switchCategory("work"));
-  filterTrashBtn.addEventListener("click", () => switchCategory("trash"));
 
   // Search input listener with debouncing
   searchInput.addEventListener("keypress", (e) => {
@@ -981,10 +981,12 @@ function switchCategory(category) {
 }
 
 function updateCategoryButtons() {
-  // Remove active class from all buttons
+  // Remove active class from all category filter buttons
   filterPrivateBtn.classList.remove("active");
   filterWorkBtn.classList.remove("active");
-  filterTrashBtn.classList.remove("active");
+
+  // Remove active class from trash button
+  trashBtn.classList.remove("active");
 
   // Add active class to current category button
   switch (currentCategory) {
@@ -995,7 +997,7 @@ function updateCategoryButtons() {
       filterWorkBtn.classList.add("active");
       break;
     case "trash":
-      filterTrashBtn.classList.add("active");
+      trashBtn.classList.add("active");
       break;
   }
 }

@@ -1418,13 +1418,6 @@ header a:hover,
   white-space: nowrap;
 }
 
-/* Add visual separation before trash button */
-.category-btn[data-category="trash"] {
-  margin-left: 8px;
-  border-left: 1px solid rgba(102, 126, 234, 0.2);
-  padding-left: 16px;
-}
-
 .category-btn:hover {
   background: rgba(102, 126, 234, 0.1);
   color: #764ba2;
@@ -1439,4 +1432,15 @@ header a:hover,
 .category-btn.active:hover {
   background: #764ba2;
   color: white;
+}
+
+/* Trash button active state */
+#trash-btn.active {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
+}
+
+#trash-btn.active:hover {
+  background: linear-gradient(135deg, #ee5a52 0%, #e53e3e 100%);
 }
