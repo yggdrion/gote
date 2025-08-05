@@ -71,7 +71,6 @@ export const ELEMENT_IDS = {
   SAVE_NOTE_BTN: "save-note-btn",
   CANCEL_EDITOR_BTN: "cancel-editor-btn",
   SETTINGS_BTN: "settings-btn",
-  SYNC_BTN: "sync-btn",
   SEARCH_BTN: "search-btn",
   CLEAR_SEARCH_BTN: "clear-search-btn",
   LOGIN_BTN: "login-btn",
@@ -87,13 +86,11 @@ export const MESSAGES = {
   NOTE_DELETED: "Note deleted successfully",
   PASSWORD_CHANGED: "Password changed successfully",
   BACKUP_CREATED: "Backup created successfully",
-  SYNC_COMPLETED: "Notes synchronized from disk",
 
   // Error Messages
   LOGIN_FAILED: "Invalid password. Please try again.",
   SAVE_FAILED: "Failed to save note. Please try again.",
   DELETE_FAILED: "Failed to delete note. Please try again.",
-  SYNC_FAILED: "Failed to sync notes from disk.",
   PASSWORD_MISMATCH: "Passwords do not match.",
   PASSWORD_TOO_SHORT: `Password must be at least ${UI_CONSTANTS.MIN_PASSWORD_LENGTH} characters long.`,
   NETWORK_ERROR: "Network error. Please check your connection.",

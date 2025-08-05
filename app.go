@@ -353,17 +353,6 @@ func (a *App) SearchNotes(query string) []types.WailsNote {
 	return types.ConvertToWailsNotes(notes)
 }
 
-func (a *App) SyncFromDisk() error {
-	if a.currentKey == nil {
-		return fmt.Errorf("not authenticated")
-	}
-
-	if a.noteService != nil {
-		return a.noteService.SyncFromDisk()
-	}
-	return a.store.LoadNotes(a.currentKey)
-}
-
 // Settings methods
 func (a *App) GetSettings() map[string]interface{} {
 	return map[string]interface{}{

@@ -23,7 +23,6 @@ import {
   RestoreFromTrash,
   PermanentlyDeleteNote,
   SearchNotes,
-  SyncFromDisk,
   GetSettings,
   UpdateSettings,
   ResetApplication,
@@ -141,10 +140,10 @@ let authScreen, mainApp, settingsScreen, passwordSetup, passwordLogin;
 let setupPasswordInput, confirmPasswordInput, setupBtn;
 let loginPasswordInput, loginBtn, loginError, resetPasswordBtn;
 let newNoteBtn, newNoteFromClipboardBtn, searchInput, searchBtn, clearSearchBtn;
-let syncBtn, settingsBtn, trashBtn, notesGrid, noteEditor;
+let settingsBtn, trashBtn, notesGrid, noteEditor;
 let noteContent, searchResultsHeader, emptyState;
 let saveNoteBtn, cancelEditorBtn, createFirstNoteBtn;
-let backFromSettings, syncFromSettings;
+let backFromSettings;
 let createBackupBtn, logoutBtn;
 let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 
@@ -194,7 +193,6 @@ function initializeDOM() {
   searchInput = document.getElementById("search-input");
   searchBtn = document.getElementById("search-btn");
   clearSearchBtn = document.getElementById("clear-search-btn");
-  syncBtn = document.getElementById("sync-btn");
   trashBtn = document.getElementById("trash-btn");
   settingsBtn = document.getElementById("settings-btn");
   notesGrid = document.getElementById("notes-grid");
@@ -206,7 +204,6 @@ function initializeDOM() {
   cancelEditorBtn = document.getElementById("cancel-editor-btn");
   createFirstNoteBtn = document.getElementById("create-first-note");
   backFromSettings = document.getElementById("back-from-settings");
-  syncFromSettings = document.getElementById("sync-from-settings");
   createBackupBtn = document.getElementById("create-backup-btn");
   logoutBtn = document.getElementById("logout-btn");
 
@@ -272,7 +269,6 @@ function setupEventListeners() {
   newNoteFromClipboardBtn.addEventListener("click", createNoteFromClipboard);
   searchBtn.addEventListener("click", handleSearch);
   clearSearchBtn.addEventListener("click", clearSearch);
-  syncBtn.addEventListener("click", handleSync);
   trashBtn.addEventListener("click", () => switchCategory("trash"));
   settingsBtn.addEventListener("click", openSettings);
   createFirstNoteBtn.addEventListener("click", createNewNote);
@@ -314,7 +310,6 @@ function setupEventListeners() {
 
   // Settings listeners
   backFromSettings.addEventListener("click", closeSettings);
-  syncFromSettings.addEventListener("click", handleSync);
   createBackupBtn.addEventListener("click", handleCreateBackup);
   saveSettingsBtn.addEventListener("click", handleSaveSettings);
   logoutBtn.addEventListener("click", handleLogout);
@@ -1123,12 +1118,6 @@ function startActivityTracking() {
 
   // Start the timer
   resetTimer();
-}
-
-async function handleSync() {
-  // Placeholder for sync functionality
-  console.log("Sync functionality not implemented yet");
-  alert("Sync feature is not implemented yet");
 }
 
 async function handleCreateBackup() {

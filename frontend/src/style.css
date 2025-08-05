@@ -1079,11 +1079,6 @@ header a:hover,
   line-height: 1.4;
 }
 
-.sync-btn {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
 /* Button variations for settings */
 .btn.btn-warning {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
