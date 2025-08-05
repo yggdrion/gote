@@ -85,7 +85,17 @@ header a:hover,
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+}
+
+/* Header button overrides for more compact spacing */
+.header-right .btn {
+  min-width: 44px;
+  padding: 10px 12px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-form {
