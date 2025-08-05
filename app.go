@@ -196,15 +196,20 @@ func (a *App) VerifyPassword(password string) bool {
 	a.currentKey = key
 	// Load notes with the key
 	if a.noteService != nil {
-		a.noteService.LoadNotes(a.currentKey)
+		err = a.noteService.LoadNotes(a.currentKey)
+		if err != nil {
+			log.Printf("Failed to load notes via service: %v", err)
+		}
 	} else {
-		a.store.LoadNotes(a.currentKey)
+		err = a.store.LoadNotes(a.currentKey)
+		if err != nil {
+			log.Printf("Failed to load notes via store: %v", err)
+		}
 	}
 	a.imageStore.SetKey(a.currentKey)
-	return true
-}
 
-// Note management methods
+	return true
+} // Note management methods
 func (a *App) GetAllNotes() []types.WailsNote {
 	var notes []*models.Note
 	if a.noteService != nil {

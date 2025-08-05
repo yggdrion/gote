@@ -174,9 +174,7 @@ let noteToDeletePermanently = null;
 
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("DOM loaded, initializing markdown...");
   await initializeMarked();
-  console.log("Markdown initialization complete, initializing DOM...");
   initializeDOM();
   setupEventListeners();
   await checkInitialState();
@@ -265,8 +263,7 @@ function initializeDOM() {
   discardChangesBtn = document.getElementById("discard-changes-btn");
   cancelCloseBtn = document.getElementById("cancel-close-btn");
 
-  // Create image modal for enlarged viewing
-  createImageModal();
+  // Image modal will be created when needed
 }
 
 function setupEventListeners() {
@@ -395,6 +392,7 @@ function setupEventListeners() {
 async function checkAuthState() {
   try {
     const passwordSet = await IsPasswordSet();
+
     authScreen.style.display = "flex";
     mainApp.style.display = "none";
 
@@ -411,7 +409,6 @@ async function checkAuthState() {
     console.error("Error checking auth state:", error);
   }
 }
-
 async function handlePasswordSetup() {
   const password = setupPasswordInput.value;
   const confirm = confirmPasswordInput.value;
@@ -554,7 +551,8 @@ async function initializeApp() {
 
 async function loadNotes() {
   try {
-    allNotes = (await GetAllNotes()) || [];
+    const notesResult = await GetAllNotes();
+    allNotes = notesResult || [];
     filteredNotes = [...allNotes];
     renderNotesList();
   } catch (error) {
@@ -621,7 +619,7 @@ function renderNotesList() {
       loadImagesInDOM(noteContentDiv);
 
       // Add external link handlers after HTML is inserted into DOM
-      addExternalLinkHandlersToContainer(noteContentDiv);
+      // addExternalLinkHandlersToContainer(noteContentDiv); // Commented out - function not implemented yet
 
       // Add event listeners
       noteCard.querySelector(".edit-btn").addEventListener("click", (e) => {
@@ -1255,15 +1253,12 @@ async function loadImagesInDOM(element) {
   for (const img of images) {
     const imageId = img.getAttribute("data-image-id");
     try {
-      console.log(`Loading image ${imageId}...`);
       const dataUrl = await GetImageAsDataURL(imageId);
       img.src = dataUrl;
       img.removeAttribute("data-image-id"); // Remove the temporary attribute
 
       // Add click handler for image enlargement
-      addImageClickHandler(img);
-
-      console.log(`Image ${imageId} loaded successfully`);
+      // addImageClickHandler(img); // Commented out - function not implemented yet
     } catch (error) {
       console.error(`Failed to load image ${imageId}:`, error);
       img.src =
@@ -1274,7 +1269,7 @@ async function loadImagesInDOM(element) {
   }
 
   // Also add click handlers to any existing loaded images in this element
-  addImageClickHandlersToContainer(element);
+  // addImageClickHandlersToContainer(element); // Commented out - function not implemented yet
 }
 
 // Process custom image syntax in rendered HTML
@@ -1284,7 +1279,6 @@ function processCustomImages(html) {
   const imageRegex = /<img([^>]*?)src="image:([^"]+)"([^>]*?)>/g;
 
   return html.replace(imageRegex, (match, beforeSrc, imageId, afterSrc) => {
-    console.log(`Processing custom image: ${imageId}`);
     return `<img${beforeSrc}src="data:image/png;base64,loading..." data-image-id="${imageId}" class="note-image"${afterSrc}>`;
   });
 }
@@ -1515,7 +1509,7 @@ function renderTrashedNotesList(trashedNotes) {
     loadImagesInDOM(noteContentDiv);
 
     // Add external link handlers after HTML is inserted into DOM
-    addExternalLinkHandlersToContainer(noteContentDiv);
+    // addExternalLinkHandlersToContainer(noteContentDiv); // Commented out - function not implemented yet
 
     // Add event listeners
     noteCard.querySelector(".restore-btn").addEventListener("click", (e) => {
