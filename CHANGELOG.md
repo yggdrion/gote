@@ -1,3 +1,10 @@
+## [1.2.18](https://github.com/yggdrion/gote/compare/v1.2.17...v1.2.18) (2025-08-05)
+
+### Bug Fixes
+
+* clipboard icon ([8896b2f](https://github.com/yggdrion/gote/commit/8896b2f8b1123137cc2f9547c8cf9fec74901201))
+* wrong password ([d23b485](https://github.com/yggdrion/gote/commit/d23b4850b75ce110ef04f25ee8a66615654853ff))
+
 ## [1.2.17](https://github.com/yggdrion/gote/compare/v1.2.16...v1.2.17) (2025-08-05)
 
 ### Bug Fixes
