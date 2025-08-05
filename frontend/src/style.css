@@ -510,6 +510,11 @@ header a:hover,
   background: #f8f9fa;
 }
 
+.editor-category {
+  display: flex;
+  align-items: center;
+}
+
 .editor-actions {
   display: flex;
   gap: 10px;

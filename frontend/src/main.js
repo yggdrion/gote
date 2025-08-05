@@ -157,6 +157,9 @@ let notesPathInput, passwordHashPathInput, saveSettingsBtn;
 // Category filter elements
 let filterPrivateBtn, filterWorkBtn;
 
+// Editor category filter elements
+let editorFilterPrivateBtn, editorFilterWorkBtn;
+
 // Setup screen elements
 let initialSetupScreen, setupNotesPath, setupPasswordHashPath;
 let setupMasterPassword, setupConfirmPassword, completeSetupBtn;
@@ -216,6 +219,10 @@ function initializeDOM() {
   // Category filter elements
   filterPrivateBtn = document.getElementById("filter-private");
   filterWorkBtn = document.getElementById("filter-work");
+
+  // Editor category filter elements
+  editorFilterPrivateBtn = document.getElementById("editor-filter-private");
+  editorFilterWorkBtn = document.getElementById("editor-filter-work");
 
   // Settings input elements
   notesPathInput = document.getElementById("notes-path-input");
@@ -279,6 +286,14 @@ function setupEventListeners() {
   // Category filter listeners
   filterPrivateBtn.addEventListener("click", () => switchCategory("private"));
   filterWorkBtn.addEventListener("click", () => switchCategory("work"));
+
+  // Editor category filter listeners
+  editorFilterPrivateBtn.addEventListener("click", () =>
+    switchEditorCategory("private")
+  );
+  editorFilterWorkBtn.addEventListener("click", () =>
+    switchEditorCategory("work")
+  );
 
   // Search input listener with debouncing
   searchInput.addEventListener("keypress", (e) => {
@@ -745,6 +760,10 @@ async function editNote(noteId) {
     currentNote = note;
     noteContent.value = note.content;
     originalNoteContent = note.content; // Track original content for change detection
+
+    // Set the editor category buttons to reflect the note's category
+    updateEditorCategoryButtons(note.category);
+
     showEditor();
   } catch (error) {
     console.error("Error loading note:", error);
@@ -771,15 +790,25 @@ async function saveCurrentNote() {
     const updatedNote = await UpdateNote(currentNote.id, noteContent.value);
     currentNote = updatedNote;
 
-    // Update notes list
-    const index = allNotes.findIndex((n) => n.id === currentNote.id);
-    if (index !== -1) {
-      allNotes[index] = updatedNote;
-      filteredNotes = searchQuery
-        ? filteredNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n))
-        : [...allNotes];
+    // Check if the note's category matches the current view
+    const noteCategoryMatchesView = updatedNote.category === currentCategory;
 
-      renderNotesList();
+    if (noteCategoryMatchesView) {
+      // Update notes list if the note is still in the current category view
+      const index = allNotes.findIndex((n) => n.id === currentNote.id);
+      if (index !== -1) {
+        allNotes[index] = updatedNote;
+        filteredNotes = searchQuery
+          ? filteredNotes.map((n) =>
+              n.id === updatedNote.id ? updatedNote : n
+            )
+          : [...allNotes];
+
+        renderNotesList();
+      }
+    } else {
+      // Reload notes if the category changed and note is no longer in current view
+      await loadNotes();
     }
 
     // Show save feedback briefly, then close editor
@@ -999,6 +1028,40 @@ function updateCategoryButtons() {
     case "trash":
       trashBtn.classList.add("active");
       break;
+  }
+}
+
+function updateEditorCategoryButtons(category) {
+  // Remove active class from all editor category buttons
+  editorFilterPrivateBtn.classList.remove("active");
+  editorFilterWorkBtn.classList.remove("active");
+
+  // Add active class to the specified category button
+  switch (category) {
+    case "private":
+      editorFilterPrivateBtn.classList.add("active");
+      break;
+    case "work":
+      editorFilterWorkBtn.classList.add("active");
+      break;
+  }
+}
+
+async function switchEditorCategory(category) {
+  if (!currentNote) return;
+
+  try {
+    // Update the note's category
+    const updatedNote = await UpdateNoteCategory(currentNote.id, category);
+    currentNote = updatedNote;
+
+    // Update the editor UI
+    updateEditorCategoryButtons(category);
+
+    console.log(`Note moved to ${category} category`);
+  } catch (error) {
+    console.error("Error updating note category:", error);
+    alert("Failed to update note category");
   }
 }
 
