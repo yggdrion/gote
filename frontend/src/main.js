@@ -6,9 +6,6 @@ import {
   MESSAGES,
 } from "./constants.js";
 
-// Import performance utilities (simplified)
-import { Debouncer } from "./performance.js";
-
 // Import Wails runtime
 import {
   IsPasswordSet,
@@ -57,9 +54,6 @@ let allNotes = [];
 let filteredNotes = [];
 let searchQuery = "";
 let currentCategory = "private"; // Track currently selected category
-
-// Performance optimization instances
-let searchDebouncer = new Debouncer(300); // 300ms debounce for search
 
 // Markdown instance
 let markedInstance = null;
@@ -310,7 +304,6 @@ function setupEventListeners() {
     if (e.target.value === "") {
       clearSearch();
     } else {
-      // Use debounced search for real-time search
       handleSearchInput();
     }
   });
@@ -537,7 +530,6 @@ async function loadNotes() {
 }
 
 function renderNotesList() {
-  // Use batch DOM operations for better performance
   requestAnimationFrame(() => {
     notesGrid.innerHTML = "";
     searchResultsHeader.classList.toggle("hidden", !searchQuery);
