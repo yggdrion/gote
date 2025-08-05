@@ -801,3 +801,16 @@ func (a *App) MoveToTrash(id string) (types.WailsNote, error) {
 func (a *App) PermanentlyDeleteNote(id string) error {
 	return a.noteService.PermanentlyDeleteNote(id)
 }
+
+// RestoreFromTrash restores a note from trash to its original category
+func (a *App) RestoreFromTrash(id string) (types.WailsNote, error) {
+	if a.currentKey == nil {
+		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	}
+
+	note, err := a.noteService.RestoreFromTrash(id, a.currentKey)
+	if err != nil {
+		return types.WailsNote{}, err
+	}
+	return types.ConvertToWailsNote(note), nil
+}

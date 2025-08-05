@@ -7,11 +7,12 @@ import (
 
 // WailsNote represents a note structure optimized for Wails bindings
 type WailsNote struct {
-	ID        string `json:"id"`
-	Content   string `json:"content"`
-	Category  string `json:"category"`
-	CreatedAt string `json:"created_at"` // Use string representation for better Wails compatibility
-	UpdatedAt string `json:"updated_at"` // Use string representation for better Wails compatibility
+	ID               string `json:"id"`
+	Content          string `json:"content"`
+	Category         string `json:"category"`
+	OriginalCategory string `json:"original_category,omitempty"`
+	CreatedAt        string `json:"created_at"` // Use string representation for better Wails compatibility
+	UpdatedAt        string `json:"updated_at"` // Use string representation for better Wails compatibility
 }
 
 // ConvertToWailsNote converts a models.Note to WailsNote with proper time formatting
@@ -21,11 +22,12 @@ func ConvertToWailsNote(note *models.Note) WailsNote {
 	}
 
 	return WailsNote{
-		ID:        note.ID,
-		Content:   note.Content,
-		Category:  string(note.Category),
-		CreatedAt: note.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: note.UpdatedAt.Format(time.RFC3339),
+		ID:               note.ID,
+		Content:          note.Content,
+		Category:         string(note.Category),
+		OriginalCategory: string(note.OriginalCategory),
+		CreatedAt:        note.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:        note.UpdatedAt.Format(time.RFC3339),
 	}
 }
 

@@ -23,6 +23,7 @@ import {
   DeleteNote,
   GetNotesByCategory,
   MoveToTrash,
+  RestoreFromTrash,
   PermanentlyDeleteNote,
   SearchNotes,
   SyncFromDisk,
@@ -853,13 +854,13 @@ async function confirmDeleteNote() {
 // Note action functions
 async function restoreNote(noteId) {
   try {
-    // Restore to private category by default
-    await UpdateNoteCategory(noteId, "private");
+    // Use the new RestoreFromTrash API that restores to original category
+    await RestoreFromTrash(noteId);
 
     // Reload current view
     await loadNotes();
 
-    console.log("Note restored to private category");
+    console.log("Note restored to original category");
   } catch (error) {
     console.error("Error restoring note:", error);
     alert("Failed to restore note");

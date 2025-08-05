@@ -150,3 +150,16 @@ func (s *NoteService) SearchNotes(query string) []*models.Note {
 func (s *NoteService) SyncFromDisk() error {
 	return s.store.RefreshFromDisk()
 }
+
+// RestoreFromTrash restores a note from trash to its original category
+func (s *NoteService) RestoreFromTrash(id string, key []byte) (*models.Note, error) {
+	if key == nil {
+		return nil, fmt.Errorf("authentication required")
+	}
+
+	if strings.TrimSpace(id) == "" {
+		return nil, fmt.Errorf("note ID cannot be empty")
+	}
+
+	return s.store.RestoreFromTrash(id, key)
+}

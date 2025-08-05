@@ -598,9 +598,28 @@ func (s *NoteStore) SearchNotes(query string) []*models.Note {
 	return results
 }
 
-// MoveToTrash moves a note to trash category
+// MoveToTrash moves a note to trash category, preserving the original category
 func (s *NoteStore) MoveToTrash(id string, key []byte) (*models.Note, error) {
-	return s.UpdateNoteCategory(id, models.CategoryTrash, key)
+	s.mutex.Lock()
+	note, exists := s.notes[id]
+	if !exists {
+		s.mutex.Unlock()
+		return nil, fmt.Errorf("note not found")
+	}
+
+	// Store the current category as original category before moving to trash
+	if note.Category != models.CategoryTrash {
+		note.OriginalCategory = note.Category
+	}
+	note.Category = models.CategoryTrash
+	note.UpdatedAt = time.Now()
+	s.mutex.Unlock()
+
+	if err := s.saveNote(note, key); err != nil {
+		return nil, err
+	}
+
+	return note, nil
 }
 
 // PermanentlyDeleteNote permanently deletes a note (only for trash items)
@@ -701,4 +720,38 @@ func (s *NoteStore) ClearAllNotes() error {
 	s.fileModTimes = make(map[string]time.Time)
 
 	return nil
+}
+
+// RestoreFromTrash restores a note from trash to its original category
+func (s *NoteStore) RestoreFromTrash(id string, key []byte) (*models.Note, error) {
+	s.mutex.Lock()
+	note, exists := s.notes[id]
+	if !exists {
+		s.mutex.Unlock()
+		return nil, fmt.Errorf("note not found")
+	}
+
+	// Only allow restoring from trash
+	if note.Category != models.CategoryTrash {
+		s.mutex.Unlock()
+		return nil, fmt.Errorf("note is not in trash")
+	}
+
+	// Restore to original category, or default to private if no original category
+	if note.OriginalCategory != "" {
+		note.Category = note.OriginalCategory
+	} else {
+		note.Category = models.CategoryPrivate // Default fallback
+	}
+
+	// Clear the original category since it's been restored
+	note.OriginalCategory = ""
+	note.UpdatedAt = time.Now()
+	s.mutex.Unlock()
+
+	if err := s.saveNote(note, key); err != nil {
+		return nil, err
+	}
+
+	return note, nil
 }
