@@ -1,3 +1,9 @@
+## [1.2.17](https://github.com/yggdrion/gote/compare/v1.2.16...v1.2.17) (2025-08-05)
+
+### Bug Fixes
+
+* note from clipboard ([beeea96](https://github.com/yggdrion/gote/commit/beeea9611c3504348140bb5543885b0868ba5e62))
+
 ## [1.2.16](https://github.com/yggdrion/gote/compare/v1.2.15...v1.2.16) (2025-08-04)
 
 ### Bug Fixes
