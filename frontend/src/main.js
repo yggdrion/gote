@@ -1437,12 +1437,13 @@ async function saveAndCloseNote() {
 // Open trash screen
 async function openTrash() {
   try {
+    console.log("Opening trash screen...");
     mainApp.style.display = "none";
     trashScreen.style.display = "flex";
     await loadTrashedNotes();
   } catch (error) {
     console.error("Error opening trash:", error);
-    alert("Failed to open trash");
+    alert("Failed to open trash: " + error.message);
   }
 }
 
@@ -1455,12 +1456,14 @@ function closeTrash() {
 // Load and render trashed notes
 async function loadTrashedNotes() {
   try {
+    console.log("Attempting to load trashed notes...");
     const trashedNotes = await GetTrashedNotes();
+    console.log("Loaded trashed notes:", trashedNotes);
     renderTrashedNotesList(trashedNotes);
     updateTrashUI(trashedNotes.length);
   } catch (error) {
     console.error("Error loading trashed notes:", error);
-    alert("Failed to load trashed notes");
+    alert("Failed to load trashed notes: " + error.message);
   }
 }
 

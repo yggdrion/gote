@@ -312,15 +312,19 @@ func (a *App) RestoreNoteFromTrash(id string) error {
 
 // GetTrashedNotes returns all notes in the trash folder
 func (a *App) GetTrashedNotes() ([]types.WailsNote, error) {
+	log.Printf("GetTrashedNotes called")
 	if a.currentKey == nil {
+		log.Printf("GetTrashedNotes: authentication required")
 		return nil, fmt.Errorf("authentication required")
 	}
 
 	notes, err := a.noteService.GetTrashedNotes(a.currentKey)
 	if err != nil {
+		log.Printf("GetTrashedNotes: error from service layer: %v", err)
 		return nil, err
 	}
 
+	log.Printf("GetTrashedNotes: found %d trashed notes", len(notes))
 	var wailsNotes []types.WailsNote
 	for _, note := range notes {
 		wailsNotes = append(wailsNotes, types.ConvertToWailsNote(note))

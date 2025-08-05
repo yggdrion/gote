@@ -239,9 +239,11 @@ header a:hover,
   font-size: 15px;
   min-height: 20px;
   white-space: normal;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-right: 120px;
   cursor: text;
+  max-width: 100%;
 }
 
 .markdown-content h1,
@@ -338,9 +340,12 @@ header a:hover,
   border-radius: 6px;
   font-size: 13px;
   line-height: 1.45;
-  overflow: auto;
+  overflow-x: auto;
   padding: 16px;
   margin: 16px 0;
+  max-width: calc(100% - 140px); /* Account for action buttons */
+  word-wrap: normal;
+  white-space: pre;
 }
 
 .markdown-content code {
@@ -365,6 +370,9 @@ header a:hover,
   white-space: pre;
   font-family: "SF Mono", "Monaco", "Consolas", "Liberation Mono", "Courier New",
     monospace;
+  max-width: 100%;
+  overflow-x: auto;
+  word-wrap: normal;
 }
 
 .note-actions {
@@ -1026,6 +1034,26 @@ header a:hover,
 
 .note-card.trashed .note-actions .permanent-delete-btn:hover {
   background: #c82333;
+}
+
+/* Fix for wide content in trashed notes */
+.note-card.trashed .note-content {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.note-card.trashed .markdown-content pre {
+  max-width: calc(100% - 140px); /* Account for action buttons */
+  overflow-x: auto;
+  word-wrap: normal;
+  white-space: pre;
+}
+
+.note-card.trashed .markdown-content pre code {
+  max-width: 100%;
+  overflow-x: auto;
+  word-wrap: normal;
+  white-space: pre;
 }
 
 /* Initial Setup Styles */
