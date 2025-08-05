@@ -827,9 +827,10 @@ async function confirmDeleteNote() {
   }
 
   try {
-    await DeleteNote(noteToDelete);
+    // Use smart deletion logic: move to trash first, then permanent delete
+    await MoveToTrash(noteToDelete);
 
-    // Remove from arrays
+    // Remove from current arrays (since we're viewing private/work)
     allNotes = allNotes.filter((n) => n.id !== noteToDelete);
     filteredNotes = filteredNotes.filter((n) => n.id !== noteToDelete);
 
@@ -841,6 +842,7 @@ async function confirmDeleteNote() {
     }
 
     hideDeleteModal();
+    console.log("Note moved to trash");
   } catch (error) {
     console.error("Error deleting note:", error);
     alert("Failed to delete note");

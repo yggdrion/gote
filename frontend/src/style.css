@@ -408,9 +408,9 @@ header a:hover,
 }
 
 /* Trash-specific note action styles */
-.restore-btn {
-  background: #28a745;
-  color: white;
+.note-actions .restore-btn {
+  background: #28a745 !important;
+  color: white !important;
   border: none;
   padding: 4px 8px;
   border-radius: 4px;
@@ -419,13 +419,13 @@ header a:hover,
   transition: background-color 0.2s ease;
 }
 
-.restore-btn:hover {
-  background: #218838;
+.note-actions .restore-btn:hover {
+  background: #218838 !important;
 }
 
-.delete-permanent-btn {
-  background: #dc3545;
-  color: white;
+.note-actions .delete-permanent-btn {
+  background: #dc3545 !important;
+  color: white !important;
   border: none;
   padding: 4px 8px;
   border-radius: 4px;
@@ -434,8 +434,8 @@ header a:hover,
   transition: background-color 0.2s ease;
 }
 
-.delete-permanent-btn:hover {
-  background: #c82333;
+.note-actions .delete-permanent-btn:hover {
+  background: #c82333 !important;
 }
 
 .empty-state {
