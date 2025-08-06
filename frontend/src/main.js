@@ -793,52 +793,26 @@ async function createNewNote() {
 
 async function createNoteFromClipboard() {
   try {
-    // First try to get image from clipboard
+    // Provide immediate feedback
+    newNoteFromClipboardBtn.disabled = true;
+    newNoteFromClipboardBtn.textContent = "⏳";
+
     let clipboardContent = "";
-    let hasImage = false;
 
-    // Check if clipboard has image data
+    // Use only the Wails ClipboardGetText API - no browser clipboard access
     try {
-      const clipboardData = await navigator.clipboard.read();
-      for (const item of clipboardData) {
-        if (item.types.some((type) => type.startsWith("image/"))) {
-          // Get the first image type
-          const imageType = item.types.find((type) =>
-            type.startsWith("image/")
-          );
-          const blob = await item.getType(imageType);
-
-          // Convert blob to base64
-          const base64Data = await blobToBase64(blob);
-          const base64String = base64Data.split(",")[1]; // Remove data:image/xxx;base64, prefix
-
-          // Save image using the backend
-          const imageResult = await SaveImageFromClipboard(
-            base64String,
-            imageType
-          );
-
-          // Create markdown content with the image
-          clipboardContent = `![Clipboard Image](image:${imageResult.id})`;
-          hasImage = true;
-          break;
-        }
-      }
-    } catch (error) {
-      console.log("No image in clipboard or clipboard access failed:", error);
-    }
-
-    // If no image found, try to get text content
-    if (!hasImage) {
       const clipboardText = await ClipboardGetText();
-
-      if (!clipboardText || clipboardText.trim() === "") {
+      if (clipboardText && clipboardText.trim() !== "") {
+        // Wrap clipboard text content in a code block
+        clipboardContent = "```\n" + clipboardText + "\n```";
+      } else {
         alert("Clipboard is empty");
         return;
       }
-
-      // Wrap clipboard text content in a code block
-      clipboardContent = "```\n" + clipboardText + "\n```";
+    } catch (error) {
+      console.log("Could not access clipboard:", error);
+      alert("Could not access clipboard content");
+      return;
     }
 
     // Don't create notes in trash category - switch to private instead
@@ -856,12 +830,14 @@ async function createNoteFromClipboard() {
       renderNotesList();
     }
 
-    // Don't open editor - note is created and saved directly
-    const contentType = hasImage ? "image" : "text";
-    console.log(`Note created from clipboard ${contentType} content`);
+    console.log("Note created from clipboard text content");
   } catch (error) {
     console.error("Error creating note from clipboard:", error);
     alert("Failed to create note from clipboard");
+  } finally {
+    // Restore button state
+    newNoteFromClipboardBtn.disabled = false;
+    newNoteFromClipboardBtn.textContent = "📋";
   }
 }
 
