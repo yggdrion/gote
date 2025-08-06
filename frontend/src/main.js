@@ -793,22 +793,59 @@ async function createNewNote() {
 
 async function createNoteFromClipboard() {
   try {
-    // Get clipboard content
-    const clipboardText = await ClipboardGetText();
+    // First try to get image from clipboard
+    let clipboardContent = "";
+    let hasImage = false;
 
-    if (!clipboardText || clipboardText.trim() === "") {
-      alert("Clipboard is empty");
-      return;
+    // Check if clipboard has image data
+    try {
+      const clipboardData = await navigator.clipboard.read();
+      for (const item of clipboardData) {
+        if (item.types.some((type) => type.startsWith("image/"))) {
+          // Get the first image type
+          const imageType = item.types.find((type) =>
+            type.startsWith("image/")
+          );
+          const blob = await item.getType(imageType);
+
+          // Convert blob to base64
+          const base64Data = await blobToBase64(blob);
+          const base64String = base64Data.split(",")[1]; // Remove data:image/xxx;base64, prefix
+
+          // Save image using the backend
+          const imageResult = await SaveImageFromClipboard(
+            base64String,
+            imageType
+          );
+
+          // Create markdown content with the image
+          clipboardContent = `![Clipboard Image](image:${imageResult.id})`;
+          hasImage = true;
+          break;
+        }
+      }
+    } catch (error) {
+      console.log("No image in clipboard or clipboard access failed:", error);
     }
 
-    // Wrap clipboard content in a code block
-    const noteContent = "```\n" + clipboardText + "\n```";
+    // If no image found, try to get text content
+    if (!hasImage) {
+      const clipboardText = await ClipboardGetText();
+
+      if (!clipboardText || clipboardText.trim() === "") {
+        alert("Clipboard is empty");
+        return;
+      }
+
+      // Wrap clipboard text content in a code block
+      clipboardContent = "```\n" + clipboardText + "\n```";
+    }
 
     // Don't create notes in trash category - switch to private instead
     const category = currentCategory === "trash" ? "private" : currentCategory;
 
     // Create note with the clipboard content
-    const newNote = await CreateNoteWithCategory(noteContent, category);
+    const newNote = await CreateNoteWithCategory(clipboardContent, category);
 
     // If we created in a different category, reload notes
     if (category !== currentCategory) {
@@ -820,11 +857,22 @@ async function createNoteFromClipboard() {
     }
 
     // Don't open editor - note is created and saved directly
-    console.log("Note created from clipboard content");
+    const contentType = hasImage ? "image" : "text";
+    console.log(`Note created from clipboard ${contentType} content`);
   } catch (error) {
     console.error("Error creating note from clipboard:", error);
     alert("Failed to create note from clipboard");
   }
+}
+
+// Helper function to convert blob to base64
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
 }
 
 async function editNote(noteId) {
@@ -1288,11 +1336,72 @@ function handleGlobalKeyboard(event) {
 
 async function handleClipboardPaste(event) {
   // Handle clipboard paste events
-  if (event.target === noteContent) {
-    // Let the default paste behavior work in the editor
+  if (event.target === noteContent && noteContent) {
+    // Handle paste in the note editor
+    const clipboardData = event.clipboardData || window.clipboardData;
+    if (!clipboardData) return;
+
+    // Check if there are any image files in the clipboard
+    const items = Array.from(clipboardData.items);
+    const imageItems = items.filter((item) => item.type.startsWith("image/"));
+
+    if (imageItems.length > 0) {
+      event.preventDefault(); // Prevent default paste behavior for images
+
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          try {
+            // Convert file to base64
+            const base64Data = await fileToBase64(file);
+            const base64String = base64Data.split(",")[1]; // Remove data:image/xxx;base64, prefix
+
+            // Save image using the backend
+            const imageResult = await SaveImageFromClipboard(
+              base64String,
+              file.type
+            );
+
+            // Insert markdown image syntax at cursor position
+            const imageMarkdown = `![Image](image:${imageResult.id})`;
+            insertTextAtCursor(noteContent, imageMarkdown);
+
+            console.log(`Image pasted and saved with ID: ${imageResult.id}`);
+          } catch (error) {
+            console.error("Failed to save pasted image:", error);
+            alert("Failed to save pasted image");
+          }
+        }
+      }
+    }
+    // For text content, let the default paste behavior work
     return;
   }
 
   // For other paste events, could implement custom behavior
-  console.log("Clipboard paste detected");
+  console.log("Clipboard paste detected outside editor");
+}
+
+// Helper function to convert file to base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
+// Helper function to insert text at cursor position
+function insertTextAtCursor(textArea, text) {
+  const start = textArea.selectionStart;
+  const end = textArea.selectionEnd;
+  const value = textArea.value;
+
+  textArea.value = value.slice(0, start) + text + value.slice(end);
+
+  // Set cursor position after the inserted text
+  const newCursorPos = start + text.length;
+  textArea.setSelectionRange(newCursorPos, newCursorPos);
+  textArea.focus();
 }
