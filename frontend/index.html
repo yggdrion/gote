@@ -139,7 +139,7 @@
                 <button
                   id="new-note-from-clipboard-btn"
                   class="btn btn-secondary btn-icon"
-                  title="Create note from clipboard content (Ctrl+Shift+V)"
+                  title="Create note from clipboard content (Ctrl/Cmd+Shift+N)"
                 >
                   📋
                 </button>
@@ -416,6 +416,17 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="image-modal">
+      <div class="image-modal-content">
+        <button class="image-modal-close" onclick="hideImageModal()">
+          &times;
+        </button>
+        <img id="image-modal-image" class="image-modal-image" src="" alt="" />
+        <div id="image-modal-info" class="image-modal-info"></div>
       </div>
     </div>
 
