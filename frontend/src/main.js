@@ -697,17 +697,20 @@ window.createNewNote = createNewNote;
 
 // Image handling functions
 function loadImagesInDOM(element) {
-  const images = element.querySelectorAll('img[src^="image:"]');
-  console.log(`Found ${images.length} images with image: scheme`);
+  const images = element.querySelectorAll("img[data-image-id]");
+  console.log(`Found ${images.length} images with data-image-id attribute`);
 
   images.forEach(async (img, index) => {
-    const imageId = img.src.replace("image:", "");
+    const imageId = img.getAttribute("data-image-id");
     console.log(`Loading image ${index + 1}/${images.length}: ${imageId}`);
 
     try {
       const dataUrl = await GetImageAsDataURL(imageId);
       console.log(`Successfully loaded image ${imageId}, setting data URL`);
       img.src = dataUrl;
+
+      // Remove the data-image-id attribute as it's no longer needed
+      img.removeAttribute("data-image-id");
 
       // Add click handler for image modal
       img.addEventListener("click", (e) => {
@@ -725,6 +728,8 @@ function loadImagesInDOM(element) {
         "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pjwvc3ZnPg==";
       img.alt = "Image not found";
       img.title = `Failed to load image: ${imageId}`;
+      // Remove the data-image-id attribute
+      img.removeAttribute("data-image-id");
     }
   });
 }
@@ -743,18 +748,17 @@ function addExternalLinkHandlersToContainer(element) {
 // Process custom image syntax in rendered HTML
 function processCustomImages(html) {
   // Replace custom image syntax ![alt](image:id) with proper img tags
-  // This handles cases where marked might not process custom schemes correctly
-  const originalHtml = html;
-  const processedHtml = html.replace(
+  // Use data-image-id instead of src to prevent browser from trying to load image: URLs
+  let processedHtml = html.replace(
     /!\[([^\]]*)\]\(image:([^)]+)\)/g,
-    '<img src="image:$2" alt="$1" />'
+    '<img data-image-id="$2" alt="$1" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzlmYTZiMiI+TG9hZGluZy4uLjwvdGV4dD48L3N2Zz4=" />'
   );
 
-  if (originalHtml !== processedHtml) {
-    console.log("processCustomImages: Found and processed image syntax");
-    console.log("Original:", originalHtml.substring(0, 200) + "...");
-    console.log("Processed:", processedHtml.substring(0, 200) + "...");
-  }
+  // Also handle cases where marked.js has already processed the markdown into img tags
+  processedHtml = processedHtml.replace(
+    /<img([^>]*) src="image:([^"]+)"([^>]*)>/g,
+    '<img$1 data-image-id="$2" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzlmYTZiMiI+TG9hZGluZy4uLjwvdGV4dD48L3N2Zz4="$3>'
+  );
 
   return processedHtml;
 }
