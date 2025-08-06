@@ -637,21 +637,17 @@ func (s *NoteStore) PermanentlyDeleteNote(id string) error {
 		return fmt.Errorf("note must be in trash to be permanently deleted")
 	}
 
+	// Mark this deletion as app-initiated
+	s.pendingDeletions[id] = true
 	delete(s.notes, id)
+
+	// Clean up file mod times
+	filename := filepath.Join(s.dataDir, id+".json")
+	delete(s.fileModTimes, filename)
 	s.mutex.Unlock()
 
 	// Delete the file
-	filename := filepath.Join(s.dataDir, id+".json")
-	return s.deleteFile(filename)
-}
-
-// deleteFile removes a file from the file system
-func (s *NoteStore) deleteFile(filePath string) error {
-	s.mutex.Lock()
-	delete(s.fileModTimes, filePath)
-	s.mutex.Unlock()
-
-	return os.Remove(filePath)
+	return os.Remove(filename)
 }
 
 // DeleteNote deletes a note by ID

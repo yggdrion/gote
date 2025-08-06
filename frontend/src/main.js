@@ -159,8 +159,10 @@ let setupMasterPassword, setupConfirmPassword, completeSetupBtn;
 
 // Delete confirmation modal elements
 let deleteModal, confirmDeleteBtn, cancelDeleteBtn;
+let permanentDeleteModal, confirmPermanentDeleteBtn, cancelPermanentDeleteBtn;
 let closeEditorModal, saveAndCloseBtn, discardChangesBtn, cancelCloseBtn;
 let noteToDelete = null;
+let noteToPermanentlyDelete = null;
 
 // Image modal elements
 let imageModal, imageModalImage, imageModalInfo;
@@ -235,6 +237,15 @@ function initializeDOM() {
   deleteModal = document.getElementById("delete-confirmation-modal");
   confirmDeleteBtn = document.getElementById("confirm-delete-btn");
   cancelDeleteBtn = document.getElementById("cancel-delete-btn");
+
+  // Permanent delete confirmation modal elements
+  permanentDeleteModal = document.getElementById("permanent-delete-modal");
+  confirmPermanentDeleteBtn = document.getElementById(
+    "confirm-permanent-delete-btn"
+  );
+  cancelPermanentDeleteBtn = document.getElementById(
+    "cancel-permanent-delete-btn"
+  );
 
   // Close editor confirmation modal elements
   closeEditorModal = document.getElementById("close-editor-modal");
@@ -360,6 +371,13 @@ function setupEventListeners() {
   confirmDeleteBtn.addEventListener("click", confirmDeleteNote);
   cancelDeleteBtn.addEventListener("click", cancelDeleteNote);
 
+  // Permanent delete confirmation modal listeners
+  confirmPermanentDeleteBtn.addEventListener(
+    "click",
+    confirmPermanentDeleteNote
+  );
+  cancelPermanentDeleteBtn.addEventListener("click", cancelPermanentDeleteNote);
+
   // Close editor confirmation modal listeners
   saveAndCloseBtn.addEventListener("click", handleSaveAndCloseEditor);
   discardChangesBtn.addEventListener(
@@ -372,6 +390,13 @@ function setupEventListeners() {
   deleteModal.addEventListener("click", (e) => {
     if (e.target === deleteModal) {
       cancelDeleteNote();
+    }
+  });
+
+  // Close permanent delete modal when clicking outside
+  permanentDeleteModal.addEventListener("click", (e) => {
+    if (e.target === permanentDeleteModal) {
+      cancelPermanentDeleteNote();
     }
   });
 
@@ -999,29 +1024,56 @@ async function restoreNote(noteId) {
 }
 
 async function permanentlyDeleteNote(noteId) {
-  // Show confirmation dialog
-  if (!confirm("Permanently delete this note? This action cannot be undone.")) {
+  // Store the note ID for the confirmation
+  noteToPermanentlyDelete = noteId;
+
+  // Show the custom permanent delete confirmation modal
+  showPermanentDeleteModal();
+}
+
+function showPermanentDeleteModal() {
+  permanentDeleteModal.style.display = "flex";
+  // Focus the cancel button for better accessibility
+  cancelPermanentDeleteBtn.focus();
+}
+
+function hidePermanentDeleteModal() {
+  permanentDeleteModal.style.display = "none";
+  noteToPermanentlyDelete = null;
+}
+
+function cancelPermanentDeleteNote() {
+  hidePermanentDeleteModal();
+}
+
+async function confirmPermanentDeleteNote() {
+  if (!noteToPermanentlyDelete) {
+    hidePermanentDeleteModal();
     return;
   }
 
   try {
-    await PermanentlyDeleteNote(noteId);
+    await PermanentlyDeleteNote(noteToPermanentlyDelete);
 
     // Remove from local arrays
-    allNotes = allNotes.filter((n) => n.id !== noteId);
-    filteredNotes = filteredNotes.filter((n) => n.id !== noteId);
+    allNotes = allNotes.filter((n) => n.id !== noteToPermanentlyDelete);
+    filteredNotes = filteredNotes.filter(
+      (n) => n.id !== noteToPermanentlyDelete
+    );
 
     renderNotesList();
 
     // Close editor if this note was being edited
-    if (currentNote && currentNote.id === noteId) {
+    if (currentNote && currentNote.id === noteToPermanentlyDelete) {
       closeEditor();
     }
 
+    hidePermanentDeleteModal();
     console.log("Note permanently deleted");
   } catch (error) {
     console.error("Error permanently deleting note:", error);
     alert("Failed to permanently delete note");
+    hidePermanentDeleteModal();
   }
 }
 
