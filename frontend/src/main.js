@@ -162,6 +162,9 @@ let deleteModal, confirmDeleteBtn, cancelDeleteBtn;
 let closeEditorModal, saveAndCloseBtn, discardChangesBtn, cancelCloseBtn;
 let noteToDelete = null;
 
+// Image modal elements
+let imageModal, imageModalImage, imageModalInfo;
+
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("DOM loaded, initializing markdown...");
@@ -239,10 +242,49 @@ function initializeDOM() {
   discardChangesBtn = document.getElementById("discard-changes-btn");
   cancelCloseBtn = document.getElementById("cancel-close-btn");
 
-  // Create image modal for enlarged viewing
-  // TODO: Re-implement image modal functionality
-  // createImageModal();
+  // Image modal elements
+  imageModal = document.getElementById("image-modal");
+  imageModalImage = document.getElementById("image-modal-image");
+  imageModalInfo = document.getElementById("image-modal-info");
 }
+
+// Image modal functions
+function showImageModal(imageSrc, imageAlt) {
+  const modal = document.getElementById("image-modal");
+  const modalImage = document.getElementById("image-modal-image");
+  const modalInfo = document.getElementById("image-modal-info");
+
+  modalImage.src = imageSrc;
+  modalImage.alt = imageAlt;
+  modalInfo.textContent = imageAlt || "Image";
+
+  modal.classList.add("show");
+
+  // Close on click outside image
+  modal.onclick = function (e) {
+    if (e.target === modal) {
+      hideImageModal();
+    }
+  };
+
+  // Close on escape key
+  document.addEventListener("keydown", handleImageModalKeydown);
+}
+
+function hideImageModal() {
+  const modal = document.getElementById("image-modal");
+  modal.classList.remove("show");
+  document.removeEventListener("keydown", handleImageModalKeydown);
+}
+
+function handleImageModalKeydown(e) {
+  if (e.key === "Escape") {
+    hideImageModal();
+  }
+}
+
+// Make functions globally available for inline event handlers
+window.hideImageModal = hideImageModal;
 
 function setupEventListeners() {
   // Initial setup listener
@@ -628,19 +670,68 @@ function renderNotesList() {
 window.clearSearch = clearSearch;
 window.createNewNote = createNewNote;
 
-// Image handling functions - simplified stubs for now
+// Image handling functions
 function loadImagesInDOM(element) {
-  // TODO: Implement image loading
+  const images = element.querySelectorAll('img[src^="image:"]');
+  console.log(`Found ${images.length} images with image: scheme`);
+
+  images.forEach(async (img, index) => {
+    const imageId = img.src.replace("image:", "");
+    console.log(`Loading image ${index + 1}/${images.length}: ${imageId}`);
+
+    try {
+      const dataUrl = await GetImageAsDataURL(imageId);
+      console.log(`Successfully loaded image ${imageId}, setting data URL`);
+      img.src = dataUrl;
+
+      // Add click handler for image modal
+      img.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showImageModal(dataUrl, img.alt || "Image");
+      });
+
+      // Add hover effect class
+      img.classList.add("note-image");
+    } catch (error) {
+      console.error(`Failed to load image ${imageId}:`, error);
+      // Set a broken image placeholder
+      img.src =
+        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNjY2MiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OSI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pjwvc3ZnPg==";
+      img.alt = "Image not found";
+      img.title = `Failed to load image: ${imageId}`;
+    }
+  });
 }
 
 function addExternalLinkHandlersToContainer(element) {
-  // TODO: Implement external link handlers
+  const links = element.querySelectorAll('a[href^="http"]');
+  links.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      BrowserOpenURL(link.href);
+    });
+  });
 }
 
-// Process custom image syntax in rendered HTML (stub)
+// Process custom image syntax in rendered HTML
 function processCustomImages(html) {
-  // TODO: Implement custom image processing
-  return html;
+  // Replace custom image syntax ![alt](image:id) with proper img tags
+  // This handles cases where marked might not process custom schemes correctly
+  const originalHtml = html;
+  const processedHtml = html.replace(
+    /!\[([^\]]*)\]\(image:([^)]+)\)/g,
+    '<img src="image:$2" alt="$1" />'
+  );
+
+  if (originalHtml !== processedHtml) {
+    console.log("processCustomImages: Found and processed image syntax");
+    console.log("Original:", originalHtml.substring(0, 200) + "...");
+    console.log("Processed:", processedHtml.substring(0, 200) + "...");
+  }
+
+  return processedHtml;
 }
 
 // Additional missing functions that may be called
@@ -702,22 +793,33 @@ async function createNewNote() {
 
 async function createNoteFromClipboard() {
   try {
-    // Get clipboard content
-    const clipboardText = await ClipboardGetText();
+    // Provide immediate feedback
+    newNoteFromClipboardBtn.disabled = true;
+    newNoteFromClipboardBtn.textContent = "⏳";
 
-    if (!clipboardText || clipboardText.trim() === "") {
-      alert("Clipboard is empty");
+    let clipboardContent = "";
+
+    // Use only the Wails ClipboardGetText API - no browser clipboard access
+    try {
+      const clipboardText = await ClipboardGetText();
+      if (clipboardText && clipboardText.trim() !== "") {
+        // Wrap clipboard text content in a code block
+        clipboardContent = "```\n" + clipboardText + "\n```";
+      } else {
+        alert("Clipboard is empty");
+        return;
+      }
+    } catch (error) {
+      console.log("Could not access clipboard:", error);
+      alert("Could not access clipboard content");
       return;
     }
-
-    // Wrap clipboard content in a code block
-    const noteContent = "```\n" + clipboardText + "\n```";
 
     // Don't create notes in trash category - switch to private instead
     const category = currentCategory === "trash" ? "private" : currentCategory;
 
     // Create note with the clipboard content
-    const newNote = await CreateNoteWithCategory(noteContent, category);
+    const newNote = await CreateNoteWithCategory(clipboardContent, category);
 
     // If we created in a different category, reload notes
     if (category !== currentCategory) {
@@ -728,12 +830,25 @@ async function createNoteFromClipboard() {
       renderNotesList();
     }
 
-    // Don't open editor - note is created and saved directly
-    console.log("Note created from clipboard content");
+    console.log("Note created from clipboard text content");
   } catch (error) {
     console.error("Error creating note from clipboard:", error);
     alert("Failed to create note from clipboard");
+  } finally {
+    // Restore button state
+    newNoteFromClipboardBtn.disabled = false;
+    newNoteFromClipboardBtn.textContent = "📋";
   }
+}
+
+// Helper function to convert blob to base64
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
 }
 
 async function editNote(noteId) {
@@ -1164,8 +1279,15 @@ function handleGlobalKeyboard(event) {
   if (event.ctrlKey || event.metaKey) {
     switch (event.key) {
       case "n":
-        event.preventDefault();
-        createNewNote();
+        if (event.shiftKey) {
+          // Ctrl/Cmd+Shift+N - Create note from clipboard
+          event.preventDefault();
+          createNoteFromClipboard();
+        } else {
+          // Ctrl/Cmd+N - Create new note
+          event.preventDefault();
+          createNewNote();
+        }
         break;
       case "s":
         if (currentNote) {
@@ -1190,11 +1312,72 @@ function handleGlobalKeyboard(event) {
 
 async function handleClipboardPaste(event) {
   // Handle clipboard paste events
-  if (event.target === noteContent) {
-    // Let the default paste behavior work in the editor
+  if (event.target === noteContent && noteContent) {
+    // Handle paste in the note editor
+    const clipboardData = event.clipboardData || window.clipboardData;
+    if (!clipboardData) return;
+
+    // Check if there are any image files in the clipboard
+    const items = Array.from(clipboardData.items);
+    const imageItems = items.filter((item) => item.type.startsWith("image/"));
+
+    if (imageItems.length > 0) {
+      event.preventDefault(); // Prevent default paste behavior for images
+
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          try {
+            // Convert file to base64
+            const base64Data = await fileToBase64(file);
+            const base64String = base64Data.split(",")[1]; // Remove data:image/xxx;base64, prefix
+
+            // Save image using the backend
+            const imageResult = await SaveImageFromClipboard(
+              base64String,
+              file.type
+            );
+
+            // Insert markdown image syntax at cursor position
+            const imageMarkdown = `![Image](image:${imageResult.id})`;
+            insertTextAtCursor(noteContent, imageMarkdown);
+
+            console.log(`Image pasted and saved with ID: ${imageResult.id}`);
+          } catch (error) {
+            console.error("Failed to save pasted image:", error);
+            alert("Failed to save pasted image");
+          }
+        }
+      }
+    }
+    // For text content, let the default paste behavior work
     return;
   }
 
   // For other paste events, could implement custom behavior
-  console.log("Clipboard paste detected");
+  console.log("Clipboard paste detected outside editor");
+}
+
+// Helper function to convert file to base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
+// Helper function to insert text at cursor position
+function insertTextAtCursor(textArea, text) {
+  const start = textArea.selectionStart;
+  const end = textArea.selectionEnd;
+  const value = textArea.value;
+
+  textArea.value = value.slice(0, start) + text + value.slice(end);
+
+  // Set cursor position after the inserted text
+  const newCursorPos = start + text.length;
+  textArea.setSelectionRange(newCursorPos, newCursorPos);
+  textArea.focus();
 }

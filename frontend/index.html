@@ -133,13 +133,14 @@
           <header>
             <div class="header-actions">
               <div class="header-left">
-                <button id="new-note-btn" class="btn btn-primary">
+                <button id="new-note-btn" class="btn btn-primary" type="button">
                   New Note
                 </button>
                 <button
                   id="new-note-from-clipboard-btn"
                   class="btn btn-secondary btn-icon"
-                  title="Create note from clipboard content (Ctrl+Shift+V)"
+                  type="button"
+                  title="Create note from clipboard content (Ctrl/Cmd+Shift+N)"
                 >
                   📋
                 </button>
@@ -288,7 +289,7 @@
               </div>
               <div class="cheat-item special-item">
                 <strong>📋 Paste Image</strong> →
-                <span>Ctrl+V to paste screenshots</span>
+                <span>Ctrl+V to paste images from clipboard</span>
               </div>
             </div>
           </div>
@@ -416,6 +417,17 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="image-modal" class="image-modal">
+      <div class="image-modal-content">
+        <button class="image-modal-close" onclick="hideImageModal()">
+          &times;
+        </button>
+        <img id="image-modal-image" class="image-modal-image" src="" alt="" />
+        <div id="image-modal-info" class="image-modal-info"></div>
       </div>
     </div>
 
