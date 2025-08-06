@@ -10,6 +10,8 @@ updates:
       actions:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "vite"
 
   - package-ecosystem: "gomod"
     directory: "/"
