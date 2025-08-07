@@ -771,9 +771,7 @@ func (a *App) GetNotesByCategory(category string) []types.WailsNote {
 
 	notes := a.noteService.GetNotesByCategory(noteCategory)
 	return types.ConvertToWailsNotes(notes)
-}
-
-// MoveToTrash moves a note to trash category
+} // MoveToTrash moves a note to trash category
 func (a *App) MoveToTrash(id string) (types.WailsNote, error) {
 	if a.currentKey == nil {
 		return types.WailsNote{}, fmt.Errorf("not authenticated")

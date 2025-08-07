@@ -309,15 +309,17 @@ func (s *NoteStore) syncFromDisk() error {
 
 		// Try to parse as new JSON format first
 		var noteData struct {
-			Content  string              `json:"content"`
-			Category models.NoteCategory `json:"category"`
-			Images   []models.Image      `json:"images,omitempty"`
+			Content          string              `json:"content"`
+			Category         models.NoteCategory `json:"category"`
+			OriginalCategory models.NoteCategory `json:"original_category,omitempty"`
+			Images           []models.Image      `json:"images,omitempty"`
 		}
 
 		if err := json.Unmarshal([]byte(decryptedContent), &noteData); err == nil {
 			// New format - use parsed data
 			note.Content = noteData.Content
 			note.Category = noteData.Category
+			note.OriginalCategory = noteData.OriginalCategory
 			note.Images = noteData.Images
 
 			// Ensure category is set (handle empty category in new format)
@@ -328,6 +330,7 @@ func (s *NoteStore) syncFromDisk() error {
 			// Legacy format - content is just a string
 			note.Content = decryptedContent
 			note.Category = models.CategoryPrivate
+			note.OriginalCategory = ""
 			note.Images = nil
 		}
 
@@ -356,13 +359,15 @@ func (s *NoteStore) syncFromDisk() error {
 func (s *NoteStore) saveNote(note *models.Note, key []byte) error {
 	// Create a structure to encrypt that includes all note data
 	noteData := struct {
-		Content  string              `json:"content"`
-		Category models.NoteCategory `json:"category"`
-		Images   []models.Image      `json:"images,omitempty"`
+		Content          string              `json:"content"`
+		Category         models.NoteCategory `json:"category"`
+		OriginalCategory models.NoteCategory `json:"original_category,omitempty"`
+		Images           []models.Image      `json:"images,omitempty"`
 	}{
-		Content:  note.Content,
-		Category: note.Category,
-		Images:   note.Images,
+		Content:          note.Content,
+		Category:         note.Category,
+		OriginalCategory: note.OriginalCategory,
+		Images:           note.Images,
 	}
 
 	// Marshal the note data to JSON
@@ -409,13 +414,15 @@ func (s *NoteStore) saveNote(note *models.Note, key []byte) error {
 func (s *NoteStore) SaveNoteDirect(note *models.Note, key []byte) error {
 	// Create a structure to encrypt that includes all note data
 	noteData := struct {
-		Content  string              `json:"content"`
-		Category models.NoteCategory `json:"category"`
-		Images   []models.Image      `json:"images,omitempty"`
+		Content          string              `json:"content"`
+		Category         models.NoteCategory `json:"category"`
+		OriginalCategory models.NoteCategory `json:"original_category,omitempty"`
+		Images           []models.Image      `json:"images,omitempty"`
 	}{
-		Content:  note.Content,
-		Category: note.Category,
-		Images:   note.Images,
+		Content:          note.Content,
+		Category:         note.Category,
+		OriginalCategory: note.OriginalCategory,
+		Images:           note.Images,
 	}
 
 	// Marshal the note data to JSON
