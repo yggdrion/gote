@@ -570,6 +570,9 @@ header a:hover,
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  vertical-align: top;
+  box-sizing: border-box;
+  min-height: 3em; /* Ensures at least one full line is always visible */
 }
 
 #note-content:focus {
@@ -578,19 +581,18 @@ header a:hover,
 
 #note-content::placeholder {
   color: #999;
-  line-height: 1.7;
+  line-height: normal;
 }
 
 /* macOS-specific fixes for cursor height consistency */
 @supports (-webkit-appearance: none) {
   #note-content {
-    /* Force consistent cursor height on macOS WebKit */
     caret-color: #333;
-    /* Ensure consistent line box height */
     font-variant-numeric: normal;
-    /* Prevent sub-pixel font rendering issues */
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    line-height: normal;
+    /* Removed -webkit-line-box-contain and monospace font for better cursor alignment */
   }
 }
 
