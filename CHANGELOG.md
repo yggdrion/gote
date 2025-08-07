@@ -1,3 +1,23 @@
+## [1.3.0](https://github.com/yggdrion/gote/compare/v1.2.18...v1.3.0) (2025-08-07)
+
+### Bug Fixes
+
+* autologout ([224f6f7](https://github.com/yggdrion/gote/commit/224f6f738895062ae9662bfe2509c514ba92bb6c))
+* cleanup performance stuff ([aadf650](https://github.com/yggdrion/gote/commit/aadf65087f59d640ac3880e2a2b9d12ebf6c2010))
+* cursor height ([#28](https://github.com/yggdrion/gote/issues/28)) ([18a1a28](https://github.com/yggdrion/gote/commit/18a1a288375a40ab5d28a90d07b1b3e09741c8ed))
+* dependabot vite ([2ef6fd9](https://github.com/yggdrion/gote/commit/2ef6fd90b8d60829365f07df0cdd0102a5155a11))
+* display images again ([#25](https://github.com/yggdrion/gote/issues/25)) ([08a25f1](https://github.com/yggdrion/gote/commit/08a25f10fe357a3dd6cd0eedca96c9e582b4380c))
+* image loading errors ([a35dc4d](https://github.com/yggdrion/gote/commit/a35dc4d575e23d2c9147710d358ffd9bc4f363b3))
+* permanently delete ([8b9f3b3](https://github.com/yggdrion/gote/commit/8b9f3b3a2a9c65188f0fce6a454e5dd95456fb11))
+* remove manual sync ([10fe792](https://github.com/yggdrion/gote/commit/10fe7926bbf03d041e171b285ca7f44dd90b987f))
+* some category stuff ([#27](https://github.com/yggdrion/gote/issues/27)) ([ba62c06](https://github.com/yggdrion/gote/commit/ba62c061124512aef907a8f69a9411607b6b6357))
+* text ([0e69fce](https://github.com/yggdrion/gote/commit/0e69fce6cd28053a09876a9462f751897df34051))
+* vite ([61e89a5](https://github.com/yggdrion/gote/commit/61e89a54ed5df69a458c8788d52123cb6d559daf))
+
+### Features
+
+* categories ([#23](https://github.com/yggdrion/gote/issues/23)) ([697a9cc](https://github.com/yggdrion/gote/commit/697a9cc6d31eeb57efdc80a3829fa606ab4c47a8))
+
 ## [1.2.18](https://github.com/yggdrion/gote/compare/v1.2.17...v1.2.18) (2025-08-05)
 
 ### Bug Fixes
