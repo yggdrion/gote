@@ -20,12 +20,13 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	authManager *auth.Manager
-	store       *storage.NoteStore
-	imageStore  *storage.ImageStore
-	config      *config.Config
-	currentKey  []byte
+	ctx            context.Context
+	authManager    *auth.Manager
+	store          *storage.NoteStore
+	imageStore     *storage.ImageStore
+	config         *config.Config
+	currentKey     []byte
+	currentSession string // Track current session ID
 
 	// Service layer - simplified architecture
 	noteService *services.NoteService
@@ -63,6 +64,9 @@ func (a *App) startup(ctx context.Context) {
 
 		// Initialize services - simplified
 		a.noteService = services.NewNoteService(a.store)
+
+		// Start background session cleanup
+		go a.startSessionCleanup()
 
 		log.Printf("Note app initialized:")
 		log.Printf("  Configuration file: %s", config.GetConfigFilePath())
@@ -194,6 +198,11 @@ func (a *App) VerifyPassword(password string) bool {
 	}
 
 	a.currentKey = key
+
+	// Create a new session
+	sessionID := a.authManager.CreateSession(key)
+	a.currentSession = sessionID
+
 	// Load notes with the key
 	if a.noteService != nil {
 		a.noteService.LoadNotes(a.currentKey)
@@ -232,8 +241,8 @@ func (a *App) GetNote(id string) (types.WailsNote, error) {
 }
 
 func (a *App) CreateNote(content string) (types.WailsNote, error) {
-	if a.currentKey == nil {
-		return types.WailsNote{}, fmt.Errorf("authentication required")
+	if err := a.requireAuth(); err != nil {
+		return types.WailsNote{}, err
 	}
 
 	note, err := a.noteService.CreateNote(content, a.currentKey)
@@ -245,8 +254,8 @@ func (a *App) CreateNote(content string) (types.WailsNote, error) {
 
 // CreateNoteWithCategory creates a new note with a specific category
 func (a *App) CreateNoteWithCategory(content string, category string) (types.WailsNote, error) {
-	if a.currentKey == nil {
-		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return types.WailsNote{}, err
 	}
 
 	// Convert string to NoteCategory
@@ -270,8 +279,8 @@ func (a *App) CreateNoteWithCategory(content string, category string) (types.Wai
 }
 
 func (a *App) UpdateNote(id, content string) (types.WailsNote, error) {
-	if a.currentKey == nil {
-		return types.WailsNote{}, fmt.Errorf("authentication required")
+	if err := a.requireAuth(); err != nil {
+		return types.WailsNote{}, err
 	}
 
 	note, err := a.noteService.UpdateNote(id, content, a.currentKey)
@@ -283,8 +292,8 @@ func (a *App) UpdateNote(id, content string) (types.WailsNote, error) {
 
 // UpdateNoteCategory updates the category of a note
 func (a *App) UpdateNoteCategory(id string, category string) (types.WailsNote, error) {
-	if a.currentKey == nil {
-		return types.WailsNote{}, fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return types.WailsNote{}, err
 	}
 
 	// Convert string to NoteCategory
@@ -424,15 +433,66 @@ func (a *App) ResetApplication() error {
 
 // Logout clears the current session without removing password hash
 func (a *App) Logout() error {
+	// Delete the session from auth manager
+	if a.currentSession != "" {
+		a.authManager.DeleteSession(a.currentSession)
+		a.currentSession = ""
+	}
+
 	// Clear the current key to end the session
 	a.currentKey = nil
 	return nil
 }
 
+// ValidateCurrentSession checks if the current session is still valid
+func (a *App) ValidateCurrentSession() bool {
+	if a.currentSession == "" {
+		return false
+	}
+
+	valid := a.authManager.ValidateSession(a.currentSession)
+	if !valid {
+		// Session expired, clear local state
+		a.currentSession = ""
+		a.currentKey = nil
+	}
+	return valid
+}
+
+// IsAuthenticated returns true if user has a valid session
+func (a *App) IsAuthenticated() bool {
+	return a.ValidateCurrentSession()
+}
+
+// requireAuth checks if user is authenticated and returns error if not
+func (a *App) requireAuth() error {
+	if !a.IsAuthenticated() {
+		return fmt.Errorf("session expired - re-authentication required")
+	}
+	return nil
+}
+
+// startSessionCleanup runs a background goroutine to clean up expired sessions
+func (a *App) startSessionCleanup() {
+	ticker := time.NewTicker(5 * time.Minute) // Clean up every 5 minutes
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if a.authManager != nil {
+				a.authManager.CleanupExpiredSessions()
+			}
+		case <-a.ctx.Done():
+			return
+		}
+	}
+}
+
 // CreateBackup creates a zip backup of all notes
 func (a *App) CreateBackup() (string, error) {
-	if a.currentKey == nil {
-		return "", fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return "", err
 	}
 
 	// Use the storage backup function
@@ -534,8 +594,8 @@ func (a *App) GetPerformanceStats() map[string]interface{} {
 
 // SaveImageFromClipboard saves an image from clipboard data
 func (a *App) SaveImageFromClipboard(imageData string, contentType string) (*models.Image, error) {
-	if a.currentKey == nil {
-		return nil, fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return nil, err
 	}
 
 	// Decode base64 image data
@@ -559,8 +619,8 @@ func (a *App) SaveImageFromClipboard(imageData string, contentType string) (*mod
 
 // GetImage retrieves an image by ID and returns base64 encoded data
 func (a *App) GetImage(imageID string) (map[string]interface{}, error) {
-	if a.currentKey == nil {
-		return nil, fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return nil, err
 	}
 
 	imageData, image, err := a.imageStore.GetImage(imageID)
@@ -580,8 +640,8 @@ func (a *App) GetImage(imageID string) (map[string]interface{}, error) {
 
 // DeleteImage removes an image from storage
 func (a *App) DeleteImage(imageID string) error {
-	if a.currentKey == nil {
-		return fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return err
 	}
 
 	return a.imageStore.DeleteImage(imageID)
@@ -589,8 +649,8 @@ func (a *App) DeleteImage(imageID string) error {
 
 // ListImages returns a list of all stored images
 func (a *App) ListImages() ([]*models.Image, error) {
-	if a.currentKey == nil {
-		return nil, fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return nil, err
 	}
 
 	return a.imageStore.ListImages()
@@ -598,8 +658,8 @@ func (a *App) ListImages() ([]*models.Image, error) {
 
 // GetImageAsDataURL returns an image as a data URL for embedding in HTML
 func (a *App) GetImageAsDataURL(imageID string) (string, error) {
-	if a.currentKey == nil {
-		return "", fmt.Errorf("not authenticated")
+	if err := a.requireAuth(); err != nil {
+		return "", err
 	}
 
 	imageData, image, err := a.imageStore.GetImage(imageID)

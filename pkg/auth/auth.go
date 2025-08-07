@@ -224,6 +224,61 @@ func (m *Manager) CreateSession(key []byte) string {
 	return sessionID
 }
 
+// GetSession retrieves and validates a session
+func (m *Manager) GetSession(sessionID string) (*models.Session, bool) {
+	m.sessionsMutex.RLock()
+	session, exists := m.sessions[sessionID]
+	m.sessionsMutex.RUnlock()
+
+	if !exists {
+		return nil, false
+	}
+
+	// Check if session has expired
+	if time.Now().After(session.ExpiresAt) {
+		// Session expired, clean it up
+		m.DeleteSession(sessionID)
+		return nil, false
+	}
+
+	return session, true
+}
+
+// ValidateSession checks if a session is valid and updates expiry
+func (m *Manager) ValidateSession(sessionID string) bool {
+	m.sessionsMutex.Lock()
+	defer m.sessionsMutex.Unlock()
+
+	session, exists := m.sessions[sessionID]
+	if !exists {
+		return false
+	}
+
+	// Check if session has expired
+	if time.Now().After(session.ExpiresAt) {
+		// Session expired, clean it up
+		delete(m.sessions, sessionID)
+		return false
+	}
+
+	// Update expiry time (extend session)
+	session.ExpiresAt = time.Now().Add(SessionTimeout)
+	return true
+}
+
+// CleanupExpiredSessions removes all expired sessions
+func (m *Manager) CleanupExpiredSessions() {
+	m.sessionsMutex.Lock()
+	defer m.sessionsMutex.Unlock()
+
+	now := time.Now()
+	for sessionID, session := range m.sessions {
+		if now.After(session.ExpiresAt) {
+			delete(m.sessions, sessionID)
+		}
+	}
+}
+
 // DeleteSession removes a session (logout)
 func (m *Manager) DeleteSession(sessionID string) {
 	m.sessionsMutex.Lock()

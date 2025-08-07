@@ -135,6 +135,21 @@ let inactivityTimer = null;
 let lastActivityTime = Date.now();
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
+// API wrapper to handle session expiration
+async function callAPI(apiCall) {
+  try {
+    return await apiCall();
+  } catch (error) {
+    // Check if this is a session expired error
+    if (error.message && error.message.includes("session expired")) {
+      console.log("Session expired during API call");
+      await handleAutoLogout();
+      throw error; // Re-throw so caller knows the operation failed
+    }
+    throw error; // Re-throw other errors
+  }
+}
+
 // DOM elements
 let authScreen, mainApp, settingsScreen, passwordSetup, passwordLogin;
 let setupPasswordInput, confirmPasswordInput, setupBtn;
@@ -580,14 +595,17 @@ async function initializeApp() {
 async function loadNotes() {
   try {
     // Load notes filtered by current category
-    allNotes = (await GetNotesByCategory(currentCategory)) || [];
+    allNotes = (await callAPI(() => GetNotesByCategory(currentCategory))) || [];
     filteredNotes = [...allNotes];
     renderNotesList();
   } catch (error) {
     console.error("Error loading notes:", error);
-    allNotes = [];
-    filteredNotes = [];
-    renderNotesList();
+    // Don't show error if it was a session expiry (already handled)
+    if (!error.message || !error.message.includes("session expired")) {
+      allNotes = [];
+      filteredNotes = [];
+      renderNotesList();
+    }
   }
 }
 
@@ -918,7 +936,9 @@ async function saveCurrentNote() {
   if (!currentNote) return;
 
   try {
-    const updatedNote = await UpdateNote(currentNote.id, noteContent.value);
+    const updatedNote = await callAPI(() =>
+      UpdateNote(currentNote.id, noteContent.value)
+    );
     currentNote = updatedNote;
 
     // Check if the note's category matches the current view
@@ -954,7 +974,10 @@ async function saveCurrentNote() {
     }, 500); // Shorter feedback time since we're closing
   } catch (error) {
     console.error("Error saving note:", error);
-    alert("Failed to save note");
+    // Don't show error alert if it was a session expiry (already handled)
+    if (!error.message || !error.message.includes("session expired")) {
+      alert("Failed to save note");
+    }
   }
 }
 
@@ -1275,22 +1298,82 @@ function startActivityTracking() {
       clearTimeout(inactivityTimer);
     }
 
-    inactivityTimer = setTimeout(() => {
+    inactivityTimer = setTimeout(async () => {
       if (currentUser && Date.now() - lastActivityTime >= INACTIVITY_TIMEOUT) {
         console.log("Auto-logout due to inactivity");
-        handleLogout();
+        await handleAutoLogout();
       }
     }, INACTIVITY_TIMEOUT);
   };
 
+  // Also refresh session on activity (every 10 minutes at most)
+  let lastSessionRefresh = Date.now();
+  const refreshSession = async () => {
+    const now = Date.now();
+    if (currentUser && now - lastSessionRefresh > 10 * 60 * 1000) {
+      // 10 minutes
+      try {
+        // Make a light API call to refresh the session
+        await callAPI(() => GetNotesByCategory(currentCategory));
+        lastSessionRefresh = now;
+      } catch (error) {
+        // Session refresh failed, will be handled by callAPI
+      }
+    }
+  };
+
   activities.forEach((activity) => {
-    document.addEventListener(activity, resetTimer, true);
+    document.addEventListener(
+      activity,
+      () => {
+        resetTimer();
+        refreshSession();
+      },
+      true
+    );
   });
 
   // Start the timer
   resetTimer();
+
+  // Also start periodic session validation
+  startSessionValidation();
 }
 
+function startSessionValidation() {
+  // Check session validity every 5 minutes
+  setInterval(async () => {
+    if (currentUser) {
+      try {
+        // Try to call a simple authenticated method to check if session is valid
+        // We'll use GetNotesByCategory with a quick call
+        await callAPI(() => GetNotesByCategory(currentCategory));
+      } catch (error) {
+        // If we get a session expired error, it will be handled by callAPI
+        // which will call handleAutoLogout
+      }
+    }
+  }, 5 * 60 * 1000); // Check every 5 minutes
+}
+
+async function handleAutoLogout() {
+  try {
+    await Logout();
+  } catch (error) {
+    console.error("Error during auto-logout:", error);
+  }
+
+  currentUser = null;
+
+  // Clear any timers
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = null;
+  }
+
+  // Return to auth screen silently
+  checkAuthState();
+}
 async function handleCreateBackup() {
   try {
     await CreateBackup();
