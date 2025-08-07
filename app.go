@@ -752,7 +752,10 @@ func (a *App) GetImageStats() (map[string]interface{}, error) {
 
 // GetNotesByCategory returns notes filtered by category
 func (a *App) GetNotesByCategory(category string) []types.WailsNote {
+	log.Printf("DEBUG: GetNotesByCategory called with category: %s", category)
+
 	if a.noteService == nil {
+		log.Printf("DEBUG: noteService is nil")
 		return []types.WailsNote{}
 	}
 
@@ -766,11 +769,25 @@ func (a *App) GetNotesByCategory(category string) []types.WailsNote {
 	case "trash":
 		noteCategory = models.CategoryTrash
 	default:
+		log.Printf("DEBUG: Invalid category: %s", category)
 		return []types.WailsNote{}
 	}
 
+	log.Printf("DEBUG: Converted to noteCategory: %s", noteCategory)
 	notes := a.noteService.GetNotesByCategory(noteCategory)
-	return types.ConvertToWailsNotes(notes)
+	log.Printf("DEBUG: Found %d notes for category %s", len(notes), noteCategory)
+
+	for i, note := range notes {
+		contentPreview := note.Content
+		if len(contentPreview) > 50 {
+			contentPreview = contentPreview[:50] + "..."
+		}
+		log.Printf("DEBUG: Note %d: ID=%s, Category=%s, Content=%s", i, note.ID, note.Category, contentPreview)
+	}
+
+	wailsNotes := types.ConvertToWailsNotes(notes)
+	log.Printf("DEBUG: Returning %d WailsNotes", len(wailsNotes))
+	return wailsNotes
 }
 
 // MoveToTrash moves a note to trash category

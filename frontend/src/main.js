@@ -327,8 +327,14 @@ function setupEventListeners() {
   createFirstNoteBtn.addEventListener("click", createNewNote);
 
   // Category filter listeners
-  filterPrivateBtn.addEventListener("click", () => switchCategory("private"));
-  filterWorkBtn.addEventListener("click", () => switchCategory("work"));
+  filterPrivateBtn.addEventListener("click", () => {
+    console.log("DEBUG: Private button clicked");
+    switchCategory("private");
+  });
+  filterWorkBtn.addEventListener("click", () => {
+    console.log("DEBUG: Work button clicked");
+    switchCategory("work");
+  });
 
   // Editor category filter listeners
   editorFilterPrivateBtn.addEventListener("click", () =>
@@ -579,8 +585,20 @@ async function initializeApp() {
 
 async function loadNotes() {
   try {
+    console.log(`DEBUG: Loading notes for category: ${currentCategory}`);
+
     // Load notes filtered by current category
     allNotes = (await GetNotesByCategory(currentCategory)) || [];
+
+    console.log(
+      `DEBUG: Loaded ${allNotes.length} notes for category ${currentCategory}:`,
+      allNotes.map((n) => ({
+        id: n.id,
+        category: n.category,
+        content: n.content.substring(0, 50) + "...",
+      }))
+    );
+
     filteredNotes = [...allNotes];
     renderNotesList();
   } catch (error) {
@@ -1157,6 +1175,8 @@ function attemptCloseEditor() {
 }
 
 function switchCategory(category) {
+  console.log(`DEBUG: Switching to category: ${category}`);
+
   // Update current category
   currentCategory = category;
 
