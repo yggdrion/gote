@@ -565,6 +565,14 @@ header a:hover,
   resize: none;
   outline: none;
   background: white;
+  /* Fix for macOS cursor height inconsistency */
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  vertical-align: top;
+  box-sizing: border-box;
+  min-height: 3em; /* Ensures at least one full line is always visible */
 }
 
 #note-content:focus {
@@ -573,7 +581,19 @@ header a:hover,
 
 #note-content::placeholder {
   color: #999;
-  line-height: 1.6;
+  line-height: normal;
+}
+
+/* macOS-specific fixes for cursor height consistency */
+@supports (-webkit-appearance: none) {
+  #note-content {
+    caret-color: #333;
+    font-variant-numeric: normal;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    line-height: normal;
+    /* Removed -webkit-line-box-contain and monospace font for better cursor alignment */
+  }
 }
 
 /* Markdown Cheat Sheet Styles */
