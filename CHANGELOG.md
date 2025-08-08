@@ -1,3 +1,9 @@
+## [1.3.1](https://github.com/yggdrion/gote/compare/v1.3.0...v1.3.1) (2025-08-08)
+
+### Bug Fixes
+
+* add delete all trash ([5d6a977](https://github.com/yggdrion/gote/commit/5d6a977b30c611f4ac91dcfadcd0e42317635a78))
+
 ## [1.3.0](https://github.com/yggdrion/gote/compare/v1.2.18...v1.3.0) (2025-08-07)
 
 ### Bug Fixes
