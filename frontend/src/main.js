@@ -638,6 +638,14 @@ function renderNotesList() {
       (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
     );
 
+    // Show/hide Delete All button in trash view
+    const deleteAllTrashBtn = document.getElementById("delete-all-trash-btn");
+    if (currentCategory === "trash" && sortedNotes.length > 0) {
+      deleteAllTrashBtn.style.display = "inline-block";
+    } else {
+      deleteAllTrashBtn.style.display = "none";
+    }
+
     // Use document fragment for efficient DOM manipulation
     const fragment = document.createDocumentFragment();
 
@@ -782,6 +790,49 @@ function processCustomImages(html) {
 }
 
 // Additional missing functions that may be called
+// Delete All Trash logic
+const deleteAllTrashModal = document.getElementById("delete-all-trash-modal");
+const confirmDeleteAllTrashBtn = document.getElementById(
+  "confirm-delete-all-trash-btn"
+);
+const cancelDeleteAllTrashBtn = document.getElementById(
+  "cancel-delete-all-trash-btn"
+);
+const deleteAllTrashBtn = document.getElementById("delete-all-trash-btn");
+
+if (deleteAllTrashBtn) {
+  deleteAllTrashBtn.addEventListener("click", () => {
+    deleteAllTrashModal.style.display = "flex";
+    cancelDeleteAllTrashBtn.focus();
+  });
+}
+
+if (cancelDeleteAllTrashBtn) {
+  cancelDeleteAllTrashBtn.addEventListener("click", () => {
+    deleteAllTrashModal.style.display = "none";
+  });
+}
+
+if (confirmDeleteAllTrashBtn) {
+  confirmDeleteAllTrashBtn.addEventListener("click", async () => {
+    try {
+      // Get all notes in trash
+      const trashNotes = allNotes.filter((n) => n.category === "trash");
+      for (const note of trashNotes) {
+        await PermanentlyDeleteNote(note.id);
+      }
+      // Remove from local arrays
+      allNotes = allNotes.filter((n) => n.category !== "trash");
+      filteredNotes = filteredNotes.filter((n) => n.category !== "trash");
+      renderNotesList();
+      deleteAllTrashModal.style.display = "none";
+    } catch (error) {
+      console.error("Error deleting all trash notes:", error);
+      alert("Failed to delete all trash notes");
+      deleteAllTrashModal.style.display = "none";
+    }
+  });
+}
 
 function escapeHtml(text) {
   const div = document.createElement("div");
