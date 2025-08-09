@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"gote/pkg/auth"
@@ -33,6 +34,9 @@ type App struct {
 
 	// Service layer - simplified architecture
 	noteService *services.NoteService
+
+	// internals
+	backupSchedulerStarted bool
 }
 
 // NewApp creates a new App application struct
@@ -70,6 +74,9 @@ func (a *App) startup(ctx context.Context) {
 
 		// Start background session cleanup
 		go a.startSessionCleanup()
+
+		// Start daily backup scheduler
+		a.startBackupScheduler()
 
 		log.Printf("Note app initialized:")
 		log.Printf("  Configuration file: %s", config.GetConfigFilePath())
@@ -159,6 +166,9 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	log.Printf("  Configuration file: %s", config.GetConfigFilePath())
 	log.Printf("  Password hash file: %s", a.config.PasswordHashPath)
 	log.Printf("  Notes directory: %s", a.config.NotesPath)
+
+	// Start daily backup scheduler after initial setup
+	a.startBackupScheduler()
 
 	return nil
 }
@@ -505,6 +515,80 @@ func (a *App) CreateBackup() (string, error) {
 	}
 
 	return backupPath, nil
+}
+
+// startBackupScheduler starts a simple daily backup scheduler.
+// It creates one backup per 24 hours by checking the most recent backup file
+// in the backups directory under the notes path.
+func (a *App) startBackupScheduler() {
+	if a.backupSchedulerStarted || a.config == nil || a.config.NotesPath == "" {
+		return
+	}
+	a.backupSchedulerStarted = true
+
+	go func() {
+		// Run an immediate check at start, then hourly checks
+		a.tryCreateDailyBackup()
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				a.tryCreateDailyBackup()
+			case <-a.ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// tryCreateDailyBackup checks the latest backup timestamp and creates a new backup if >24h passed.
+func (a *App) tryCreateDailyBackup() {
+	if a.config == nil || a.config.NotesPath == "" {
+		return
+	}
+
+	notesDir := a.config.NotesPath
+	backupsDir := filepath.Join(notesDir, "backups")
+	if err := os.MkdirAll(backupsDir, 0755); err != nil {
+		log.Printf("Auto-backup: failed to create backups dir: %v", err)
+		return
+	}
+
+	// Find most recent backup-*.zip
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		log.Printf("Auto-backup: failed to read backups dir: %v", err)
+		return
+	}
+
+	var latest time.Time
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasPrefix(name, "backup-") || !strings.HasSuffix(name, ".zip") {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		mt := info.ModTime()
+		if mt.After(latest) {
+			latest = mt
+		}
+	}
+
+	if latest.IsZero() || time.Since(latest) >= 24*time.Hour {
+		if path, err := storage.BackupNotes(notesDir, ""); err != nil {
+			log.Printf("Auto-backup: failed: %v", err)
+		} else {
+			log.Printf("Auto-backup: created %s", path)
+		}
+	}
 }
 
 // Greet returns a greeting for the given name (keeping for compatibility)
