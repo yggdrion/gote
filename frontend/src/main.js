@@ -49,6 +49,7 @@ import {
 let currentUser = null;
 let currentNote = null;
 let originalNoteContent = ""; // Track original content to detect changes
+let autosaveTimer = null; // Debounced autosave timer
 let allNotes = [];
 let filteredNotes = [];
 let searchQuery = "";
@@ -364,12 +365,16 @@ function setupEventListeners() {
       searchInput.blur(); // Remove focus from search input
     }
   });
+  let searchDebounceHandle;
   searchInput.addEventListener("input", (e) => {
     if (e.target.value === "") {
       clearSearch();
-    } else {
-      handleSearchInput();
+      return;
     }
+    if (searchDebounceHandle) clearTimeout(searchDebounceHandle);
+    searchDebounceHandle = setTimeout(() => {
+      handleSearchInput();
+    }, UI_CONSTANTS.SEARCH_DEBOUNCE_MS || 300);
   });
 
   // Editor listeners
@@ -974,6 +979,41 @@ async function editNote(noteId) {
 function showEditor() {
   noteEditor.classList.remove("hidden");
   noteContent.focus();
+
+  // Attach autosave on input (debounced)
+  if (!noteContent.__autosaveBound) {
+    noteContent.addEventListener("input", () => {
+      if (!currentNote) return;
+      if (autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(async () => {
+        if (!currentNote) return;
+        // Only save if content changed
+        if (noteContent.value !== currentNote.content) {
+          try {
+            const updatedNote = await callAPI(() =>
+              UpdateNote(currentNote.id, noteContent.value)
+            );
+            currentNote = updatedNote;
+            originalNoteContent = updatedNote.content;
+            // Update list if visible
+            const index = allNotes.findIndex((n) => n.id === updatedNote.id);
+            if (index !== -1) {
+              allNotes[index] = updatedNote;
+              filteredNotes = searchQuery
+                ? filteredNotes.map((n) =>
+                    n.id === updatedNote.id ? updatedNote : n
+                  )
+                : [...allNotes];
+              renderNotesList();
+            }
+          } catch (err) {
+            console.warn("Autosave failed:", err?.message || err);
+          }
+        }
+      }, UI_CONSTANTS.AUTO_SAVE_DELAY_MS || 1000);
+    });
+    noteContent.__autosaveBound = true;
+  }
 }
 
 function closeEditor() {

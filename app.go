@@ -18,6 +18,9 @@ import (
 	"gote/pkg/types"
 )
 
+// Precompiled regexp for image references in markdown: ![alt](image:<id>)
+var imageIDRegexp = regexp.MustCompile(`!\[[^\]]*\]\(image:([^)]+)\)`)
+
 // App struct
 type App struct {
 	ctx            context.Context
@@ -675,9 +678,8 @@ func (a *App) GetImageAsDataURL(imageID string) (string, error) {
 func (a *App) extractImageIDsFromContent(content string) []string {
 	var imageIDs []string
 
-	// Regular expression to match ![alt](image:imageId) pattern
-	re := regexp.MustCompile(`!\[[^\]]*\]\(image:([^)]+)\)`)
-	matches := re.FindAllStringSubmatch(content, -1)
+	// Regular expression to match ![alt](image:imageId) pattern (precompiled)
+	matches := imageIDRegexp.FindAllStringSubmatch(content, -1)
 
 	for _, match := range matches {
 		if len(match) > 1 {
@@ -844,9 +846,45 @@ func (a *App) MoveToTrash(id string) (types.WailsNote, error) {
 	return types.ConvertToWailsNote(note), nil
 }
 
+// shutdown is called when the app is closing; clean up resources here
+func (a *App) shutdown(ctx context.Context) {
+	// Close file watchers to avoid leaks
+	if a.store != nil {
+		if err := a.store.Close(); err != nil {
+			log.Printf("warning: failed to close note store watcher: %v", err)
+		}
+	}
+	// Let background cleanup goroutine exit via context cancellation
+}
+
 // PermanentlyDeleteNote permanently deletes a note (only works for trash items)
 func (a *App) PermanentlyDeleteNote(id string) error {
-	return a.noteService.PermanentlyDeleteNote(id)
+	// Capture image references before deletion so we can clean up orphans
+	var noteContent string
+	if note, err := a.noteService.GetNote(id); err == nil && note != nil {
+		noteContent = note.Content
+	}
+
+	// Perform permanent deletion
+	if err := a.noteService.PermanentlyDeleteNote(id); err != nil {
+		return err
+	}
+
+	// After the note is removed, clean up any images that are no longer referenced
+	if noteContent != "" {
+		imageIDs := a.extractImageIDsFromContent(noteContent)
+		for _, imageID := range imageIDs {
+			if !a.isImageReferencedByOtherNotes(imageID, id) {
+				if err := a.imageStore.DeleteImage(imageID); err != nil {
+					log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, err)
+				} else {
+					log.Printf("Cleaned up orphaned image: %s", imageID)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // RestoreFromTrash restores a note from trash to its original category
