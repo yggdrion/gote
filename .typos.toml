@@ -2,6 +2,7 @@
 extend-exclude = [
     "noteapp/static/vendor/**",
     "frontend/wailsjs/**",
+    "CHANGELOG.md"
 ]
 
 [default.extend-words]
