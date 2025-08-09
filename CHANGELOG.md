@@ -1,3 +1,9 @@
+## [1.3.2](https://github.com/yggdrion/gote/compare/v1.3.1...v1.3.2) (2025-08-09)
+
+### Bug Fixes
+
+* backup logic ([#29](https://github.com/yggdrion/gote/issues/29)) ([8a48f0e](https://github.com/yggdrion/gote/commit/8a48f0e1a541b1809598e61c6e283f5be9ed8f15))
+
 ## [1.3.1](https://github.com/yggdrion/gote/compare/v1.3.0...v1.3.1) (2025-08-08)
 
 ### Bug Fixes
