@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"sync"
 	"time"
 
 	"gote/pkg/auth"
@@ -17,6 +19,9 @@ import (
 	"gote/pkg/storage"
 	"gote/pkg/types"
 )
+
+// Precompiled regexp for image references in markdown: ![alt](image:<id>)
+var imageIDRegexp = regexp.MustCompile(`!\[[^\]]*\]\(image:([^)]+)\)`)
 
 // App struct
 type App struct {
@@ -30,6 +35,10 @@ type App struct {
 
 	// Service layer - simplified architecture
 	noteService *services.NoteService
+
+	// internals
+	backupSchedulerStarted bool
+	backupMutex            sync.Mutex
 }
 
 // NewApp creates a new App application struct
@@ -67,6 +76,9 @@ func (a *App) startup(ctx context.Context) {
 
 		// Start background session cleanup
 		go a.startSessionCleanup()
+
+		// Start daily backup scheduler
+		a.startBackupScheduler()
 
 		log.Printf("Note app initialized:")
 		log.Printf("  Configuration file: %s", config.GetConfigFilePath())
@@ -156,6 +168,9 @@ func (a *App) CompleteInitialSetup(notesPath, passwordHashPath, password, confir
 	log.Printf("  Configuration file: %s", config.GetConfigFilePath())
 	log.Printf("  Password hash file: %s", a.config.PasswordHashPath)
 	log.Printf("  Notes directory: %s", a.config.NotesPath)
+
+	// Start daily backup scheduler after initial setup
+	a.startBackupScheduler()
 
 	return nil
 }
@@ -496,12 +511,97 @@ func (a *App) CreateBackup() (string, error) {
 	}
 
 	// Use the storage backup function
-	backupPath, err := storage.BackupNotes(a.config.NotesPath, "")
+	return a.backupNow()
+}
+
+// startBackupScheduler starts a simple daily backup scheduler.
+// It creates one backup per 24 hours by checking the most recent backup file
+// in the backups directory under the notes path.
+func (a *App) startBackupScheduler() {
+	if a.backupSchedulerStarted || a.config == nil || a.config.NotesPath == "" {
+		return
+	}
+	a.backupSchedulerStarted = true
+
+	go func() {
+		// Run an immediate check at start, then hourly checks
+		a.tryCreateDailyBackup()
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				a.tryCreateDailyBackup()
+			case <-a.ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// tryCreateDailyBackup checks the latest backup timestamp and creates a new backup if >24h passed.
+func (a *App) tryCreateDailyBackup() {
+	if a.config == nil || a.config.NotesPath == "" {
+		return
+	}
+
+	notesDir := a.config.NotesPath
+	backupsDir := filepath.Join(notesDir, "backups")
+	if err := os.MkdirAll(backupsDir, 0755); err != nil {
+		log.Printf("Auto-backup: failed to create backups dir: %v", err)
+		return
+	}
+
+	// Find most recent backup-*.zip
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		log.Printf("Auto-backup: failed to read backups dir: %v", err)
+		return
+	}
+
+	var latest time.Time
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasPrefix(name, "backup-") || !strings.HasSuffix(name, ".zip") {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		mt := info.ModTime()
+		if mt.After(latest) {
+			latest = mt
+		}
+	}
+
+	if latest.IsZero() || time.Since(latest) >= 24*time.Hour {
+		if path, err := a.backupNow(); err != nil {
+			log.Printf("Auto-backup: failed: %v", err)
+		} else {
+			log.Printf("Auto-backup: created %s", path)
+		}
+	}
+}
+
+// backupNow performs a backup using a single shared path for manual & scheduled backups.
+// It prevents concurrent backups via a mutex and returns the created archive path.
+func (a *App) backupNow() (string, error) {
+	if a.config == nil || a.config.NotesPath == "" {
+		return "", fmt.Errorf("backup not configured: notes path missing")
+	}
+	a.backupMutex.Lock()
+	defer a.backupMutex.Unlock()
+
+	path, err := storage.BackupNotes(a.config.NotesPath, "")
 	if err != nil {
 		return "", fmt.Errorf("failed to create backup: %v", err)
 	}
-
-	return backupPath, nil
+	return path, nil
 }
 
 // Greet returns a greeting for the given name (keeping for compatibility)
@@ -675,9 +775,8 @@ func (a *App) GetImageAsDataURL(imageID string) (string, error) {
 func (a *App) extractImageIDsFromContent(content string) []string {
 	var imageIDs []string
 
-	// Regular expression to match ![alt](image:imageId) pattern
-	re := regexp.MustCompile(`!\[[^\]]*\]\(image:([^)]+)\)`)
-	matches := re.FindAllStringSubmatch(content, -1)
+	// Regular expression to match ![alt](image:imageId) pattern (precompiled)
+	matches := imageIDRegexp.FindAllStringSubmatch(content, -1)
 
 	for _, match := range matches {
 		if len(match) > 1 {
@@ -844,9 +943,45 @@ func (a *App) MoveToTrash(id string) (types.WailsNote, error) {
 	return types.ConvertToWailsNote(note), nil
 }
 
+// shutdown is called when the app is closing; clean up resources here
+func (a *App) shutdown(ctx context.Context) {
+	// Close file watchers to avoid leaks
+	if a.store != nil {
+		if err := a.store.Close(); err != nil {
+			log.Printf("warning: failed to close note store watcher: %v", err)
+		}
+	}
+	// Let background cleanup goroutine exit via context cancellation
+}
+
 // PermanentlyDeleteNote permanently deletes a note (only works for trash items)
 func (a *App) PermanentlyDeleteNote(id string) error {
-	return a.noteService.PermanentlyDeleteNote(id)
+	// Capture image references before deletion so we can clean up orphans
+	var noteContent string
+	if note, err := a.noteService.GetNote(id); err == nil && note != nil {
+		noteContent = note.Content
+	}
+
+	// Perform permanent deletion
+	if err := a.noteService.PermanentlyDeleteNote(id); err != nil {
+		return err
+	}
+
+	// After the note is removed, clean up any images that are no longer referenced
+	if noteContent != "" {
+		imageIDs := a.extractImageIDsFromContent(noteContent)
+		for _, imageID := range imageIDs {
+			if !a.isImageReferencedByOtherNotes(imageID, id) {
+				if err := a.imageStore.DeleteImage(imageID); err != nil {
+					log.Printf("Warning: Failed to delete orphaned image %s: %v", imageID, err)
+				} else {
+					log.Printf("Cleaned up orphaned image: %s", imageID)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // RestoreFromTrash restores a note from trash to its original category

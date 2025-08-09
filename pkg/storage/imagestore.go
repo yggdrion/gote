@@ -146,7 +146,13 @@ func (is *ImageStore) DeleteImage(imageID string) error {
 	defer is.mutex.Unlock()
 
 	imagePath := filepath.Join(is.dataDir, fmt.Sprintf("%s.json", imageID))
-	return os.Remove(imagePath)
+	if err := os.Remove(imagePath); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // ListImages returns a list of all stored images (metadata only)
