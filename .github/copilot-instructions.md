@@ -1,2 +1,2 @@
-this is a wails app with vanilla javascript and no framework. use `wails build` to test the build process.
+this is a wails app with vanilla javascript and no framework. use `wails build` to test the build process and verify go code.
 Focus on readability and simplicity. Use modern JavaScript features but avoid complex patterns.
