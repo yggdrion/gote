@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"gote/pkg/auth"
@@ -37,6 +38,7 @@ type App struct {
 
 	// internals
 	backupSchedulerStarted bool
+	backupMutex            sync.Mutex
 }
 
 // NewApp creates a new App application struct
@@ -509,12 +511,7 @@ func (a *App) CreateBackup() (string, error) {
 	}
 
 	// Use the storage backup function
-	backupPath, err := storage.BackupNotes(a.config.NotesPath, "")
-	if err != nil {
-		return "", fmt.Errorf("failed to create backup: %v", err)
-	}
-
-	return backupPath, nil
+	return a.backupNow()
 }
 
 // startBackupScheduler starts a simple daily backup scheduler.
@@ -583,12 +580,28 @@ func (a *App) tryCreateDailyBackup() {
 	}
 
 	if latest.IsZero() || time.Since(latest) >= 24*time.Hour {
-		if path, err := storage.BackupNotes(notesDir, ""); err != nil {
+		if path, err := a.backupNow(); err != nil {
 			log.Printf("Auto-backup: failed: %v", err)
 		} else {
 			log.Printf("Auto-backup: created %s", path)
 		}
 	}
+}
+
+// backupNow performs a backup using a single shared path for manual & scheduled backups.
+// It prevents concurrent backups via a mutex and returns the created archive path.
+func (a *App) backupNow() (string, error) {
+	if a.config == nil || a.config.NotesPath == "" {
+		return "", fmt.Errorf("backup not configured: notes path missing")
+	}
+	a.backupMutex.Lock()
+	defer a.backupMutex.Unlock()
+
+	path, err := storage.BackupNotes(a.config.NotesPath, "")
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup: %v", err)
+	}
+	return path, nil
 }
 
 // Greet returns a greeting for the given name (keeping for compatibility)
