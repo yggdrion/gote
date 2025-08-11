@@ -1,3 +1,9 @@
+## [1.3.3](https://github.com/yggdrion/gote/compare/v1.3.2...v1.3.3) (2025-08-11)
+
+### Bug Fixes
+
+* clear password ([2056c12](https://github.com/yggdrion/gote/commit/2056c1225ac1960a03cefde4df5ccf42b8504b69))
+
 ## [1.3.2](https://github.com/yggdrion/gote/compare/v1.3.1...v1.3.2) (2025-08-09)
 
 ### Bug Fixes
