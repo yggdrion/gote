@@ -443,6 +443,8 @@ async function checkAuthState() {
     if (passwordSet) {
       passwordSetup.style.display = "none";
       passwordLogin.style.display = "block";
+      // Clear password field when showing login screen
+      loginPasswordInput.value = "";
       loginPasswordInput.focus();
     } else {
       passwordSetup.style.display = "block";
@@ -488,6 +490,8 @@ async function handleLogin() {
   try {
     const isValid = await VerifyPassword(password);
     if (isValid) {
+      // Clear password field on successful login
+      loginPasswordInput.value = "";
       initializeApp();
     } else {
       showLoginError("Invalid password");
@@ -1462,7 +1466,7 @@ async function handleAutoLogout() {
     inactivityTimer = null;
   }
 
-  // Return to auth screen silently
+  // Return to auth screen silently (checkAuthState will clear password field)
   checkAuthState();
 }
 async function handleCreateBackup() {
@@ -1486,6 +1490,7 @@ async function handleLogout() {
     try {
       await Logout();
       currentUser = null;
+      // checkAuthState will clear the password field when showing login screen
       checkAuthState();
     } catch (error) {
       console.error("Error during logout:", error);
