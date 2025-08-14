@@ -1,3 +1,5 @@
+## [1.3.4](https://github.com/yggdrion/gote/compare/v1.3.3...v1.3.4) (2025-08-14)
+
 ## [1.3.3](https://github.com/yggdrion/gote/compare/v1.3.2...v1.3.3) (2025-08-11)
 
 ### Bug Fixes
