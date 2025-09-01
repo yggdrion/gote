@@ -886,7 +886,8 @@ async function createNewNote() {
     if (category !== currentCategory) {
       switchCategory(category);
     } else {
-      allNotes.push(newNote);
+      // Add new note at the beginning since it's the most recent
+      allNotes.unshift(newNote);
       filteredNotes = searchQuery ? filteredNotes : [...allNotes];
       renderNotesList();
     }
@@ -932,7 +933,8 @@ async function createNoteFromClipboard() {
     if (category !== currentCategory) {
       switchCategory(category);
     } else {
-      allNotes.push(newNote);
+      // Add new note at the beginning since it's the most recent
+      allNotes.unshift(newNote);
       filteredNotes = searchQuery ? filteredNotes : [...allNotes];
       renderNotesList();
     }
@@ -960,6 +962,12 @@ function blobToBase64(blob) {
 
 async function editNote(noteId) {
   try {
+    // Clear any pending autosave timer from previous editing session
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
+
     const note = await GetNote(noteId);
     if (!note) {
       alert("Note not found");
@@ -999,17 +1007,32 @@ function showEditor() {
             );
             currentNote = updatedNote;
             originalNoteContent = updatedNote.content;
-            // Update list if visible
-            const index = allNotes.findIndex((n) => n.id === updatedNote.id);
-            if (index !== -1) {
-              allNotes[index] = updatedNote;
-              filteredNotes = searchQuery
-                ? filteredNotes.map((n) =>
-                    n.id === updatedNote.id ? updatedNote : n
-                  )
-                : [...allNotes];
-              renderNotesList();
+
+            // Check if note belongs to current category view
+            const noteCategoryMatchesView =
+              updatedNote.category === currentCategory;
+
+            if (noteCategoryMatchesView) {
+              // Update list if visible and note belongs to current view
+              const index = allNotes.findIndex((n) => n.id === updatedNote.id);
+              if (index !== -1) {
+                allNotes[index] = updatedNote;
+                // Update filtered notes appropriately
+                if (searchQuery) {
+                  const filteredIndex = filteredNotes.findIndex(
+                    (n) => n.id === updatedNote.id
+                  );
+                  if (filteredIndex !== -1) {
+                    filteredNotes[filteredIndex] = updatedNote;
+                  }
+                } else {
+                  filteredNotes = [...allNotes];
+                }
+                renderNotesList();
+              }
             }
+            // If note doesn't match current view, don't update the list
+            // as it would be confusing to show a note from another category
           } catch (err) {
             console.warn("Autosave failed:", err?.message || err);
           }
@@ -1021,6 +1044,12 @@ function showEditor() {
 }
 
 function closeEditor() {
+  // Clear any pending autosave timer
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+
   noteEditor.classList.add("hidden");
   currentNote = null;
   noteContent.value = "";
@@ -1030,11 +1059,18 @@ function closeEditor() {
 async function saveCurrentNote() {
   if (!currentNote) return;
 
+  // Clear any pending autosave to prevent conflicts
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+
   try {
     const updatedNote = await callAPI(() =>
       UpdateNote(currentNote.id, noteContent.value)
     );
     currentNote = updatedNote;
+    originalNoteContent = updatedNote.content; // Update the original content tracker
 
     // Check if the note's category matches the current view
     const noteCategoryMatchesView = updatedNote.category === currentCategory;
@@ -1043,15 +1079,32 @@ async function saveCurrentNote() {
       // Update notes list if the note is still in the current category view
       const index = allNotes.findIndex((n) => n.id === currentNote.id);
       if (index !== -1) {
+        // Update existing note in the list
         allNotes[index] = updatedNote;
-        filteredNotes = searchQuery
-          ? filteredNotes.map((n) =>
-              n.id === updatedNote.id ? updatedNote : n
-            )
-          : [...allNotes];
-
-        renderNotesList();
+      } else {
+        // Note wasn't in the list, add it (shouldn't happen but safety net)
+        allNotes.unshift(updatedNote);
       }
+
+      // Update filtered notes
+      if (searchQuery) {
+        const filteredIndex = filteredNotes.findIndex(
+          (n) => n.id === currentNote.id
+        );
+        if (filteredIndex !== -1) {
+          filteredNotes[filteredIndex] = updatedNote;
+        } else {
+          // Re-filter to include the updated note if it matches search
+          const lowercaseQuery = searchQuery.toLowerCase();
+          if (updatedNote.content.toLowerCase().includes(lowercaseQuery)) {
+            filteredNotes.unshift(updatedNote);
+          }
+        }
+      } else {
+        filteredNotes = [...allNotes];
+      }
+
+      renderNotesList();
     } else {
       // Reload notes if the category changed and note is no longer in current view
       await loadNotes();
