@@ -1,3 +1,9 @@
+## [1.3.8](https://github.com/yggdrion/gote/compare/v1.3.7...v1.3.8) (2025-09-01)
+
+### Bug Fixes
+
+* cleanup ([4d16f37](https://github.com/yggdrion/gote/commit/4d16f37425f6f57c9611998f40b710e6092b8b04))
+
 ## [1.3.7](https://github.com/yggdrion/gote/compare/v1.3.6...v1.3.7) (2025-09-01)
 
 ## [1.3.6](https://github.com/yggdrion/gote/compare/v1.3.5...v1.3.6) (2025-08-29)
