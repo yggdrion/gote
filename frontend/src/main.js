@@ -48,6 +48,8 @@ import {
 // State management
 let currentUser = null;
 let currentNote = null;
+let isDraftMode = false; // Track if we're creating a new note that hasn't been saved yet
+let draftCategory = "private"; // Track the category for draft notes
 let originalNoteContent = ""; // Track original content to detect changes
 let autosaveTimer = null; // Debounced autosave timer
 let allNotes = [];
@@ -878,24 +880,23 @@ function renderMarkdown(content) {
 
 async function createNewNote() {
   try {
-    // Don't create notes in trash category - switch to private instead
+    // Don't create notes in trash category - use private instead
     const category = currentCategory === "trash" ? "private" : currentCategory;
-    const newNote = await CreateNoteWithCategory("", category);
 
-    // If we created in a different category, reload notes
-    if (category !== currentCategory) {
-      switchCategory(category);
-    } else {
-      // Add new note at the beginning since it's the most recent
-      allNotes.unshift(newNote);
-      filteredNotes = searchQuery ? filteredNotes : [...allNotes];
-      renderNotesList();
-    }
+    // Enter draft mode - don't create the note yet, just open the editor
+    isDraftMode = true;
+    draftCategory = category;
+    currentNote = null; // No note exists yet
+    noteContent.value = "";
+    originalNoteContent = "";
 
-    editNote(newNote.id);
+    // Update editor category buttons to reflect the intended category
+    updateEditorCategoryButtons(category);
+
+    showEditor();
   } catch (error) {
-    console.error("Error creating note:", error);
-    alert("Failed to create note");
+    console.error("Error opening new note editor:", error);
+    alert("Failed to open note editor");
   }
 }
 
@@ -975,6 +976,7 @@ async function editNote(noteId) {
     }
 
     currentNote = note;
+    isDraftMode = false; // Ensure we're not in draft mode when editing existing note
     noteContent.value = note.content;
     originalNoteContent = note.content; // Track original content for change detection
 
@@ -994,7 +996,38 @@ function showEditor() {
 
   // Attach autosave on input (debounced)
   if (!noteContent.__autosaveBound) {
-    noteContent.addEventListener("input", () => {
+    noteContent.addEventListener("input", async () => {
+      // Handle draft mode - create note when user starts typing
+      if (isDraftMode && noteContent.value.trim() !== "") {
+        try {
+          // Create the note now that there's content
+          const newNote = await CreateNoteWithCategory(
+            noteContent.value.trim(),
+            draftCategory
+          );
+          currentNote = newNote;
+          originalNoteContent = newNote.content;
+          isDraftMode = false;
+
+          // Add to notes list if we're in the same category
+          if (draftCategory === currentCategory) {
+            allNotes.unshift(newNote);
+            filteredNotes = searchQuery ? filteredNotes : [...allNotes];
+            renderNotesList();
+          } else {
+            // If we created in a different category, we don't need to update current view
+            // The note exists but isn't visible until user switches categories
+          }
+
+          console.log("Draft note created with initial content");
+          return; // Don't continue to autosave logic since we just created the note
+        } catch (error) {
+          console.error("Error creating draft note:", error);
+          return;
+        }
+      }
+
+      // Normal autosave logic for existing notes
       if (!currentNote) return;
       if (autosaveTimer) clearTimeout(autosaveTimer);
       autosaveTimer = setTimeout(async () => {
@@ -1052,11 +1085,57 @@ function closeEditor() {
 
   noteEditor.classList.add("hidden");
   currentNote = null;
+  isDraftMode = false; // Reset draft mode
+  draftCategory = "private"; // Reset draft category
   noteContent.value = "";
   originalNoteContent = ""; // Reset original content tracking
 }
 
 async function saveCurrentNote() {
+  // Handle draft mode - create note if it doesn't exist yet
+  if (isDraftMode) {
+    const content = noteContent.value.trim();
+    if (content === "") {
+      // If there's no content, just close the editor without creating a note
+      closeEditor();
+      return;
+    }
+
+    try {
+      // Create the note now
+      const newNote = await CreateNoteWithCategory(content, draftCategory);
+      currentNote = newNote;
+      originalNoteContent = newNote.content;
+      isDraftMode = false;
+
+      // Add to notes list if we're in the same category
+      if (draftCategory === currentCategory) {
+        allNotes.unshift(newNote);
+        filteredNotes = searchQuery ? filteredNotes : [...allNotes];
+        renderNotesList();
+      }
+
+      // Show save feedback briefly, then close editor
+      const originalText = saveNoteBtn.textContent;
+      saveNoteBtn.textContent = "Saved!";
+      saveNoteBtn.disabled = true;
+
+      setTimeout(() => {
+        saveNoteBtn.textContent = originalText;
+        saveNoteBtn.disabled = false;
+        closeEditor();
+      }, 500);
+
+      console.log("Draft note created and saved");
+      return;
+    } catch (error) {
+      console.error("Error creating draft note:", error);
+      alert("Failed to create note");
+      return;
+    }
+  }
+
+  // Normal save logic for existing notes
   if (!currentNote) return;
 
   // Clear any pending autosave to prevent conflicts
@@ -1315,7 +1394,22 @@ function clearSearch() {
 }
 
 function attemptCloseEditor() {
-  // Check if there are unsaved changes
+  // Handle draft mode
+  if (isDraftMode) {
+    const content = noteContent.value.trim();
+    if (content !== "") {
+      if (confirm("Save this note before closing?")) {
+        saveCurrentNote();
+      } else {
+        closeEditor(); // Just close without creating a note
+      }
+    } else {
+      closeEditor(); // No content, just close
+    }
+    return;
+  }
+
+  // Check if there are unsaved changes for existing notes
   if (currentNote && noteContent.value !== originalNoteContent) {
     if (confirm("You have unsaved changes. Save before closing?")) {
       saveCurrentNote().then(() => closeEditor());
@@ -1593,7 +1687,7 @@ function handleGlobalKeyboard(event) {
   // Handle escape key
   if (event.key === "Escape") {
     if (noteEditor && !noteEditor.classList.contains("hidden")) {
-      closeEditor();
+      attemptCloseEditor();
     }
   }
 }
