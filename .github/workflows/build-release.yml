@@ -88,7 +88,7 @@ jobs:
       - name: Set up Go 🐹
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
         with:
-          go-version: "1.24"
+          go-version: "1.25"
 
       - name: Set up Node.js �
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
