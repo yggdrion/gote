@@ -1,3 +1,15 @@
+## [1.4.0](https://github.com/yggdrion/gote/compare/v1.3.8...v1.4.0) (2025-09-25)
+
+### Bug Fixes
+
+* empty note ([f85e7cb](https://github.com/yggdrion/gote/commit/f85e7cb621b5fdf5c96265546fef4266ce5b97d7))
+* manual release ([0fa58ef](https://github.com/yggdrion/gote/commit/0fa58ef074fcd652cf38d39165d462acd07b0670))
+* note not appearing ([f5ff35c](https://github.com/yggdrion/gote/commit/f5ff35c011467cc5cf83cc5ed172a24b84d1708a))
+
+### Features
+
+* homebrew ([#36](https://github.com/yggdrion/gote/issues/36)) ([bdf7b91](https://github.com/yggdrion/gote/commit/bdf7b91a3da0fedec55e8bbd41778177d3e6786b))
+
 ## [1.3.8](https://github.com/yggdrion/gote/compare/v1.3.7...v1.3.8) (2025-09-01)
 
 ### Bug Fixes
