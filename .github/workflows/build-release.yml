@@ -125,7 +125,7 @@ jobs:
           mv ${{ matrix.artifact_name }}.zip ../
 
       - name: Upload build artifacts 📤
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.1
         with:
           name: ${{ matrix.artifact_name }}
           path: |
@@ -158,7 +158,7 @@ jobs:
           npm install -g semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/github conventional-changelog-conventionalcommits semantic-release-export-data
 
       - name: Download build artifacts 📥
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 v4.6.1
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4.6.1
         with:
           path: ./artifacts
 
