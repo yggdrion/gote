@@ -6,15 +6,15 @@ on:
 concurrency:
   group: ${{ githu    steps:
       - name: Checkout code 🌿
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.1
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Set up Go 🐹
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5.1.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: "1.25"
 
       - name: Set up Node.js 🟢
-        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
   cancel-in-progress: false
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js 🟢
-        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
 
@@ -96,12 +96,12 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Set up Go 🐹
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5.1.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: "1.25"
 
       - name: Set up Node.js �
-        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
 
@@ -125,7 +125,7 @@ jobs:
           mv ${{ matrix.artifact_name }}.zip ../
 
       - name: Upload build artifacts 📤
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ matrix.artifact_name }}
           path: |
@@ -149,7 +149,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js 🟢
-        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
 
