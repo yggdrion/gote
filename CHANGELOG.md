@@ -1,3 +1,19 @@
+## [1.4.2](https://github.com/yggdrion/gote/compare/v1.4.1...v1.4.2) (2025-10-03)
+
+### Bug Fixes
+
+* action typo ([a398219](https://github.com/yggdrion/gote/commit/a3982190108f3634d8b8c1a6c551d5aec5f101e1))
+* add github-action versions ([423ae65](https://github.com/yggdrion/gote/commit/423ae651c00bdc75eeb4d00fae287dddec708819))
+* hashes and version ([ab0d5aa](https://github.com/yggdrion/gote/commit/ab0d5aa85aef34c2633b2226de9102fcba0e2da3))
+* missing ga version ([ea2fdb9](https://github.com/yggdrion/gote/commit/ea2fdb96e7e371f03ef89ff78256e0c6587f8d54))
+* pr title ([c6074be](https://github.com/yggdrion/gote/commit/c6074be1b28d9a6381e18e7407a67bcb973d1cac))
+* renovate versions ([9ef11fa](https://github.com/yggdrion/gote/commit/9ef11faed227b4abc9e6ef9ad81f1a87b96d1e57))
+* replace dependabot with renovate ([8f18a32](https://github.com/yggdrion/gote/commit/8f18a325057e54d258fd1f55b4fef2e957b0df54))
+* setup node ([25b5708](https://github.com/yggdrion/gote/commit/25b570849c4b55f870e87545e14d7e436fdb7510))
+* setup node ([12c869b](https://github.com/yggdrion/gote/commit/12c869b641caf76875685461afdfd91b06baf1f8))
+* universal renovate config ([e4df6a6](https://github.com/yggdrion/gote/commit/e4df6a631888fb0f4d9d946841e83ec39e76783a))
+* versions ([43d082c](https://github.com/yggdrion/gote/commit/43d082c1ffa0c194bb6dc423d90e849797748ce8))
+
 ## [1.4.1](https://github.com/yggdrion/gote/compare/v1.4.0...v1.4.1) (2025-09-25)
 
 ## [1.4.0](https://github.com/yggdrion/gote/compare/v1.3.8...v1.4.0) (2025-09-25)
