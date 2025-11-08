@@ -1,3 +1,11 @@
+## [1.4.4](https://github.com/yggdrion/gote/compare/v1.4.3...v1.4.4) (2025-11-08)
+
+### 🐛 Bug Fixes
+
+* ignore changes in release and changelog ([de5c196](https://github.com/yggdrion/gote/commit/de5c196898dc908e4ddd6693a7a7dbb2c5cb6d40))
+* prettierrc ([3fee97c](https://github.com/yggdrion/gote/commit/3fee97c414f5f69afcd8844360524ed06db48d59))
+* unresponsive app ([054e34d](https://github.com/yggdrion/gote/commit/054e34d2e7b195926c1092295b03244315af262c))
+
 ## [1.4.3](https://github.com/yggdrion/gote/compare/v1.4.2...v1.4.3) (2025-11-08)
 
 ### Bug Fixes
