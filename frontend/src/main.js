@@ -945,9 +945,11 @@ async function createNoteFromClipboard() {
     console.error("Error creating note from clipboard:", error);
     alert("Failed to create note from clipboard");
   } finally {
-    // Restore button state
-    newNoteFromClipboardBtn.disabled = false;
-    newNoteFromClipboardBtn.textContent = "📋";
+    // Always restore button state, even if there was an error
+    if (newNoteFromClipboardBtn) {
+      newNoteFromClipboardBtn.disabled = false;
+      newNoteFromClipboardBtn.textContent = "📋";
+    }
   }
 }
 
@@ -1121,8 +1123,10 @@ async function saveCurrentNote() {
       saveNoteBtn.disabled = true;
 
       setTimeout(() => {
-        saveNoteBtn.textContent = originalText;
-        saveNoteBtn.disabled = false;
+        if (saveNoteBtn) {
+          saveNoteBtn.textContent = originalText;
+          saveNoteBtn.disabled = false;
+        }
         closeEditor();
       }, 500);
 
@@ -1130,6 +1134,10 @@ async function saveCurrentNote() {
       return;
     } catch (error) {
       console.error("Error creating draft note:", error);
+      // Re-enable button on error
+      if (saveNoteBtn) {
+        saveNoteBtn.disabled = false;
+      }
       alert("Failed to create note");
       return;
     }
@@ -1195,12 +1203,18 @@ async function saveCurrentNote() {
     saveNoteBtn.disabled = true;
 
     setTimeout(() => {
-      saveNoteBtn.textContent = originalText;
-      saveNoteBtn.disabled = false;
+      if (saveNoteBtn) {
+        saveNoteBtn.textContent = originalText;
+        saveNoteBtn.disabled = false;
+      }
       closeEditor(); // Close the editor after saving
     }, 500); // Shorter feedback time since we're closing
   } catch (error) {
     console.error("Error saving note:", error);
+    // Always re-enable the button on error
+    if (saveNoteBtn) {
+      saveNoteBtn.disabled = false;
+    }
     // Don't show error alert if it was a session expiry (already handled)
     if (!error.message || !error.message.includes("session expired")) {
       alert("Failed to save note");
@@ -1558,8 +1572,10 @@ function startActivityTracking() {
         // Make a light API call to refresh the session
         await callAPI(() => GetNotesByCategory(currentCategory));
         lastSessionRefresh = now;
+        console.log("Session refreshed successfully");
       } catch (error) {
         // Session refresh failed, will be handled by callAPI
+        console.warn("Session refresh failed:", error);
       }
     }
   };
@@ -1580,6 +1596,9 @@ function startActivityTracking() {
 
   // Also start periodic session validation
   startSessionValidation();
+
+  // Add visibility change handler to detect when app comes back from standby
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 }
 
 function startSessionValidation() {
@@ -1590,12 +1609,69 @@ function startSessionValidation() {
         // Try to call a simple authenticated method to check if session is valid
         // We'll use GetNotesByCategory with a quick call
         await callAPI(() => GetNotesByCategory(currentCategory));
+        console.log("Session validation successful");
       } catch (error) {
         // If we get a session expired error, it will be handled by callAPI
         // which will call handleAutoLogout
+        console.warn("Session validation failed:", error);
       }
     }
   }, 5 * 60 * 1000); // Check every 5 minutes
+}
+
+// Handle visibility change (standby/resume detection)
+async function handleVisibilityChange() {
+  if (document.visibilityState === "visible" && currentUser) {
+    console.log("App became visible, checking session status...");
+
+    // Re-enable any buttons that might have been left disabled
+    ensureButtonsEnabled();
+
+    try {
+      // When app becomes visible again (e.g., after standby), validate session
+      await callAPI(() => GetNotesByCategory(currentCategory));
+      console.log("Session is still valid after resume");
+
+      // Refresh the notes list to ensure we have the latest data
+      await loadNotes();
+    } catch (error) {
+      console.error("Session validation failed after resume:", error);
+      // Session validation failed - the callAPI wrapper will handle logout
+    }
+  }
+}
+
+// Ensure all interactive buttons are enabled (recovery from interrupted state)
+function ensureButtonsEnabled() {
+  const buttons = [
+    newNoteBtn,
+    newNoteFromClipboardBtn,
+    searchBtn,
+    clearSearchBtn,
+    saveNoteBtn,
+    cancelEditorBtn,
+    settingsBtn,
+    trashBtn,
+    filterPrivateBtn,
+    filterWorkBtn,
+    editorFilterPrivateBtn,
+    editorFilterWorkBtn,
+  ];
+
+  buttons.forEach((btn) => {
+    if (btn && btn.disabled) {
+      btn.disabled = false;
+      console.log(`Re-enabled button: ${btn.id || btn.textContent}`);
+    }
+  });
+
+  // Restore button text content if needed
+  if (newNoteFromClipboardBtn && newNoteFromClipboardBtn.textContent !== "📋") {
+    newNoteFromClipboardBtn.textContent = "📋";
+  }
+  if (saveNoteBtn && !saveNoteBtn.textContent.includes("Save")) {
+    saveNoteBtn.textContent = "💾 Save Note";
+  }
 }
 
 async function handleAutoLogout() {
