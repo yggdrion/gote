@@ -1,3 +1,10 @@
+## [1.4.3](https://github.com/yggdrion/gote/compare/v1.4.2...v1.4.3) (2025-11-08)
+
+### Bug Fixes
+
+* renovate schedule ([4214523](https://github.com/yggdrion/gote/commit/42145230121cf0cc6d71a20070b72adbbd104164))
+* renovate schedule ([e26aa0a](https://github.com/yggdrion/gote/commit/e26aa0aee240d2f61ee48d0afbd92c23426b1a00))
+
 ## [1.4.2](https://github.com/yggdrion/gote/compare/v1.4.1...v1.4.2) (2025-10-03)
 
 ### Bug Fixes
