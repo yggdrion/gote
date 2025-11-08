@@ -16,7 +16,6 @@
     ],
     "semanticCommits": "enabled",
     "recreateWhen": "always",
-    "recreateClosed": true,
     "separateMajorMinor": false,
     "packageRules": [
         {
