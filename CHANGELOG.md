@@ -1,3 +1,10 @@
+## [1.4.5](https://github.com/yggdrion/gote/compare/v1.4.4...v1.4.5) (2025-11-17)
+
+### 🔧 Chores
+
+* **github-actions:** Update crate-ci/typos action to v1.39.2 ([#52](https://github.com/yggdrion/gote/issues/52)) ([7215f24](https://github.com/yggdrion/gote/commit/7215f2453734c287c2799d543f9c9a2964585c58))
+* **go:** Update module golang.org/x/crypto to v0.44.0 ([#53](https://github.com/yggdrion/gote/issues/53)) ([9ad89b3](https://github.com/yggdrion/gote/commit/9ad89b334c6087054a9eef0d8b2cb5377bb3d6e6))
+
 ## [1.4.4](https://github.com/yggdrion/gote/compare/v1.4.3...v1.4.4) (2025-11-08)
 
 ### 🐛 Bug Fixes
