@@ -1,3 +1,10 @@
+## [1.4.6](https://github.com/yggdrion/gote/compare/v1.4.5...v1.4.6) (2025-11-23)
+
+### 🔧 Chores
+
+* **github-actions:** Update github-actions ([#55](https://github.com/yggdrion/gote/issues/55)) ([16d9a20](https://github.com/yggdrion/gote/commit/16d9a20dda5adc39c2569506dbabcc920e177f21))
+* **go:** Update module golang.org/x/crypto to v0.45.0 ([#54](https://github.com/yggdrion/gote/issues/54)) ([78f60fa](https://github.com/yggdrion/gote/commit/78f60faa4b63f0f85de1200f4d1a64ac3a0f9ce6))
+
 ## [1.4.5](https://github.com/yggdrion/gote/compare/v1.4.4...v1.4.5) (2025-11-17)
 
 ### 🔧 Chores
