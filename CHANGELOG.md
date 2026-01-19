@@ -1,3 +1,15 @@
+## [1.4.7](https://github.com/yggdrion/gote/compare/v1.4.6...v1.4.7) (2026-01-19)
+
+### 🔧 Chores
+
+* **github-actions:** Update crate-ci/typos action to v1.40.0 ([#56](https://github.com/yggdrion/gote/issues/56)) ([f4d21aa](https://github.com/yggdrion/gote/commit/f4d21aa9e2a21d0e824fa276e9c7782efe709ecd))
+* **github-actions:** Update crate-ci/typos action to v1.42.0 ([#60](https://github.com/yggdrion/gote/issues/60)) ([9934192](https://github.com/yggdrion/gote/commit/99341922c0bc7be3e2ddeb21ad9f0528cc085a85))
+* **github-actions:** Update github-actions ([#57](https://github.com/yggdrion/gote/issues/57)) ([e65bf4c](https://github.com/yggdrion/gote/commit/e65bf4c4c0952bd69ff829a304781e070907ecb6))
+* **github-actions:** Update github-actions ([#59](https://github.com/yggdrion/gote/issues/59)) ([517c6d8](https://github.com/yggdrion/gote/commit/517c6d82f3f5a2f538e1a69d3960ea40e739ac3b))
+* **github-actions:** Update github-actions to v6.2.0 ([#61](https://github.com/yggdrion/gote/issues/61)) ([bc463a3](https://github.com/yggdrion/gote/commit/bc463a33836c496e25b779bad7d0bdf20e48e1ee))
+* **go:** Update module golang.org/x/crypto to v0.46.0 ([#58](https://github.com/yggdrion/gote/issues/58)) ([554c402](https://github.com/yggdrion/gote/commit/554c40224fc6be7984ac86585590276acae9e237))
+* **go:** Update module golang.org/x/crypto to v0.47.0 ([#62](https://github.com/yggdrion/gote/issues/62)) ([1962186](https://github.com/yggdrion/gote/commit/19621867a0e0dfccb0ba088ee0e457b3a17d2c93))
+
 ## [1.4.6](https://github.com/yggdrion/gote/compare/v1.4.5...v1.4.6) (2025-11-23)
 
 ### 🔧 Chores
