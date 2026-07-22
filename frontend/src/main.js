@@ -43,6 +43,7 @@ import {
 import {
   BrowserOpenURL,
   ClipboardGetText,
+  ClipboardSetText,
 } from "../wailsjs/runtime/runtime.js";
 
 // State management
@@ -694,6 +695,9 @@ function renderNotesList() {
       // Add external link handlers after HTML is inserted into DOM
       addExternalLinkHandlersToContainer(noteContentDiv);
 
+      // Add copy buttons to code blocks after HTML is inserted into DOM
+      addCodeCopyButtonsToContainer(noteContentDiv);
+
       // Add event listeners based on button type
       if (currentCategory === "trash") {
         noteCard
@@ -779,6 +783,31 @@ function addExternalLinkHandlersToContainer(element) {
       e.stopPropagation();
       BrowserOpenURL(link.href);
     });
+  });
+}
+
+const COPY_ICON =
+  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>';
+const CHECK_ICON =
+  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8.5l3 3 7-7"/></svg>';
+
+function addCodeCopyButtonsToContainer(element) {
+  element.querySelectorAll("pre").forEach((pre) => {
+    const btn = document.createElement("button");
+    btn.className = "code-copy-btn";
+    btn.type = "button";
+    btn.title = "Copy code";
+    btn.innerHTML = COPY_ICON;
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const code = pre.querySelector("code") || pre;
+      ClipboardSetText(code.innerText).then(() => {
+        btn.innerHTML = CHECK_ICON;
+        setTimeout(() => (btn.innerHTML = COPY_ICON), 1500);
+      });
+    });
+    pre.appendChild(btn);
   });
 }
 
@@ -912,8 +941,12 @@ async function createNoteFromClipboard() {
     try {
       const clipboardText = await ClipboardGetText();
       if (clipboardText && clipboardText.trim() !== "") {
+        // Normalize CRLF/CR to LF - raw OS clipboard text (unlike textarea
+        // input) isn't normalized, and stray \r left in a code block shows
+        // up as invisible trailing whitespace at the end of each line.
+        const normalizedText = clipboardText.replace(/\r\n?/g, "\n");
         // Wrap clipboard text content in a code block
-        clipboardContent = "```\n" + clipboardText + "\n```";
+        clipboardContent = "```\n" + normalizedText + "\n```";
       } else {
         alert("Clipboard is empty");
         return;
@@ -1584,6 +1617,9 @@ function startActivityTracking() {
     document.addEventListener(
       activity,
       () => {
+        // Ignore ambient events (e.g. mouse merely hovering an unfocused
+        // window) so the app still locks while it sits in the background.
+        if (!document.hasFocus()) return;
         resetTimer();
         refreshSession();
       },
