@@ -1,3 +1,5 @@
+## [1.6.1](https://github.com/yggdrion/gote/compare/v1.6.0...v1.6.1) (2026-08-03)
+
 ## [1.6.0](https://github.com/yggdrion/gote/compare/v1.5.0...v1.6.0) (2026-07-22)
 
 ## [1.4.8](https://github.com/yggdrion/gote/compare/v1.4.7...v1.4.8) (2026-05-23)
