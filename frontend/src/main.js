@@ -19,6 +19,7 @@ import {
   UpdateNoteCategory,
   DeleteNote,
   GetNotesByCategory,
+  IsAuthenticated,
   MoveToTrash,
   RestoreFromTrash,
   PermanentlyDeleteNote,
@@ -1036,9 +1037,8 @@ function showEditor() {
       if (isDraftMode && noteContent.value.trim() !== "") {
         try {
           // Create the note now that there's content
-          const newNote = await CreateNoteWithCategory(
-            noteContent.value.trim(),
-            draftCategory
+          const newNote = await callAPI(() =>
+            CreateNoteWithCategory(noteContent.value.trim(), draftCategory)
           );
           currentNote = newNote;
           originalNoteContent = newNote.content;
@@ -1138,7 +1138,9 @@ async function saveCurrentNote() {
 
     try {
       // Create the note now
-      const newNote = await CreateNoteWithCategory(content, draftCategory);
+      const newNote = await callAPI(() =>
+        CreateNoteWithCategory(content, draftCategory)
+      );
       currentNote = newNote;
       originalNoteContent = newNote.content;
       isDraftMode = false;
@@ -1171,7 +1173,10 @@ async function saveCurrentNote() {
       if (saveNoteBtn) {
         saveNoteBtn.disabled = false;
       }
-      alert("Failed to create note");
+      // Don't show error alert if it was a session expiry (already handled)
+      if (!error.message || !error.message.includes("session expired")) {
+        alert("Failed to create note");
+      }
       return;
     }
   }
@@ -1602,12 +1607,15 @@ function startActivityTracking() {
     if (currentUser && now - lastSessionRefresh > 10 * 60 * 1000) {
       // 10 minutes
       try {
-        // Make a light API call to refresh the session
-        await callAPI(() => GetNotesByCategory(currentCategory));
-        lastSessionRefresh = now;
-        console.log("Session refreshed successfully");
+        // Validating extends the backend's sliding session window
+        const valid = await IsAuthenticated();
+        if (!valid) {
+          await handleAutoLogout();
+        } else {
+          lastSessionRefresh = now;
+          console.log("Session refreshed successfully");
+        }
       } catch (error) {
-        // Session refresh failed, will be handled by callAPI
         console.warn("Session refresh failed:", error);
       }
     }
@@ -1642,13 +1650,13 @@ function startSessionValidation() {
   setInterval(async () => {
     if (currentUser) {
       try {
-        // Try to call a simple authenticated method to check if session is valid
-        // We'll use GetNotesByCategory with a quick call
-        await callAPI(() => GetNotesByCategory(currentCategory));
-        console.log("Session validation successful");
+        const valid = await IsAuthenticated();
+        if (!valid) {
+          await handleAutoLogout();
+        } else {
+          console.log("Session validation successful");
+        }
       } catch (error) {
-        // If we get a session expired error, it will be handled by callAPI
-        // which will call handleAutoLogout
         console.warn("Session validation failed:", error);
       }
     }
