@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+`AGENTS.md` mirrors this file for Codex — keep both in sync when editing.
+
 ## What this is
 
 `gote` is a secure, cross-platform desktop note-taking app built with [Wails v2](https://wails.io): a Go backend (module `gote`, Go 1.25) paired with a vanilla-JS frontend, packaged as a native webview app. Notes are AES-GCM encrypted at rest with a PBKDF2-derived key from a single app password; no framework (React/Vue/etc.) is used on the frontend by design — keep it that way (see Conventions below).
@@ -25,7 +27,9 @@ npm run preview     # preview a production build
 
 There are no tests in this repo (no `*_test.go` files, no frontend test script) — there is no test command to run.
 
-Two of the three lint/check CI workflows (`golangci-lint.yml`, `lint-static.yml`) are `workflow_dispatch`-only, i.e. they don't run automatically on push/PR. `typos-spelling.yml` (crate-ci/typos) and `pull-request-title.yml` do run automatically. `lint-static.yml` lints a `static/**` glob that doesn't exist in the current layout — treat it as stale/non-authoritative.
+CI workflows:
+- Run automatically on push/PR: `typos-spelling.yml` (crate-ci/typos), `pull-request-title.yml`.
+- Manual (`workflow_dispatch`) only: `golangci-lint.yml`, `build-release.yml` (releases are triggered by hand), and `lint-static.yml`, which lints a `static/**` glob that doesn't exist in the current layout — treat it as stale/non-authoritative.
 
 PR titles are enforced by CI and drive semantic-release versioning — they must match:
 ```
