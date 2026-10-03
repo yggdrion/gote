@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   setup:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       issues: read
@@ -127,7 +127,7 @@ jobs:
   release:
     needs: [setup, build]
     if: needs.setup.outputs.should_build == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       issues: read
