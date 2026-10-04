@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`gote` is a secure, cross-platform desktop note-taking app built with [Wails v2](https://wails.io): a Go backend (module `gote`, Go 1.25) paired with a vanilla-JS frontend, packaged as a native webview app. Notes are AES-GCM encrypted at rest with a PBKDF2-derived key from a single app password; no framework (React/Vue/etc.) is used on the frontend by design — keep it that way (see Conventions below).
+`gote` is a secure, cross-platform desktop note-taking app built with [Wails v2](https://wails.io): a Go backend (module `gote`, Go 1.26) paired with a vanilla-JS frontend, packaged as a native webview app. Notes are AES-GCM encrypted at rest with a PBKDF2-derived key from a single app password; no framework (React/Vue/etc.) is used on the frontend by design — keep it that way (see Conventions below).
 
 ## Commands
 
