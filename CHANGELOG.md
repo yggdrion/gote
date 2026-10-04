@@ -1,3 +1,22 @@
+## [1.6.2](https://github.com/yggdrion/gote/compare/v1.6.1...v1.6.2) (2026-10-04)
+
+### 📝 Documentation
+
+* clarify CI workflow triggers and AGENTS.md sync in CLAUDE.md ([#80](https://github.com/yggdrion/gote/issues/80)) ([1209242](https://github.com/yggdrion/gote/commit/120924288e210b17d390868900c880639ba28fe9))
+
+### 🔧 Chores
+
+* AGENTS.md ([3410cb2](https://github.com/yggdrion/gote/commit/3410cb229eecf551d769570134d2f744d5963c97))
+* **github-actions:** Update crate-ci/typos action to v1.49.0 ([#76](https://github.com/yggdrion/gote/issues/76)) ([d95eaa0](https://github.com/yggdrion/gote/commit/d95eaa01fdb7c909617de55c33cad82e72c68477))
+* **github-actions:** Update github-actions ([#79](https://github.com/yggdrion/gote/issues/79)) ([c9d173a](https://github.com/yggdrion/gote/commit/c9d173a6add013611ed800a1383694ece587f2e2))
+* **go:** Update go ([#77](https://github.com/yggdrion/gote/issues/77)) ([9b8f11d](https://github.com/yggdrion/gote/commit/9b8f11d04afcd348527cf460fa550776c90c9f53))
+* **go:** Update go ([#78](https://github.com/yggdrion/gote/issues/78)) ([f94e5ba](https://github.com/yggdrion/gote/commit/f94e5ba0c1b999e865d333590a1fa45bc1321c98))
+
+### 👷 CI/CD
+
+* build with Go version from go.mod ([#82](https://github.com/yggdrion/gote/issues/82)) ([724c138](https://github.com/yggdrion/gote/commit/724c1385c73162092d14a8c95873c83cff3d5542))
+* pin conventionalcommits preset to v9 ([#81](https://github.com/yggdrion/gote/issues/81)) ([21d9943](https://github.com/yggdrion/gote/commit/21d9943cdc39abfd1510829a105fa5f2cdbe0e79))
+
 ## [1.6.1](https://github.com/yggdrion/gote/compare/v1.6.0...v1.6.1) (2026-08-03)
 
 ## [1.6.0](https://github.com/yggdrion/gote/compare/v1.5.0...v1.6.0) (2026-07-22)
