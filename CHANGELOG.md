@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/yggdrion/gote/compare/v1.6.2...v1.6.3) (2026-10-19)
+
+### 🔧 Chores
+
+* **github-actions:** Update github-actions ([#83](https://github.com/yggdrion/gote/issues/83)) ([ef29125](https://github.com/yggdrion/gote/commit/ef2912515962c07e92cbf43a65454c5f6e3ed8f9))
+* **go:** Update go ([#84](https://github.com/yggdrion/gote/issues/84)) ([0b29c43](https://github.com/yggdrion/gote/commit/0b29c438e237cc7b1b4a11f7c1a5a251c6aaeb9c))
+
 ## [1.6.2](https://github.com/yggdrion/gote/compare/v1.6.1...v1.6.2) (2026-10-04)
 
 ### 📝 Documentation
