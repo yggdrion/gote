@@ -6,22 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`gote` is a secure, cross-platform desktop note-taking app built with [Wails v2](https://wails.io): a Go backend (module `gote`, Go 1.26) paired with a vanilla-JS frontend, packaged as a native webview app. Notes are AES-GCM encrypted at rest with a PBKDF2-derived key from a single app password; no framework (React/Vue/etc.) is used on the frontend by design — keep it that way (see Conventions below).
+`gote` is a secure, cross-platform desktop note-taking app built with [Wails v3](https://v3.wails.io): a Go backend (module `gote`, Go 1.27) paired with a vanilla-JS frontend, packaged as a native webview app. Notes are AES-GCM encrypted at rest with a PBKDF2-derived key from a single app password; no framework (React/Vue/etc.) is used on the frontend by design — keep it that way (see Conventions below).
 
 ## Commands
 
 Run from the repo root unless noted.
 
 ```sh
-wails dev                          # run the app in dev mode (hot-reloads frontend + backend)
-wails build                        # production build -> build/bin/gote.exe (Windows)
+wails3 dev                         # run the app in dev mode (hot-reloads frontend + backend)
+wails3 build                       # production build -> bin/gote.exe (Windows)
+wails3 package                     # platform package (macOS: bin/gote.app)
 golangci-lint run --timeout=5m     # Go lint (matches .golangci.yml, skips frontend/dist)
 ```
 
 Frontend-only (run from `frontend/`):
 ```sh
 npm run dev        # vite dev server
-npm run build       # vite build (also invoked automatically by `wails build`)
+npm run build       # vite build (also invoked automatically by `wails3 build`)
 npm run preview     # preview a production build
 ```
 
@@ -38,7 +39,7 @@ PR titles are enforced by CI and drive semantic-release versioning — they must
 
 ## Architecture
 
-**Entry point**: `main.go` embeds `frontend/dist` (`//go:embed`), constructs `App` (`app.go`) via `NewApp()`, and calls `wails.Run` binding every exported `App` method directly to the frontend. Wails auto-generates the JS bindings into `frontend/wailsjs/` — never hand-edit that directory, regenerate via `wails dev`/`wails build`.
+**Entry point**: `main.go` embeds `frontend/dist` (`//go:embed`), registers `App` (`app.go`, via `NewApp()`) as the single Wails service with `application.New`, opens the window, and calls `app.Run()`. Every exported `App` method is bound to the frontend; `ServiceStartup`/`ServiceShutdown` are the v3 lifecycle hooks. Wails generates the JS bindings into `frontend/bindings/gote/` (gitignored) on every `wails3 build`/`wails3 dev` — never hand-edit them. Build tooling is `Taskfile.yml` + `build/` (`build/config.yml` holds product metadata). An exported `App` method taking `error` as its first parameter crashes the v3.0.0 binding generator — don't add one.
 
 **Backend layering** (`App` → service → storage → crypto):
 - `app.go` (`App`) is the Wails-bound facade: startup/config bootstrap, auth flows, note/category/image CRUD, backups, and background goroutines (session cleanup every 5 min, hourly-checked daily auto-backup, orphaned-image cleanup via regex-matching `![alt](image:<id>)` references in note content). Most methods delegate to `pkg/services.NoteService`, falling back to calling `pkg/storage.NoteStore` directly where the service isn't used.
@@ -53,12 +54,12 @@ PR titles are enforced by CI and drive semantic-release versioning — they must
 - `pkg/types` (`wails.go`) — `WailsNote` DTO/converters; timestamps are pre-formatted to RFC3339 strings here because Wails serializes Go `time.Time` awkwardly to JS.
 - `pkg/config` — resolves default paths (`~/Documents/Gote/Notes` for notes, `~/.config/gote/` for password hash + app config, on all platforms including Windows) and loads/saves the small JSON `Config{NotesPath, PasswordHashPath}`.
 
-**Frontend**: `frontend/src/main.js` (~1900 lines) is a single vanilla-JS module that imports the generated Wails bindings directly (`IsPasswordSet`, `SetPassword`, `GetAllNotes`, `CreateNote`, etc.) and drives the entire UI — auth screens, note list/editor, markdown preview (`marked` + `highlight.js`), settings. `frontend/src/constants.js` centralizes shared UI constants/CSS class names/element IDs/messages. `frontend/src/style.css` is the dark theme. Built with Vite; no component framework, no additional module/bundling structure beyond this.
+**Frontend**: `frontend/src/main.js` (~1900 lines) is a single vanilla-JS module that imports the generated Wails bindings (`../bindings/gote/app.js`) and the `@wailsio/runtime` npm package (`Browser`, `Clipboard`) directly (`IsPasswordSet`, `SetPassword`, `GetAllNotes`, `CreateNote`, etc.) and drives the entire UI — auth screens, note list/editor, markdown preview (`marked` + `highlight.js`), settings. `frontend/src/constants.js` centralizes shared UI constants/CSS class names/element IDs/messages. `frontend/src/style.css` is the dark theme. Built with Vite; no component framework, no additional module/bundling structure beyond this.
 
 ## Conventions
 
 From `.github/copilot-instructions.md`:
-- This is a Wails app with vanilla JavaScript and no framework — use `wails build` to test the build process and verify Go code.
+- This is a Wails app with vanilla JavaScript and no framework — use `wails3 build` to test the build process and verify Go code.
 - Focus on readability and simplicity. Use modern JavaScript features but avoid complex patterns.
 
 ## Stale docs, don't trust these

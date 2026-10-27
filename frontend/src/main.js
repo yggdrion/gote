@@ -38,14 +38,10 @@ import {
   GetImageAsDataURL,
   CleanupOrphanedImages,
   GetImageStats,
-} from "../wailsjs/go/main/App.js";
+} from "../bindings/gote/app.js";
 
 // Import Wails runtime for browser functionality
-import {
-  BrowserOpenURL,
-  ClipboardGetText,
-  ClipboardSetText,
-} from "../wailsjs/runtime/runtime.js";
+import { Browser, Clipboard } from "@wailsio/runtime";
 
 // State management
 let currentUser = null;
@@ -782,7 +778,7 @@ function addExternalLinkHandlersToContainer(element) {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      BrowserOpenURL(link.href);
+      Browser.OpenURL(link.href);
     });
   });
 }
@@ -803,7 +799,7 @@ function addCodeCopyButtonsToContainer(element) {
       e.preventDefault();
       e.stopPropagation();
       const code = pre.querySelector("code") || pre;
-      ClipboardSetText(code.innerText).then(() => {
+      Clipboard.SetText(code.innerText).then(() => {
         btn.innerHTML = CHECK_ICON;
         setTimeout(() => (btn.innerHTML = COPY_ICON), 1500);
       });
@@ -938,9 +934,9 @@ async function createNoteFromClipboard() {
 
     let clipboardContent = "";
 
-    // Use only the Wails ClipboardGetText API - no browser clipboard access
+    // Use only the Wails Clipboard.Text API - no browser clipboard access
     try {
-      const clipboardText = await ClipboardGetText();
+      const clipboardText = await Clipboard.Text();
       if (clipboardText && clipboardText.trim() !== "") {
         // Normalize CRLF/CR to LF - raw OS clipboard text (unlike textarea
         // input) isn't normalized, and stray \r left in a code block shows

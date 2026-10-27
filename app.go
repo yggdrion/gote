@@ -18,6 +18,8 @@ import (
 	"gote/pkg/services"
 	"gote/pkg/storage"
 	"gote/pkg/types"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Precompiled regexp for image references in markdown: ![alt](image:<id>)
@@ -46,9 +48,9 @@ func NewApp() *App {
 	return &App{}
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
+// ServiceStartup is called by Wails when the app starts. The context is saved
+// so background goroutines stop when it is cancelled on shutdown
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
 
 	// Check if this is first-time setup (no config file exists)
@@ -92,6 +94,7 @@ func (a *App) startup(ctx context.Context) {
 			PasswordHashPath: config.GetDefaultPasswordHashPath(),
 		}
 	}
+	return nil
 }
 
 // Authentication methods
@@ -609,19 +612,6 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
-// Error handling helpers for frontend
-
-// HandleError converts application errors to frontend-friendly format
-func (a *App) HandleError(err error) map[string]interface{} {
-	return map[string]interface{}{
-		"error": map[string]interface{}{
-			"message":     err.Error(),
-			"userMessage": err.Error(),
-			"code":        "GENERIC_ERROR",
-		},
-	}
-}
-
 // ValidateSetupInputs validates initial setup inputs
 func (a *App) ValidateSetupInputs(notesPath, passwordHashPath, password, confirmPassword string) map[string]interface{} {
 	// Basic validation
@@ -943,8 +933,8 @@ func (a *App) MoveToTrash(id string) (types.WailsNote, error) {
 	return types.ConvertToWailsNote(note), nil
 }
 
-// shutdown is called when the app is closing; clean up resources here
-func (a *App) shutdown(ctx context.Context) {
+// ServiceShutdown is called by Wails when the app is closing; clean up resources here
+func (a *App) ServiceShutdown() error {
 	// Close file watchers to avoid leaks
 	if a.store != nil {
 		if err := a.store.Close(); err != nil {
@@ -952,6 +942,7 @@ func (a *App) shutdown(ctx context.Context) {
 		}
 	}
 	// Let background cleanup goroutine exit via context cancellation
+	return nil
 }
 
 // PermanentlyDeleteNote permanently deletes a note (only works for trash items)
