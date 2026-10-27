@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "{{.Info.ProductVersion}}"
+		"file_version": "1.6.3"
 	},
 	"info": {
-		"0000": {
-			"ProductVersion": "{{.Info.ProductVersion}}",
-			"CompanyName": "{{.Info.CompanyName}}",
-			"FileDescription": "{{.Info.ProductName}}",
-			"LegalCopyright": "{{.Info.Copyright}}",
-			"ProductName": "{{.Info.ProductName}}",
-			"Comments": "{{.Info.Comments}}"
+		"0409": {
+			"ProductVersion": "1.6.3",
+			"CompanyName": "r4b2",
+			"FileDescription": "A secure note-taking application",
+			"LegalCopyright": "Copyright © 2025, r4b2",
+			"ProductName": "gote",
+			"Comments": "A secure note-taking application"
 		}
 	}
 }

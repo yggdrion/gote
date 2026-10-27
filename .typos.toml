@@ -1,7 +1,7 @@
 [files]
 extend-exclude = [
     "noteapp/static/vendor/**",
-    "frontend/wailsjs/**",
+    "frontend/bindings/**",
     "CHANGELOG.md"
 ]
 

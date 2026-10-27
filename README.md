@@ -28,7 +28,7 @@ This Wails application has been transformed from a basic template into a full-fe
 - **index.html**: Single-page app structure with auth and main screens
 - **main.js**: Application logic, event handling, and Wails bindings
 - **style.css**: Modern dark theme styling
-- **wailsjs/**: Auto-generated Wails bindings
+- **bindings/**: Auto-generated Wails bindings (created by `wails3 build`/`wails3 dev`)
 
 ## Key Transformations Made
 
@@ -62,18 +62,18 @@ This Wails application has been transformed from a basic template into a full-fe
 ### Development
 
 ```bash
-wails dev
+wails3 dev
 ```
 
 ### Production Build
 
 ```bash
-wails build
+wails3 build
 ```
 
 ### Built Application
 
-The built executable will be available at `build/bin/gote.exe`
+The built executable will be available at `bin/gote.exe`
 
 ## Data Storage
 
@@ -91,7 +91,7 @@ The built executable will be available at `build/bin/gote.exe`
 
 ### Go Dependencies
 
-- `github.com/wailsapp/wails/v2`: Wails framework
+- `github.com/wailsapp/wails/v3`: Wails framework
 - `github.com/fsnotify/fsnotify`: File system watching
 - `github.com/google/uuid`: UUID generation
 - `golang.org/x/term`: Terminal input utilities
