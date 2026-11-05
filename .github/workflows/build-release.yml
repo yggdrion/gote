@@ -68,16 +68,16 @@ jobs:
         include:
           # Windows builds
           - os: windows-latest
-            platform: windows/amd64
+            arch: amd64
             binary_name: gote.exe
             artifact_name: gote-windows-amd64.exe
           # macOS builds
           - os: macos-latest
-            platform: darwin/amd64
+            arch: amd64
             binary_name: gote
             artifact_name: gote-macos-amd64.app
           - os: macos-latest
-            platform: darwin/arm64
+            arch: arm64
             binary_name: gote
             artifact_name: gote-macos-arm64.app
     runs-on: ${{ matrix.os }}
@@ -96,21 +96,16 @@ jobs:
           node-version: 22
 
       - name: Install Wails 📦
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Install frontend dependencies 📦
-        run: |
-          cd frontend
-          npm install
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
 
       - name: Build Wails app 🔨
-        run: |
-          wails build -platform ${{ matrix.platform }} -o ${{ matrix.binary_name }}
+        # package builds the .app bundle on macOS; on Windows a plain build is enough
+        run: wails3 ${{ matrix.os == 'macos-latest' && 'package' || 'build' }} ARCH=${{ matrix.arch }}
 
       - name: Package macOS app (macOS only) 📦
         if: matrix.os == 'macos-latest'
         run: |
-          cd build/bin
+          cd bin
           zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.binary_name }}.app
           mv ${{ matrix.artifact_name }}.zip ../
 
@@ -119,8 +114,8 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            build/bin/${{ matrix.binary_name }}${{ matrix.os == 'macos-latest' && '.app' || '' }}
-            build/${{ matrix.artifact_name }}.zip
+            bin/${{ matrix.binary_name }}${{ matrix.os == 'macos-latest' && '.app' || '' }}
+            ${{ matrix.artifact_name }}.zip
           if-no-files-found: ignore
 
   # Release job
