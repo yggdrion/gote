@@ -1,3 +1,13 @@
+## [1.7.0](https://github.com/yggdrion/gote/compare/v1.6.3...v1.7.0) (2026-11-05)
+
+### ✨ Features
+
+* **wails:** upgrade to Wails v3 ([#85](https://github.com/yggdrion/gote/issues/85)) ([8cc9fe8](https://github.com/yggdrion/gote/commit/8cc9fe8363184cf66cb4eabbc8f07f9cf1caec51))
+
+### 🐛 Bug Fixes
+
+* **build:** drop Icon Composer step that breaks macOS packaging ([#87](https://github.com/yggdrion/gote/issues/87)) ([765f5cf](https://github.com/yggdrion/gote/commit/765f5cfc2275df9e65a27135fb18bd5b6c22a1d7))
+
 ## [1.6.3](https://github.com/yggdrion/gote/compare/v1.6.2...v1.6.3) (2026-10-19)
 
 ### 🔧 Chores
