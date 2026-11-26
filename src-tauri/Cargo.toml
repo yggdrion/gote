@@ -26,6 +26,7 @@ dirs = "6"
 uuid = { version = "1", features = ["v4"] }
 regex = "1"
 log = "0.4"
+notify = "8"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]

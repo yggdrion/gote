@@ -6,6 +6,7 @@ pub mod error;
 pub mod ids;
 pub mod image_store;
 pub mod models;
+pub mod note_store;
 
 pub fn run() {
     tauri::Builder::default()
