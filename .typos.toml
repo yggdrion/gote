@@ -2,7 +2,9 @@
 extend-exclude = [
     "noteapp/static/vendor/**",
     "frontend/bindings/**",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "testdata/**",
+    "src-tauri/gen/**"
 ]
 
 [default.extend-words]

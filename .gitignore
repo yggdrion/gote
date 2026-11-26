@@ -162,3 +162,7 @@ test.exe
 frontend/bindings
 frontend/.bindings-tmp-*
 .task
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
