@@ -1,6 +1,8 @@
+pub mod config;
 pub mod crypto;
 pub mod error;
 pub mod ids;
+pub mod models;
 
 pub fn run() {
     tauri::Builder::default()
