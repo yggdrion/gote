@@ -1,7 +1,5 @@
 [files]
 extend-exclude = [
-    "noteapp/static/vendor/**",
-    "frontend/bindings/**",
     "CHANGELOG.md",
     "testdata/**",
     "src-tauri/gen/**"
