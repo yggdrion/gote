@@ -6,7 +6,7 @@ import {
   MESSAGES,
 } from "./constants.js";
 
-// Import Wails runtime
+// Import backend API (Tauri commands)
 import {
   IsPasswordSet,
   SetPassword,
@@ -38,10 +38,11 @@ import {
   GetImageAsDataURL,
   CleanupOrphanedImages,
   GetImageStats,
-} from "../bindings/gote/app.js";
+} from "./api.js";
 
-// Import Wails runtime for browser functionality
-import { Browser, Clipboard } from "@wailsio/runtime";
+// Import Tauri plugins for clipboard and external links
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 // State management
 let currentUser = null;
@@ -778,7 +779,7 @@ function addExternalLinkHandlersToContainer(element) {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      Browser.OpenURL(link.href);
+      openUrl(link.href);
     });
   });
 }
@@ -799,7 +800,7 @@ function addCodeCopyButtonsToContainer(element) {
       e.preventDefault();
       e.stopPropagation();
       const code = pre.querySelector("code") || pre;
-      Clipboard.SetText(code.innerText).then(() => {
+      writeText(code.innerText).then(() => {
         btn.innerHTML = CHECK_ICON;
         setTimeout(() => (btn.innerHTML = COPY_ICON), 1500);
       });
@@ -934,9 +935,9 @@ async function createNoteFromClipboard() {
 
     let clipboardContent = "";
 
-    // Use only the Wails Clipboard.Text API - no browser clipboard access
+    // Use only the Tauri clipboard plugin - no browser clipboard access
     try {
-      const clipboardText = await Clipboard.Text();
+      const clipboardText = await readText();
       if (clipboardText && clipboardText.trim() !== "") {
         // Normalize CRLF/CR to LF - raw OS clipboard text (unlike textarea
         // input) isn't normalized, and stray \r left in a code block shows
