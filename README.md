@@ -12,6 +12,17 @@ A secure, cross-platform desktop note-taking app built with [Tauri v2](https://t
 - **Automatic daily zip backups** (`<notes>/backups/`)
 - **Cross-platform**: Windows, macOS, Linux
 
+## Install
+
+Download from the [latest release](https://github.com/yggdrion/gote/releases/latest):
+
+- **Windows:** `gote-windows-amd64-setup.exe` (installer, no admin rights needed) or the portable `gote-windows-amd64.exe`
+- **macOS:** `gote-macos-arm64.dmg` (Apple Silicon) or `gote-macos-amd64.dmg` (Intel), or `brew install --cask yggdrion/tap/gote`
+
+The builds are not code-signed, so Windows SmartScreen and macOS Gatekeeper warn on first launch.
+
+Installed copies update themselves: gote checks for a new release on startup and offers to install it, and Settings has a "Check for Updates" button. Updates are verified against a signing key built into the app. The portable `.exe` can't update itself, so use the installer if you want auto-updates.
+
 ## Architecture
 
 ### Backend (Rust, `src-tauri/`)
