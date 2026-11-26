@@ -280,8 +280,8 @@ impl AuthManager {
         self.sessions.retain(|_, expires| now <= *expires);
     }
 
-    #[cfg(test)]
-    fn has_session(&self, id: &str) -> bool {
+    /// Whether the session is still tracked (does not slide the expiry).
+    pub fn has_session(&self, id: &str) -> bool {
         self.sessions.contains_key(id)
     }
 }
