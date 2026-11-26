@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/yggdrion/gote/compare/v1.7.1...v1.8.0) (2026-11-26)
+
+### ✨ Features
+
+* **release:** add installers and in-app auto-updater ([#92](https://github.com/yggdrion/gote/issues/92)) ([7ad20f3](https://github.com/yggdrion/gote/commit/7ad20f37eccc83ca5a78c3c929862f3209b778b0))
+
 ## [1.7.1](https://github.com/yggdrion/gote/compare/v1.7.0...v1.7.1) (2026-11-26)
 
 ### 🐛 Bug Fixes
