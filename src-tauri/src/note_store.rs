@@ -194,15 +194,30 @@ impl NoteStore {
 
     /// Sets the key, starts the watcher (once) and syncs from disk.
     pub fn load_notes(&self, key: [u8; 32]) -> Result<()> {
-        {
+        let dir = {
             let mut inner = self.write();
             inner.key = Some(key);
-            if inner.watcher.is_none() {
-                match Self::start_watcher(&inner.dir, Arc::downgrade(&self.inner)) {
-                    Ok(w) => inner.watcher = Some(w),
-                    Err(e) => log::warn!("could not watch notes directory: {e}"),
+            inner.watcher.is_none().then(|| inner.dir.clone())
+        };
+        if let Some(dir) = dir {
+            // Created without holding the lock: `watch()` waits on the watcher's
+            // event thread, which may be blocked in the callback on this lock.
+            let started = Self::start_watcher(&dir, Arc::downgrade(&self.inner));
+            let spare = {
+                let mut inner = self.write();
+                match started {
+                    Ok(w) if inner.watcher.is_none() => {
+                        inner.watcher = Some(w);
+                        None
+                    }
+                    Ok(w) => Some(w),
+                    Err(e) => {
+                        log::warn!("could not watch notes directory: {e}");
+                        None
+                    }
                 }
-            }
+            };
+            drop(spare);
         }
         self.sync_from_disk()
     }
@@ -238,11 +253,16 @@ impl NoteStore {
 
     /// Drops the key, all cached notes and the watcher (logout / shutdown).
     pub fn clear(&self) {
-        let mut inner = self.write();
-        inner.key = None;
-        inner.notes.clear();
-        inner.mod_times.clear();
-        inner.watcher = None;
+        let watcher = {
+            let mut inner = self.write();
+            inner.key = None;
+            inner.notes.clear();
+            inner.mod_times.clear();
+            inner.watcher.take()
+        };
+        // Dropped after the lock is released: stopping a watcher can join its
+        // thread, which may be blocked in the callback waiting for this lock.
+        drop(watcher);
     }
 
     pub fn create_note(&self, content: &str, category: Category) -> Result<Note> {
@@ -722,6 +742,40 @@ mod tests {
         wait_until("newer external version", || {
             store.get_note(&note.id).unwrap().content == "from another machine"
         });
+    }
+
+    #[test]
+    fn clear_while_watcher_is_busy_does_not_hang() {
+        let (tmp, store) = empty_store();
+        let dir = tmp.path().to_path_buf();
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        // Build the (expensive-to-key) file content once, then rewrite it in a loop.
+        write_external_version(&dir, "3caaec0b", "payload", "2999-01-01T00:00:00Z");
+        let content = fs::read_to_string(dir.join("3caaec0b.json")).unwrap();
+        let writer = {
+            let stop = Arc::clone(&stop);
+            std::thread::spawn(move || {
+                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    fs::write(dir.join("3caaec0b.json"), &content).unwrap();
+                    sleep(Duration::from_millis(2));
+                }
+            })
+        };
+        let key = fixture_key();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let s2 = store.clone();
+        std::thread::spawn(move || {
+            for _ in 0..30 {
+                s2.clear();
+                s2.load_notes(key).unwrap();
+            }
+            s2.clear();
+            tx.send(()).unwrap();
+        });
+        let finished = rx.recv_timeout(Duration::from_secs(10)).is_ok();
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        writer.join().unwrap();
+        assert!(finished, "clear()/load_notes() hung");
     }
 
     #[test]
