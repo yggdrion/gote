@@ -62,6 +62,8 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(Mutex::new(AppCore::startup(config::config_file_path())))
         .setup(|app| {
             spawn_background_tasks(app.handle().clone());

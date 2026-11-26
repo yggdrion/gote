@@ -33,6 +33,9 @@ The Tauri CLI's launcher script needs `node` on `PATH`; on a machine with only b
 CI workflows:
 - Run automatically on push/PR: `typos-spelling.yml` (crate-ci/typos), `pull-request-title.yml`, `rust-check.yml` (PRs: build frontend, `cargo fmt --check`, `clippy -D warnings`, `cargo test`).
 - Manual (`workflow_dispatch`) only: `build-release.yml` (releases are triggered by hand).
+  - Each release ships a Windows NSIS installer (`gote-windows-amd64-setup.exe`), macOS `.dmg`s, the portable `gote-windows-amd64.exe`, the `.app.zip`s (used by the Homebrew cask in `yggdrion/homebrew-tap`) and a signed `latest.json` for the in-app updater. The build injects the semantic-release version with `tauri build --config '{"version":"…"}'`, so the `1.7.0` in `tauri.conf.json`/`Cargo.toml` is only the local dev version.
+  - Updater artifacts are signed with the `TAURI_SIGNING_PRIVATE_KEY` (+ `_PASSWORD`, empty) repo secrets; the matching public key is `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`. Losing the private key means existing installs can never auto-update again, so it is backed up outside the repo. Frontend side: `frontend/src/updater.js` (silent check on startup, "Check for Updates" in Settings).
+  - The Tauri CLI aborts if `@tauri-apps/*` npm packages and the `tauri*` crates differ in major/minor; npm is pinned with `~` to the crate minors (crates are held back by `rust-version = "1.85"`) and Renovate groups both sides as `tauri`.
 
 PR titles are enforced by CI and drive semantic-release versioning — they must match:
 ```

@@ -105,33 +105,50 @@ jobs:
       - name: Install frontend dependencies 📦
         run: bun install --cwd frontend
 
-      - name: Build Tauri app (Windows) 🔨
-        if: matrix.os == 'windows-latest'
+      - name: Build Tauri app 🔨
+        shell: bash
+        env:
+          # Signs the updater artifacts (.app.tar.gz / -setup.exe); the public
+          # key is plugins.updater.pubkey in src-tauri/tauri.conf.json
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VERSION: ${{ needs.setup.outputs.version }}
+        run: |
+          # The release version from semantic-release; the updater compares it
+          # with latest.json, so the build must carry it
+          CONFIG="{\"version\":\"$VERSION\"}"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            frontend/node_modules/.bin/tauri build --config "$CONFIG" --bundles nsis
+          else
+            frontend/node_modules/.bin/tauri build --config "$CONFIG" --target ${{ matrix.rust_target }} --bundles app,dmg
+          fi
+
+      - name: Stage release assets 📦
         shell: bash
         run: |
-          frontend/node_modules/.bin/tauri build --no-bundle
-          mkdir -p bin
-          cp src-tauri/target/release/gote.exe bin/gote.exe
-
-      - name: Build Tauri app (macOS) 🔨
-        if: matrix.os == 'macos-latest'
-        run: frontend/node_modules/.bin/tauri build --target ${{ matrix.rust_target }} --bundles app
-
-      - name: Package macOS app (macOS only) 📦
-        if: matrix.os == 'macos-latest'
-        run: |
-          cd src-tauri/target/${{ matrix.rust_target }}/release/bundle/macos
-          zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.binary_name }}.app
-          mv ${{ matrix.artifact_name }}.zip "$GITHUB_WORKSPACE/"
+          set -euo pipefail
+          mkdir -p dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            NSIS=src-tauri/target/release/bundle/nsis
+            cp src-tauri/target/release/gote.exe dist/gote-windows-amd64.exe
+            cp "$NSIS"/*-setup.exe dist/gote-windows-amd64-setup.exe
+            cp "$NSIS"/*-setup.exe.sig dist/gote-windows-amd64-setup.exe.sig
+          else
+            B=src-tauri/target/${{ matrix.rust_target }}/release/bundle
+            A=${{ matrix.arch }}
+            (cd "$B/macos" && zip -qry "$GITHUB_WORKSPACE/dist/gote-macos-$A.app.zip" gote.app)
+            cp "$B/macos/gote.app.tar.gz" "dist/gote-macos-$A.app.tar.gz"
+            cp "$B/macos/gote.app.tar.gz.sig" "dist/gote-macos-$A.app.tar.gz.sig"
+            cp "$B"/dmg/*.dmg "dist/gote-macos-$A.dmg"
+          fi
+          ls -la dist
 
       - name: Upload build artifacts 📤
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.artifact_name }}
-          path: |
-            bin/${{ matrix.binary_name }}${{ matrix.os == 'macos-latest' && '.app' || '' }}
-            ${{ matrix.artifact_name }}.zip
-          if-no-files-found: ignore
+          path: dist/
+          if-no-files-found: error
 
   # Release job
   release:
@@ -163,47 +180,40 @@ jobs:
           path: ./artifacts
 
       - name: Prepare release assets 📦
+        env:
+          VERSION: ${{ needs.setup.outputs.version }}
         run: |
+          set -euo pipefail
           mkdir -p release-assets
+          find artifacts -type f -exec cp {} release-assets/ \;
 
-          # Debug: List all artifacts with full structure
-          echo "=== Available artifacts directory structure ==="
-          find artifacts -type f -ls
-          echo "=== Detailed listing ==="
-          ls -la artifacts/
-          for dir in artifacts/*/; do
-            echo "Contents of $dir:"
-            ls -la "$dir"
+          # Updater manifest. The app fetches it from
+          # releases/latest/download/latest.json and verifies each signature
+          cd release-assets
+          BASE="https://github.com/yggdrion/gote/releases/download/v${VERSION}"
+          for f in gote-macos-amd64.app.tar.gz gote-macos-arm64.app.tar.gz gote-windows-amd64-setup.exe; do
+            test -f "$f" && test -f "$f.sig" || { echo "missing $f or its signature"; exit 1; }
           done
-
-          # Copy Windows binaries
-          if [ -f artifacts/gote-windows-amd64.exe/bin/gote.exe ]; then
-            echo "Found Windows binary, copying..."
-            cp artifacts/gote-windows-amd64.exe/bin/gote.exe release-assets/gote-windows-amd64.exe
-          else
-            echo "Windows binary not found at artifacts/gote-windows-amd64.exe/bin/gote.exe"
-            echo "Checking alternative paths..."
-            find artifacts -name "*.exe" -type f
-          fi
-
-          # Copy macOS apps
-          for arch in amd64 arm64; do
-            if [ -f artifacts/gote-macos-${arch}.app/gote-macos-${arch}.app.zip ]; then
-              echo "Found macOS ${arch} zip, copying..."
-              cp artifacts/gote-macos-${arch}.app/gote-macos-${arch}.app.zip release-assets/
-            elif [ -d artifacts/gote-macos-${arch}.app/gote.app ]; then
-              echo "Found macOS ${arch} app directory, zipping..."
-              cd artifacts/gote-macos-${arch}.app
-              zip -r ../../release-assets/gote-macos-${arch}.app.zip gote.app
-              cd ../..
-            else
-              echo "macOS ${arch} binary not found"
-            fi
-          done
-
-          # List what we have
-          echo "=== Final release assets ==="
-          ls -la release-assets/
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg base "$BASE" \
+            --rawfile mac_x64 gote-macos-amd64.app.tar.gz.sig \
+            --rawfile mac_arm gote-macos-arm64.app.tar.gz.sig \
+            --rawfile win gote-windows-amd64-setup.exe.sig \
+            '{
+              version: $version,
+              notes: "See the release notes on GitHub.",
+              pub_date: $pub_date,
+              platforms: {
+                "darwin-x86_64":  { signature: $mac_x64, url: "\($base)/gote-macos-amd64.app.tar.gz" },
+                "darwin-aarch64": { signature: $mac_arm, url: "\($base)/gote-macos-arm64.app.tar.gz" },
+                "windows-x86_64": { signature: $win,     url: "\($base)/gote-windows-amd64-setup.exe" }
+              }
+            }' > latest.json
+          rm -f ./*.sig
+          cat latest.json
+          ls -la
 
       - name: Run semantic-release 🚀
         id: release
@@ -289,7 +299,7 @@ jobs:
               strategy :github_latest
             end
 
-            auto_updates false
+            auto_updates true
 
             app "gote.app"
 

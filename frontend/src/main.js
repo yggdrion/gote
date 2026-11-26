@@ -43,6 +43,7 @@ import {
 // Import Tauri plugins for clipboard and external links
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { checkForUpdates, getAppVersion } from "./updater.js";
 
 // State management
 let currentUser = null;
@@ -192,6 +193,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   initializeDOM();
   setupEventListeners();
   await checkInitialState();
+
+  // Background update check; skipped in `tauri dev`.
+  if (!import.meta.env.DEV) checkForUpdates({ silent: true });
 });
 
 function initializeDOM() {
@@ -397,6 +401,12 @@ function setupEventListeners() {
   // Settings listeners
   backFromSettings.addEventListener("click", closeSettings);
   createBackupBtn.addEventListener("click", handleCreateBackup);
+  document
+    .getElementById("check-updates-btn")
+    .addEventListener("click", () => checkForUpdates());
+  getAppVersion()
+    .then((v) => (document.getElementById("app-version").textContent = v))
+    .catch(() => {});
   saveSettingsBtn.addEventListener("click", handleSaveSettings);
   logoutBtn.addEventListener("click", handleLogout);
 
