@@ -1,3 +1,17 @@
+## [1.7.1](https://github.com/yggdrion/gote/compare/v1.7.0...v1.7.1) (2026-11-26)
+
+### 🐛 Bug Fixes
+
+* **build:** align Tauri npm packages with Rust crate versions ([#91](https://github.com/yggdrion/gote/issues/91)) ([bd61347](https://github.com/yggdrion/gote/commit/bd61347241abea2af91f2ff63eb9593ee89983bf))
+
+### 🔧 Chores
+
+* **go:** Update module github.com/wailsapp/wails/v3 to v3.1.0 ([#86](https://github.com/yggdrion/gote/issues/86)) ([e5c6401](https://github.com/yggdrion/gote/commit/e5c64013a965825658099f1f3a23404fd060716e))
+
+### ♻️ Refactoring
+
+* migrate from Go/Wails to Rust/Tauri ([#90](https://github.com/yggdrion/gote/issues/90)) ([2bc7b5a](https://github.com/yggdrion/gote/commit/2bc7b5a406554cc853b537b15843a6b04c2d8b91))
+
 ## [1.7.0](https://github.com/yggdrion/gote/compare/v1.6.3...v1.7.0) (2026-11-05)
 
 ### ✨ Features
