@@ -1,8 +1,10 @@
 pub mod auth;
+pub mod backup;
 pub mod config;
 pub mod crypto;
 pub mod error;
 pub mod ids;
+pub mod image_store;
 pub mod models;
 
 pub fn run() {
