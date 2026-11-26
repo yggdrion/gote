@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/yggdrion/gote/compare/v1.8.0...v1.8.1) (2026-11-26)
+
+### 🐛 Bug Fixes
+
+* **ui:** clarify update help text in settings ([45929f0](https://github.com/yggdrion/gote/commit/45929f0dc53c71e45310574f9d5402034403e1ba))
+
 ## [1.8.0](https://github.com/yggdrion/gote/compare/v1.7.1...v1.8.0) (2026-11-26)
 
 ### ✨ Features
