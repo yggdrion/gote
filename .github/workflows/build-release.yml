@@ -59,7 +59,7 @@ jobs:
             echo "should_build=true" >> $GITHUB_OUTPUT
           fi
 
-  # Build Wails applications for multiple platforms
+  # Build Tauri applications for multiple platforms
   build:
     needs: setup
     if: needs.setup.outputs.should_build == 'true'
@@ -74,10 +74,12 @@ jobs:
           # macOS builds
           - os: macos-latest
             arch: amd64
+            rust_target: x86_64-apple-darwin
             binary_name: gote
             artifact_name: gote-macos-amd64.app
           - os: macos-latest
             arch: arm64
+            rust_target: aarch64-apple-darwin
             binary_name: gote
             artifact_name: gote-macos-arm64.app
     runs-on: ${{ matrix.os }}
@@ -85,29 +87,42 @@ jobs:
       - name: Checkout code 🌿
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Go 🐹
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-
-      - name: Set up Node.js �
+      - name: Set up Node.js 🟢
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
 
-      - name: Install Wails 📦
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+      - name: Set up Bun 🍞
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
-      - name: Build Wails app 🔨
-        # package builds the .app bundle on macOS; on Windows a plain build is enough
-        run: wails3 ${{ matrix.os == 'macos-latest' && 'package' || 'build' }} ARCH=${{ matrix.arch }}
+      - name: Set up Rust 🦀
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          target: ${{ matrix.rust_target }}
+          cache-workspaces: src-tauri
+          rustflags: ""
+
+      - name: Install frontend dependencies 📦
+        run: bun install --cwd frontend
+
+      - name: Build Tauri app (Windows) 🔨
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          frontend/node_modules/.bin/tauri build --no-bundle
+          mkdir -p bin
+          cp src-tauri/target/release/gote.exe bin/gote.exe
+
+      - name: Build Tauri app (macOS) 🔨
+        if: matrix.os == 'macos-latest'
+        run: frontend/node_modules/.bin/tauri build --target ${{ matrix.rust_target }} --bundles app
 
       - name: Package macOS app (macOS only) 📦
         if: matrix.os == 'macos-latest'
         run: |
-          cd bin
+          cd src-tauri/target/${{ matrix.rust_target }}/release/bundle/macos
           zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.binary_name }}.app
-          mv ${{ matrix.artifact_name }}.zip ../
+          mv ${{ matrix.artifact_name }}.zip "$GITHUB_WORKSPACE/"
 
       - name: Upload build artifacts 📤
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -266,7 +281,7 @@ jobs:
             end
             
             name "Gote"
-            desc "Secure note-taking application built with Wails"
+            desc "Secure note-taking application built with Tauri"
             homepage "https://github.com/yggdrion/gote"
 
             livecheck do

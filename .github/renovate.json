@@ -43,13 +43,13 @@
         },
         {
             "matchManagers": [
-                "gomod"
+                "cargo"
             ],
-            "groupName": "go",
-            "commitMessagePrefix": "chore(go): ",
+            "groupName": "rust",
+            "commitMessagePrefix": "chore(rust): ",
             "labels": [
                 "dependencies",
-                "go"
+                "rust"
             ]
         },
         {

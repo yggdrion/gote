@@ -1,112 +1,60 @@
-# gote - Wails Notes
+# gote
 
-This Wails application has been transformed from a basic template into a full-featured note-taking application by integrating the functionality from the `noteapp` directory.
+A secure, cross-platform desktop note-taking app built with [Tauri v2](https://tauri.app): a Rust backend and a vanilla JavaScript frontend (no framework).
 
 ## Features
 
-- **Secure Notes**: Password-protected encrypted note storage
-- **Real-time Preview**: Markdown preview with syntax highlighting
-- **Search**: Full-text search across all notes
-- **File Sync**: Automatic synchronization from disk
-- **Modern UI**: Dark theme with responsive design
-- **Cross-platform**: Built with Wails for native performance
+- **Secure notes**: AES-256-GCM encrypted at rest, key derived from your password with PBKDF2
+- **Markdown preview** with syntax highlighting and code-block copy buttons
+- **Search** across all notes, plus `private` / `work` / `trash` categories
+- **Pasted images**, stored encrypted next to your notes
+- **Folder sync friendly**: live-reloads notes changed on disk (Dropbox, iCloud, ...) and can be set up on a second machine from the synced folder
+- **Automatic daily zip backups** (`<notes>/backups/`)
+- **Cross-platform**: Windows, macOS, Linux
 
 ## Architecture
 
-### Backend (Go)
+### Backend (Rust, `src-tauri/`)
 
-- **app.go**: Main application logic with Wails bindings
-- **pkg/auth**: Password authentication and session management
-- **pkg/config**: Configuration management
-- **pkg/crypto**: Encryption utilities for secure note storage
-- **pkg/models**: Data models for notes and sessions
-- **pkg/storage**: File-based note storage with encryption
-- **pkg/utils**: Utility functions
+- `src/commands.rs`: Tauri commands called by the frontend
+- `src/app.rs`: `AppCore`, the application logic behind every command
+- `src/auth.rs`: password verification and sessions
+- `src/crypto.rs`: AES-GCM and PBKDF2
+- `src/note_store.rs`, `src/image_store.rs`, `src/backup.rs`: encrypted storage, file watcher, zip backups
+- `src/models.rs`, `src/config.rs`, `src/ids.rs`, `src/error.rs`: models, configuration, id validation, errors
 
-### Frontend (JavaScript/HTML/CSS)
+### Frontend (`frontend/`)
 
-- **index.html**: Single-page app structure with auth and main screens
-- **main.js**: Application logic, event handling, and Wails bindings
-- **style.css**: Modern dark theme styling
-- **bindings/**: Auto-generated Wails bindings (created by `wails3 build`/`wails3 dev`)
+- `index.html`: single-page app structure with auth and main screens
+- `src/main.js`: application logic and event handling
+- `src/api.js`: wrappers that call the Tauri commands
+- `src/style.css`: dark theme
 
-## Key Transformations Made
+## Development
 
-1. **Converted HTTP Server to Wails App**:
-
-   - Removed Chi router and HTTP handlers
-   - Integrated functionality directly into Wails App struct
-   - Created frontend bindings for all note operations
-
-2. **Authentication Flow**:
-
-   - Password setup screen for first-time users
-   - Login screen for returning users
-   - Session management through Wails context
-
-3. **Note Management**:
-
-   - Create, read, update, delete operations
-   - Full-text search functionality
-   - Markdown preview with live updates
-   - File synchronization
-
-4. **UI/UX Improvements**:
-   - Responsive sidebar with note list
-   - Split-pane editor with live preview
-   - Settings modal for password changes
-   - Modern dark theme
-
-## Running the App
-
-### Development
+Prerequisites: a Rust toolchain, [bun](https://bun.sh) and the [Tauri system dependencies](https://tauri.app/start/prerequisites/) (on Linux: webkit2gtk 4.1, libsoup 3).
 
 ```bash
-wails3 dev
+bun install --cwd frontend
+frontend/node_modules/.bin/tauri dev                # run in development mode
+frontend/node_modules/.bin/tauri build              # production build and bundles
+frontend/node_modules/.bin/tauri build --no-bundle  # only the binary: src-tauri/target/release/gote
+
+cd src-tauri
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
 ```
 
-### Production Build
+## Data storage
 
-```bash
-wails3 build
-```
-
-### Built Application
-
-The built executable will be available at `bin/gote.exe`
-
-## Data Storage
-
-- **Notes**: Stored in `./data/notes/` as encrypted files
-- **Password**: Hash stored in `./data/password_hash`
-- **Config**: User-specific config in system directories
+- **Notes**: encrypted `<id>.json` files in the notes folder (default `~/Documents/Gote/Notes`)
+- **Shared salt**: `<notes folder>/.gote_config.json`, so another machine can unlock the same folder
+- **Local password hash**: `~/.config/gote/password_hash`
+- **App config**: `~/.config/gote/config`
 
 ## Security
 
-- Notes are encrypted using the user's password
-- Password is hashed before storage
-- All note content is encrypted at rest
-
-## Dependencies
-
-### Go Dependencies
-
-- `github.com/wailsapp/wails/v3`: Wails framework
-- `github.com/fsnotify/fsnotify`: File system watching
-- `github.com/google/uuid`: UUID generation
-- `golang.org/x/term`: Terminal input utilities
-
-### Frontend Dependencies
-
-- Vite for build tooling
-- Native JavaScript with Wails bindings
-- CSS Grid and Flexbox for responsive layout
-
-## Future Enhancements
-
-- Rich text editor with WYSIWYG mode
-- Export functionality (PDF, HTML)
-- Tag-based organization
-- Note templates
-- Cloud synchronization
-- Plugin system for extensions
+- Notes and images are encrypted with a key derived from your password (PBKDF2-HMAC-SHA256, 100k iterations)
+- The derived key lives only in memory and is dropped on logout or after 30 minutes of inactivity
+- The password itself is never stored

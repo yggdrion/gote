@@ -1,0 +1,9 @@
+{
+  "image_bytes_hex": "89504e470d0a1a0a01020304",
+  "image_id": "0c93c8fc",
+  "legacy_note_id": "abcdef01",
+  "password": "testpass123",
+  "trashed_note_id": "1a90778d",
+  "work_note_content": "# Work note\n\n![shot](image:0c93c8fc) \u003ctag\u003e \u0026 \"quotes\" ünïcødé",
+  "work_note_id": "3caaec0b"
+}

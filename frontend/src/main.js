@@ -6,7 +6,7 @@ import {
   MESSAGES,
 } from "./constants.js";
 
-// Import Wails runtime
+// Import backend API (Tauri commands)
 import {
   IsPasswordSet,
   SetPassword,
@@ -38,10 +38,11 @@ import {
   GetImageAsDataURL,
   CleanupOrphanedImages,
   GetImageStats,
-} from "../bindings/gote/app.js";
+} from "./api.js";
 
-// Import Wails runtime for browser functionality
-import { Browser, Clipboard } from "@wailsio/runtime";
+// Import Tauri plugins for clipboard and external links
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 // State management
 let currentUser = null;
@@ -335,6 +336,18 @@ function setupEventListeners() {
 
   // Main app listeners
   newNoteBtn.addEventListener("click", createNewNote);
+
+  // CSP forbids inline handlers: wire modal close and empty-state buttons here
+  document
+    .getElementById("image-modal-close-btn")
+    ?.addEventListener("click", hideImageModal);
+  document
+    .getElementById("empty-state-text")
+    ?.addEventListener("click", (e) => {
+      const action = e.target.closest("[data-action]")?.dataset.action;
+      if (action === "clear-search") clearSearch();
+      else if (action === "create-note") createNewNote();
+    });
   newNoteFromClipboardBtn.addEventListener("click", createNoteFromClipboard);
   searchBtn.addEventListener("click", handleSearch);
   clearSearchBtn.addEventListener("click", clearSearch);
@@ -636,8 +649,8 @@ function renderNotesList() {
       const message = searchQuery
         ? `No notes found for "${escapeHtml(
             searchQuery
-          )}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`
-        : `No notes found. <button class="link-button" onclick="createNewNote()">Create your first note</button>`;
+          )}". <button class="link-button" data-action="clear-search">Show all notes</button>`
+        : `No notes found. <button class="link-button" data-action="create-note">Create your first note</button>`;
       emptyText.innerHTML = message;
       return;
     }
@@ -778,7 +791,7 @@ function addExternalLinkHandlersToContainer(element) {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      Browser.OpenURL(link.href);
+      openUrl(link.href);
     });
   });
 }
@@ -799,7 +812,7 @@ function addCodeCopyButtonsToContainer(element) {
       e.preventDefault();
       e.stopPropagation();
       const code = pre.querySelector("code") || pre;
-      Clipboard.SetText(code.innerText).then(() => {
+      writeText(code.innerText).then(() => {
         btn.innerHTML = CHECK_ICON;
         setTimeout(() => (btn.innerHTML = COPY_ICON), 1500);
       });
@@ -934,9 +947,9 @@ async function createNoteFromClipboard() {
 
     let clipboardContent = "";
 
-    // Use only the Wails Clipboard.Text API - no browser clipboard access
+    // Use only the Tauri clipboard plugin - no browser clipboard access
     try {
-      const clipboardText = await Clipboard.Text();
+      const clipboardText = await readText();
       if (clipboardText && clipboardText.trim() !== "") {
         // Normalize CRLF/CR to LF - raw OS clipboard text (unlike textarea
         // input) isn't normalized, and stray \r left in a code block shows
