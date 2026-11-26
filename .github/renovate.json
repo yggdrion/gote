@@ -87,6 +87,21 @@
                 "dependencies",
                 "docker"
             ]
+        },
+        {
+            "description": "Tauri's CLI refuses to build when the npm packages and the Rust crates differ in major/minor, so update them together",
+            "matchPackageNames": [
+                "tauri",
+                "tauri-build",
+                "/^tauri-plugin-/",
+                "/^@tauri-apps\\//"
+            ],
+            "groupName": "tauri",
+            "commitMessagePrefix": "chore(tauri): ",
+            "labels": [
+                "dependencies",
+                "tauri"
+            ]
         }
     ]
 }
