@@ -160,7 +160,7 @@ Removed in Task 8: `main.go`, `app.go`, `pkg/`, `go.mod`, `go.sum`, `.golangci.y
 - Produces `NoteStore` (cheaply cloneable: the inner state sits in `Arc<RwLock<Inner>>` with `notes: HashMap<String, Note>`, `key: Option<[u8;32]>`, `mod_times: HashMap<PathBuf, SystemTime>`) with:
   - `NoteStore::new(data_dir: PathBuf) -> Result<Self>` (creates the dir)
   - `load_notes(&self, key: [u8;32]) -> Result<()>`: sets the key, starts the watcher once, runs `sync_from_disk`
-  - `sync_from_disk(&self) -> Result<()>`: for each valid note file, decrypt it and keep it if it is new or has a newer `updated_at`; remove cached notes whose files are gone; record mtimes. Undecryptable or unparseable files are logged and skipped.
+  - `sync_from_disk(&self) -> Result<()>`: for each valid note file, decrypt it and keep it if it is new or has a newer `updated_at`; remove cached notes whose files are gone; record mtimes. Undecryptable or unparsable files are logged and skipped.
   - `clear(&self)`: drop the key and all cached notes (used on logout)
   - `create_note(&self, content: &str, category: Category) -> Result<Note>`; `update_note(id, content) -> Result<Note>`; `update_category(id, Category) -> Result<Note>`; `move_to_trash(id) -> Result<Note>` (keeps the original category unless already trash); `restore_from_trash(id) -> Result<Note>` (err `note is not in trash`; restores the original or `Private`, clears the original); `permanently_delete(id) -> Result<()>` (err `note must be in trash to be permanently deleted`); `get_note(id) -> Result<Note>` (err `note not found`); `all_notes() -> Vec<Note>`, `notes_by_category(Category)`, `search(query)` (case-insensitive substring on content). All lists are sorted by `updated_at` descending. `move_to_corrupted(id) -> Result<()>` → `<dir>/corrupted/<id>.json`.
   - Every write updates `updated_at = Utc::now()`, saves `<id>.json` and records its mtime. Mutations without a key → `AppError` `not authenticated`. Every id goes through `ensure_valid_id`.
@@ -181,7 +181,7 @@ Removed in Task 8: `main.go`, `app.go`, `pkg/`, `go.mod`, `go.sum`, `.golangci.y
 **Files:** Create `src-tauri/src/image_store.rs`, `src-tauri/src/backup.rs`.
 
 **Interfaces:**
-- `ImageStore::new(notes_dir: &Path) -> Self` (creates `images/`; on failure it logs instead of erroring), `set_key(Option<[u8;32]>)`, `store_image(data: &[u8], content_type: &str, filename: &str) -> Result<Image>`, `get_image(id) -> Result<(Vec<u8>, Image)>`, `delete_image(id) -> Result<()>` (missing file is OK), `list_images() -> Result<Vec<Image>>` (skips unparseable files). No key → `encryption key not set`. Ids are validated.
+- `ImageStore::new(notes_dir: &Path) -> Self` (creates `images/`; on failure it logs instead of erroring), `set_key(Option<[u8;32]>)`, `store_image(data: &[u8], content_type: &str, filename: &str) -> Result<Image>`, `get_image(id) -> Result<(Vec<u8>, Image)>`, `delete_image(id) -> Result<()>` (missing file is OK), `list_images() -> Result<Vec<Image>>` (skips unparsable files). No key → `encryption key not set`. Ids are validated.
 - `backup::backup_notes(notes_dir: &Path) -> Result<PathBuf>`, `backup::latest_backup_mtime(notes_dir: &Path) -> Option<SystemTime>`, `backup::backup_is_due(notes_dir, now: SystemTime) -> bool` (≥ 24h or none).
 - `app`-level helper (put it here as `pub fn extract_image_ids(content: &str) -> Vec<String>`) with regex `!\[[^\]]*\]\(image:([^)]+)\)`.
 
