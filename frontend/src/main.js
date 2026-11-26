@@ -336,6 +336,18 @@ function setupEventListeners() {
 
   // Main app listeners
   newNoteBtn.addEventListener("click", createNewNote);
+
+  // CSP forbids inline handlers: wire modal close and empty-state buttons here
+  document
+    .getElementById("image-modal-close-btn")
+    ?.addEventListener("click", hideImageModal);
+  document
+    .getElementById("empty-state-text")
+    ?.addEventListener("click", (e) => {
+      const action = e.target.closest("[data-action]")?.dataset.action;
+      if (action === "clear-search") clearSearch();
+      else if (action === "create-note") createNewNote();
+    });
   newNoteFromClipboardBtn.addEventListener("click", createNoteFromClipboard);
   searchBtn.addEventListener("click", handleSearch);
   clearSearchBtn.addEventListener("click", clearSearch);
@@ -637,8 +649,8 @@ function renderNotesList() {
       const message = searchQuery
         ? `No notes found for "${escapeHtml(
             searchQuery
-          )}". <button class="link-button" onclick="clearSearch()">Show all notes</button>`
-        : `No notes found. <button class="link-button" onclick="createNewNote()">Create your first note</button>`;
+          )}". <button class="link-button" data-action="clear-search">Show all notes</button>`
+        : `No notes found. <button class="link-button" data-action="create-note">Create your first note</button>`;
       emptyText.innerHTML = message;
       return;
     }
